@@ -45,7 +45,7 @@ function MemoizedTableBodyInner<TRow extends SpreadsheetRow>({
         const row = table.getRowModel().rows[virtualRow.index];
         const rowIndex = virtualRow.index;
         const rowId = row?.original?.id;
-        if (!rowId) return null;
+        if (!rowId || typeof rowId !== "string") return null;
 
         const rowCells = getRowCells(rowId);
         const isRowSelected = rowCells.every((cell) => selectedCells.has(cell));

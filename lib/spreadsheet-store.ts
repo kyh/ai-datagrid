@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type SpreadsheetRow = Record<string, any>;
+export type SpreadsheetRow = Record<string, unknown>;
 
 export interface SpreadsheetStore<
   TRow extends SpreadsheetRow = SpreadsheetRow,

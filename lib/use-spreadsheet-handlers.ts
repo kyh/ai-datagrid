@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import type { ColumnInfo } from "@/lib/spreadsheet-utils";
+import type { ColumnInfo, NavigationMap } from "@/lib/spreadsheet-utils";
 import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
 import {
   getColumnCells,
@@ -17,7 +17,7 @@ import {
 
 interface UseSpreadsheetHandlersProps {
   columns: ColumnInfo[];
-  navigationMap: Map<string, any>;
+  navigationMap: Map<string, NavigationMap>;
 }
 
 export const useSpreadsheetHandlers = ({
@@ -336,8 +336,6 @@ export const useSpreadsheetHandlers = ({
     },
     [
       selectedCells,
-      columns,
-      data,
       editingCell,
       setEditingCell,
       setSelectedCells,

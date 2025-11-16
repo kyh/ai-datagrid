@@ -25,11 +25,9 @@ export const StatusBar = React.forwardRef<HTMLDivElement, StatusBarProps>(
 );
 StatusBar.displayName = "StatusBar";
 
-interface StatusBarSectionProps extends React.HTMLAttributes<HTMLDivElement> {}
-
 export const StatusBarSection = React.forwardRef<
   HTMLDivElement,
-  StatusBarSectionProps
+  React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
@@ -71,10 +69,14 @@ export const StatusBarMessage: React.FC = () => {
 export const StatusBarSummary: React.FC = () => {
   const data = useSpreadsheetStore((state) => state.data);
   const rowCount = data.length;
+  const columnCount =
+    data[0] && typeof data[0] === "object"
+      ? Object.keys(data[0]).filter((key) => key !== "id").length
+      : 0;
 
   return (
     <span>
-      {rowCount} rows × {data[0]?.length} columns
+      {rowCount} rows × {columnCount} columns
     </span>
   );
 };

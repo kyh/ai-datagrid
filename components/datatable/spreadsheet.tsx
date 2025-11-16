@@ -47,7 +47,6 @@ function SpreadsheetInner<TRow extends SpreadsheetRow, TValue = unknown>(
   const isDragging = useSpreadsheetStore((state) => state.isDragging);
   const columnWidths = useSpreadsheetStore((state) => state.columnWidths);
   const setColumnWidths = useSpreadsheetStore((state) => state.setColumnWidths);
-  const deleteRow = useSpreadsheetStore((state) => state.deleteRow);
   const dragLineVisible = useSpreadsheetStore((state) => state.dragLineVisible);
   const setDragLineVisible = useSpreadsheetStore(
     (state) => state.setDragLineVisible
@@ -64,13 +63,14 @@ function SpreadsheetInner<TRow extends SpreadsheetRow, TValue = unknown>(
 
   // Compute column meta locally - no need to store in Zustand
   const columnMeta = useMemo<ColumnInfo[]>(() => {
-    return table.getAllLeafColumns().map((column) => ({
-      id: column.id,
-      accessorKey:
-        typeof (column.columnDef as any).accessorKey === "string"
-          ? (column.columnDef as any).accessorKey
-          : column.id,
-    }));
+    return table.getAllLeafColumns().map((column) => {
+      const accessorKey = (column.columnDef as { accessorKey?: string })
+        .accessorKey;
+      return {
+        id: column.id,
+        accessorKey: typeof accessorKey === "string" ? accessorKey : column.id,
+      };
+    });
   }, [table]);
 
   // Compute navigation map locally - no need to store in Zustand
