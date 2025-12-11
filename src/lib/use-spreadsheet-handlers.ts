@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 
-import type { ColumnInfo, NavigationMap } from "@/lib/spreadsheet-utils";
-import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
+import type { ColumnInfo, NavigationMap } from "@/src/lib/spreadsheet-utils";
+import { useSpreadsheetStore } from "@/src/lib/spreadsheet-store";
 import {
   getColumnCells,
   getFirstSelectedCell,
@@ -13,7 +13,7 @@ import {
   toggleCellSelection,
   toggleColumnSelection,
   toggleRowSelection,
-} from "@/lib/spreadsheet-utils";
+} from "@/src/lib/spreadsheet-utils";
 
 interface UseSpreadsheetHandlersProps {
   columns: ColumnInfo[];
@@ -27,7 +27,7 @@ export const useSpreadsheetHandlers = ({
   const data = useSpreadsheetStore((state) => state.data);
   const selectedCells = useSpreadsheetStore((state) => state.selectedCells);
   const setSelectedCells = useSpreadsheetStore(
-    (state) => state.setSelectedCells,
+    (state) => state.setSelectedCells
   );
   const editingCell = useSpreadsheetStore((state) => state.editingCell);
   const setEditingCell = useSpreadsheetStore((state) => state.setEditingCell);
@@ -35,10 +35,10 @@ export const useSpreadsheetHandlers = ({
   const setIsDragging = useSpreadsheetStore((state) => state.setIsDragging);
   const dragStartCell = useSpreadsheetStore((state) => state.dragStartCell);
   const setDragStartCell = useSpreadsheetStore(
-    (state) => state.setDragStartCell,
+    (state) => state.setDragStartCell
   );
   const updateSelectedCellsData = useSpreadsheetStore(
-    (state) => state.updateSelectedCellsData,
+    (state) => state.updateSelectedCellsData
   );
   // Note: navigationMap is now passed as a prop, not from store
   // Mouse down handler for all interactions
@@ -58,7 +58,7 @@ export const useSpreadsheetHandlers = ({
             const newSelection = toggleRowSelection(
               rowId,
               currentSelectedCells,
-              columns,
+              columns
             );
             // Exit edit mode if multiple cells are selected
             if (newSelection.size > 1 && editingCell) {
@@ -88,7 +88,7 @@ export const useSpreadsheetHandlers = ({
             const newSelection = toggleColumnSelection(
               columnId,
               currentSelectedCells,
-              data,
+              data
             );
             // Exit edit mode if multiple cells are selected
             if (newSelection.size > 1 && editingCell) {
@@ -114,7 +114,7 @@ export const useSpreadsheetHandlers = ({
         setSelectedCells((currentSelectedCells) => {
           const newSelection = toggleCellSelection(
             cellKey,
-            currentSelectedCells,
+            currentSelectedCells
           );
           // Exit edit mode if multiple cells are selected
           if (newSelection.size > 1 && editingCell) {
@@ -135,7 +135,7 @@ export const useSpreadsheetHandlers = ({
             rowId,
             columnId,
             columns,
-            data,
+            data
           );
           const newSelection = new Set(rangeCells);
           // Exit edit mode if multiple cells are selected
@@ -176,7 +176,7 @@ export const useSpreadsheetHandlers = ({
       setEditingCell,
       setIsDragging,
       setDragStartCell,
-    ],
+    ]
   );
 
   const handleMouseMove = useCallback(
@@ -190,7 +190,7 @@ export const useSpreadsheetHandlers = ({
         rowId,
         columnId,
         columns,
-        data,
+        data
       );
       const newSelection = new Set(rangeCells);
       setSelectedCells(newSelection);
@@ -208,7 +208,7 @@ export const useSpreadsheetHandlers = ({
       editingCell,
       setSelectedCells,
       setEditingCell,
-    ],
+    ]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -249,7 +249,7 @@ export const useSpreadsheetHandlers = ({
           const nextPosition = getNextCellPositionFromMap(
             currentCellKey,
             "up",
-            navigationMap,
+            navigationMap
           );
           if (nextPosition) {
             const newCellKey = `${nextPosition.rowId}:${nextPosition.columnId}`;
@@ -263,7 +263,7 @@ export const useSpreadsheetHandlers = ({
           const nextPosition = getNextCellPositionFromMap(
             currentCellKey,
             "down",
-            navigationMap,
+            navigationMap
           );
           if (nextPosition) {
             const newCellKey = `${nextPosition.rowId}:${nextPosition.columnId}`;
@@ -277,7 +277,7 @@ export const useSpreadsheetHandlers = ({
           const nextPosition = getNextCellPositionFromMap(
             currentCellKey,
             "left",
-            navigationMap,
+            navigationMap
           );
           if (nextPosition) {
             const newCellKey = `${nextPosition.rowId}:${nextPosition.columnId}`;
@@ -291,7 +291,7 @@ export const useSpreadsheetHandlers = ({
           const nextPosition = getNextCellPositionFromMap(
             currentCellKey,
             "right",
-            navigationMap,
+            navigationMap
           );
           if (nextPosition) {
             const newCellKey = `${nextPosition.rowId}:${nextPosition.columnId}`;
@@ -305,7 +305,7 @@ export const useSpreadsheetHandlers = ({
           const nextPosition = getNextCellPositionFromMap(
             currentCellKey,
             "tab",
-            navigationMap,
+            navigationMap
           );
           if (nextPosition) {
             const newCellKey = `${nextPosition.rowId}:${nextPosition.columnId}`;
@@ -341,7 +341,7 @@ export const useSpreadsheetHandlers = ({
       setSelectedCells,
       updateSelectedCellsData,
       navigationMap,
-    ],
+    ]
   );
 
   return {

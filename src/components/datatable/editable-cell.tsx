@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/src/components/ui/input";
 
 import type { Column, Row } from "@tanstack/react-table";
-import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
+import { useSpreadsheetStore } from "@/src/lib/spreadsheet-store";
 
 interface SpreadsheetRow {
   id: string;

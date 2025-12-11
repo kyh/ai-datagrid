@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/src/components/ui/utils";
 import {
   flexRender,
   getCoreRowModel,
@@ -9,18 +9,18 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import type { SpreadsheetRow } from "@/lib/spreadsheet-store";
-import type { ColumnInfo } from "@/lib/spreadsheet-utils";
+import type { SpreadsheetRow } from "@/src/lib/spreadsheet-store";
+import type { ColumnInfo } from "@/src/lib/spreadsheet-utils";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
+import { useSpreadsheetStore } from "@/src/lib/spreadsheet-store";
 import {
   createNavigationMap,
   getColumnSizeVars,
   getRowCells,
-} from "@/lib/spreadsheet-utils";
-import { useSpreadsheetHandlers } from "@/lib/use-spreadsheet-handlers";
-import { MemoizedTableBody } from "@/components/datatable/memoized-table-body";
-import { ResizeHandle } from "@/components/datatable/resize-handle";
+} from "@/src/lib/spreadsheet-utils";
+import { useSpreadsheetHandlers } from "@/src/lib/use-spreadsheet-handlers";
+import { MemoizedTableBody } from "@/src/components/datatable/memoized-table-body";
+import { ResizeHandle } from "@/src/components/datatable/resize-handle";
 
 interface SpreadsheetProps<TRow extends SpreadsheetRow, TValue = unknown>
   extends React.HTMLAttributes<HTMLDivElement> {

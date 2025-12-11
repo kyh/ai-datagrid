@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/src/components/ui/utils";
 
 interface ResizeHandleProps {
   columnId: string;

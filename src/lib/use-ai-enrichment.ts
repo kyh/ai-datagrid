@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { StaticChatTransport } from "@loremllm/transport";
 
 import type { UIMessage } from "@ai-sdk/react";
-import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
+import { useSpreadsheetStore } from "@/src/lib/spreadsheet-store";
 
 type CustomUIMessage = UIMessage<
   unknown,

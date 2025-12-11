@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/src/components/ui/utils";
 import { flexRender } from "@tanstack/react-table";
 
-import type { SpreadsheetRow } from "@/lib/spreadsheet-store";
+import type { SpreadsheetRow } from "@/src/lib/spreadsheet-store";
 import type { Table } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 

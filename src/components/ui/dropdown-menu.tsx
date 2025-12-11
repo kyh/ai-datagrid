@@ -5,7 +5,7 @@ import { cva } from "class-variance-authority";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/src/components/ui/utils";
 
 const DropdownMenu = ({
   ...props

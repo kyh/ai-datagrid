@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useCallback, useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/src/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/src/components/ui/dropdown-menu";
 import { createColumnHelper } from "@tanstack/react-table";
 import {
   Download,
@@ -18,17 +18,17 @@ import {
   Upload,
 } from "lucide-react";
 
-import { EditableCell } from "@/components/datatable/editable-cell";
-import { Spreadsheet } from "@/components/datatable/spreadsheet";
+import { EditableCell } from "@/src/components/datatable/editable-cell";
+import { Spreadsheet } from "@/src/components/datatable/spreadsheet";
 import {
   StatusBar,
   StatusBarMessage,
   StatusBarSection,
   StatusBarSummary,
-} from "@/components/datatable/status-bar";
-import { Toolbar, ToolbarButton } from "@/components/datatable/toolbar";
-import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
-import { useAiEnrichment } from "@/lib/use-ai-enrichment";
+} from "@/src/components/datatable/status-bar";
+import { Toolbar, ToolbarButton } from "@/src/components/datatable/toolbar";
+import { useSpreadsheetStore } from "@/src/lib/spreadsheet-store";
+import { useAiEnrichment } from "@/src/lib/use-ai-enrichment";
 
 type Person = {
   id: string;

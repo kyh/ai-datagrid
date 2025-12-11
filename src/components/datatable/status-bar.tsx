@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/src/components/ui/utils";
 
-import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
+import { useSpreadsheetStore } from "@/src/lib/spreadsheet-store";
 
 export interface StatusBarProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode;
