@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 
-import type { ColumnInfo, NavigationMap } from "@/src/lib/spreadsheet-utils";
-import { useSpreadsheetStore } from "@/src/lib/spreadsheet-store";
+import type { ColumnInfo, NavigationMap } from "@/lib/spreadsheet-utils";
+import { useSpreadsheetStore } from "@/lib/spreadsheet-store";
 import {
   getColumnCells,
   getFirstSelectedCell,
@@ -13,7 +13,7 @@ import {
   toggleCellSelection,
   toggleColumnSelection,
   toggleRowSelection,
-} from "@/src/lib/spreadsheet-utils";
+} from "@/lib/spreadsheet-utils";
 
 interface UseSpreadsheetHandlersProps {
   columns: ColumnInfo[];

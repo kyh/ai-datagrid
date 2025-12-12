@@ -1,9 +1,7 @@
 "use client";
 
 import { faker } from "@faker-js/faker";
-import { DirectionProvider } from "@radix-ui/react-direction";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Languages } from "lucide-react";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
@@ -12,11 +10,10 @@ import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-heig
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { Direction, FileCellData } from "@/types/data-grid";
+import type { FileCellData } from "@/types/data-grid";
 
 interface Person {
   id: string;
@@ -151,17 +148,10 @@ const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
 );
 
 interface DataGridDemoImplProps extends UseDataGridProps<Person> {
-  dir: Direction;
-  onDirChange: (dir: Direction) => void;
   height: number;
 }
 
-function DataGridDemoImpl({
-  dir,
-  onDirChange,
-  height,
-  ...props
-}: DataGridDemoImplProps) {
+function DataGridDemoImpl({ height, ...props }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
     getRowId: (row) => row.id,
     initialState: {
@@ -175,38 +165,28 @@ function DataGridDemoImpl({
   });
 
   return (
-    <div className="container flex flex-col gap-4 py-4">
-      <div
-        role="toolbar"
-        aria-orientation="horizontal"
-        className="flex items-center gap-2 self-end"
-      >
-        <Toggle
-          aria-label="Toggle text direction"
-          dir={dir}
-          variant="outline"
-          size="sm"
-          className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
-          pressed={dir === "rtl"}
-          onPressedChange={(pressed) => onDirChange(pressed ? "rtl" : "ltr")}
+    <div className="flex flex-col min-h-dvh">
+      <div className="flex items-center gap-2 p-2">
+        <h1>Data Grid</h1>
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2 ml-auto"
         >
-          <Languages className="text-muted-foreground" />
-          {dir === "ltr" ? "LTR" : "RTL"}
-        </Toggle>
-        <DataGridFilterMenu table={table} align="end" />
-        <DataGridSortMenu table={table} align="end" />
-        <DataGridRowHeightMenu table={table} align="end" />
-        <DataGridViewMenu table={table} align="end" />
+          <DataGridFilterMenu table={table} align="end" />
+          <DataGridSortMenu table={table} align="end" />
+          <DataGridRowHeightMenu table={table} align="end" />
+          <DataGridViewMenu table={table} align="end" />
+        </div>
       </div>
-      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
       <DataGrid {...dataGridProps} table={table} height={height} />
+      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
     </div>
   );
 }
 
-export function DataGridDemo() {
+export default function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
-  const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
@@ -546,23 +526,17 @@ export function DataGridDemo() {
       );
     }, []);
 
-  const height = Math.max(400, windowSize.height - 150);
-
   return (
-    <DirectionProvider dir={dir}>
-      <DataGridDemoImpl
-        data={data}
-        onDataChange={setData}
-        columns={columns}
-        onRowAdd={onRowAdd}
-        onRowsAdd={onRowsAdd}
-        onRowsDelete={onRowsDelete}
-        onFilesUpload={onFilesUpload}
-        onFilesDelete={onFilesDelete}
-        height={height}
-        dir={dir}
-        onDirChange={setDir}
-      />
-    </DirectionProvider>
+    <DataGridDemoImpl
+      data={data}
+      onDataChange={setData}
+      columns={columns}
+      onRowAdd={onRowAdd}
+      onRowsAdd={onRowsAdd}
+      onRowsDelete={onRowsDelete}
+      onFilesUpload={onFilesUpload}
+      onFilesDelete={onFilesDelete}
+      height={windowSize.height - 48}
+    />
   );
 }
