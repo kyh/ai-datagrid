@@ -80,7 +80,6 @@ export function DataGrid<TData>({
   return (
     <div
       data-slot="grid-wrapper"
-      dir="ltr"
       {...props}
       className={cn("relative flex w-full flex-col flex-1", className)}
     >

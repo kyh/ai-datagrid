@@ -335,7 +335,6 @@ function DataGridKeyboardShortcutsImpl({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        dir="ltr"
         className="max-w-2xl px-0"
         onOpenAutoFocus={onOpenAutoFocus}
         showCloseButton={false}

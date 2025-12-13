@@ -171,7 +171,6 @@ export function DataGridSortMenu<TData>({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            dir="ltr"
             variant="outline"
             size="sm"
             className="font-normal"
@@ -192,7 +191,6 @@ export function DataGridSortMenu<TData>({
         <PopoverContent
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
-          dir="ltr"
           className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
           {...props}
         >
@@ -253,7 +251,7 @@ export function DataGridSortMenu<TData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div dir="ltr" className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div className="h-8 w-44 rounded-sm bg-primary/10" />
           <div className="h-8 w-24 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
@@ -333,7 +331,6 @@ function DataTableSortItem({
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
-            dir="ltr"
             className="w-(--radix-popover-trigger-width) p-0"
           >
             <Command>
