@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useComposedRefs } from "@/lib/compose-refs";
+import { cn, useComposedRefs } from "@/components/ui/utils";
 import { getCellKey } from "@/lib/data-grid";
-import { cn } from "@/lib/utils";
 import type { DataGridCellProps } from "@/types/data-grid";
 
 interface DataGridCellWrapperProps<TData>

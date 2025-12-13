@@ -39,7 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn } from "@/components/ui/utils";
 import type { CellOpts } from "@/types/data-grid";
 
 function getColumnVariant(variant?: CellOpts["variant"]): {

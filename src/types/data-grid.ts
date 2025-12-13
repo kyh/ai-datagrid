@@ -1,57 +1,29 @@
 import type { Cell, RowData, TableMeta } from "@tanstack/react-table";
+import type { z } from "zod";
+import type {
+  cellSchema,
+  cellSelectOptionSchema,
+  fileCellDataSchema,
+  rowHeightValueSchema,
+  cellPositionSchema,
+  updateCellSchema,
+  filterValueSchema,
+} from "@/lib/data-grid-schema";
 
-export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
-
-export interface CellSelectOption {
-  label: string;
-  value: string;
+// Derive types from Zod schemas
+export type CellSelectOption = z.infer<typeof cellSelectOptionSchema> & {
   icon?: React.FC<React.SVGProps<SVGSVGElement>>;
-  count?: number;
-}
+};
 
-export type CellOpts =
-  | {
-      variant: "short-text";
-    }
-  | {
-      variant: "long-text";
-    }
-  | {
-      variant: "number";
-      min?: number;
-      max?: number;
-      step?: number;
-    }
-  | {
-      variant: "select";
-      options: CellSelectOption[];
-    }
-  | {
-      variant: "multi-select";
-      options: CellSelectOption[];
-    }
-  | {
-      variant: "checkbox";
-    }
-  | {
-      variant: "date";
-    }
-  | {
-      variant: "url";
-    }
-  | {
-      variant: "file";
-      maxFileSize?: number;
-      maxFiles?: number;
-      accept?: string;
-      multiple?: boolean;
-    };
+export type CellOpts = z.infer<typeof cellSchema>;
 
-export interface UpdateCell {
-  rowIndex: number;
-  columnId: string;
-  value: unknown;
-}
+export type RowHeightValue = z.infer<typeof rowHeightValueSchema>;
+
+export type CellPosition = z.infer<typeof cellPositionSchema>;
+
+export type UpdateCell = z.infer<typeof updateCellSchema>;
+
+export type FileCellData = z.infer<typeof fileCellDataSchema>;
 
 declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
@@ -130,10 +102,7 @@ declare module "@tanstack/react-table" {
   }
 }
 
-export interface CellPosition {
-  rowIndex: number;
-  columnId: string;
-}
+// CellPosition is now derived from schema above
 
 export interface CellRange {
   start: CellPosition;
@@ -200,13 +169,7 @@ export interface DataGridCellProps<TData> {
   readOnly: boolean;
 }
 
-export interface FileCellData {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url?: string;
-}
+// FileCellData is now derived from schema above
 
 export type TextFilterOperator =
   | "contains"
@@ -257,8 +220,10 @@ export type FilterOperator =
   | SelectFilterOperator
   | BooleanFilterOperator;
 
-export interface FilterValue {
+// FilterValue is now derived from schema above, but we keep FilterOperator type separate
+export type FilterValue = Omit<
+  z.infer<typeof filterValueSchema>,
+  "operator"
+> & {
   operator: FilterOperator;
-  value?: string | number | string[];
-  endValue?: string | number;
-}
+};

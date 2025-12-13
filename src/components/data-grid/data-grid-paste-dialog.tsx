@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn } from "@/components/ui/utils";
 import type { PasteDialogState } from "@/types/data-grid";
 
 interface DataGridPasteDialogProps<TData> {

@@ -718,6 +718,14 @@ function useDataGrid<TData>({
     }
   }, [store, propsRef]);
 
+  const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
+    if (element && document.activeElement !== element) {
+      requestAnimationFrame(() => {
+        element.focus();
+      });
+    }
+  }, []);
+
   const onCellsPaste = React.useCallback(
     async (expandRows = false) => {
       if (propsRef.current.readOnly) return;
@@ -1079,6 +1087,8 @@ function useDataGrid<TData>({
               { rowIndex: endRowIndex, columnId: endColumnId }
             );
           }
+
+          restoreFocus(dataGridRef.current);
         } else if (cellsSkipped > 0) {
           toast.error(
             `${cellsSkipped} cell${
@@ -1102,7 +1112,14 @@ function useDataGrid<TData>({
         );
       }
     },
-    [store, navigableColumnIds, propsRef, onDataUpdate, selectRange]
+    [
+      store,
+      navigableColumnIds,
+      propsRef,
+      onDataUpdate,
+      selectRange,
+      restoreFocus,
+    ]
   );
 
   // Release focus guard after delay to allow async data re-renders to settle.
@@ -1157,14 +1174,6 @@ function useDataGrid<TData>({
     },
     [store, focusCellWrapper]
   );
-
-  const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
-    if (element && document.activeElement !== element) {
-      requestAnimationFrame(() => {
-        element.focus();
-      });
-    }
-  }, []);
 
   const onRowsDelete = React.useCallback(
     async (rowIndices: number[]) => {
@@ -2308,6 +2317,8 @@ function useDataGrid<TData>({
 
       if (result === null || event?.defaultPrevented) return;
 
+      clearSelection();
+
       // Trust the returned rowIndex from the callback
       // onScrollToRow will handle retries if the row isn't rendered yet
       const targetRowIndex = result.rowIndex ?? initialRowCount;
@@ -2318,7 +2329,7 @@ function useDataGrid<TData>({
         columnId: targetColumnId,
       });
     },
-    [propsRef, onScrollToRow]
+    [propsRef, onScrollToRow, clearSelection]
   );
 
   const onDataGridKeyDown = React.useCallback(
@@ -2516,6 +2527,8 @@ function useDataGrid<TData>({
         Promise.resolve(propsRef.current.onRowAdd())
           .then(async (result) => {
             if (result === null) return;
+
+            clearSelection();
 
             const targetRowIndex = result.rowIndex ?? initialRowCount;
             const targetColumnId = result.columnId ?? currentColumnId;
