@@ -61,6 +61,7 @@ const OPERATORS_WITHOUT_VALUE = ["isEmpty", "isNotEmpty", "isTrue", "isFalse"];
 interface DataGridFilterMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 function getColumnVariantIcon(
@@ -135,6 +136,7 @@ function formatFilterSummary(
 export function DataGridFilterMenu<TData>({
   table,
   className,
+  disabled,
   ...props
 }: DataGridFilterMenuProps<TData>) {
   const [open, setOpen] = React.useState(false);
@@ -309,6 +311,7 @@ export function DataGridFilterMenu<TData>({
           size="sm"
           className="font-normal"
           onKeyDown={onTriggerKeyDown}
+          disabled={disabled}
         >
           <ListFilter className="text-muted-foreground" />
           Filter
@@ -710,7 +713,7 @@ function FilterValueInput<TData>({
       : [];
   }, [cellVariant]);
 
-  const isBetween = operator === "between";
+  const isBetween = operator === "isBetween";
   const isMultiValueOperator =
     operator === "isAnyOf" || operator === "isNoneOf";
 
@@ -785,11 +788,19 @@ function FilterValueInput<TData>({
           ? new Date(localEndValue)
           : undefined;
 
+      const isSameDate =
+        startDate &&
+        endDate &&
+        startDate.toDateString() === endDate.toDateString();
+
       const displayValue =
-        startDate && endDate
-          ? `${formatDate(startDate)} - ${formatDate(endDate)}`
+        startDate && endDate && !isSameDate
+          ? `${formatDate(startDate, { month: "short" })} - ${formatDate(
+              endDate,
+              { month: "short" }
+            )}`
           : startDate
-          ? formatDate(startDate)
+          ? formatDate(startDate, { month: "short" })
           : "Pick a range";
 
       return (
@@ -850,7 +861,9 @@ function FilterValueInput<TData>({
             )}
           >
             <CalendarIcon className="mr-2 size-4" />
-            {dateValue ? formatDate(dateValue) : "Pick a date"}
+            {dateValue
+              ? formatDate(dateValue, { month: "short" })
+              : "Pick a date"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">

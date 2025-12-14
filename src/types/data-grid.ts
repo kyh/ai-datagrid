@@ -188,7 +188,7 @@ export type NumberFilterOperator =
   | "lessThanOrEqual"
   | "greaterThan"
   | "greaterThanOrEqual"
-  | "between"
+  | "isBetween"
   | "isEmpty"
   | "isNotEmpty";
 
@@ -199,7 +199,7 @@ export type DateFilterOperator =
   | "after"
   | "onOrBefore"
   | "onOrAfter"
-  | "between"
+  | "isBetween"
   | "isEmpty"
   | "isNotEmpty";
 

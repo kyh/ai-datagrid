@@ -33,7 +33,7 @@ export const NUMBER_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is less than or equal to", value: "lessThanOrEqual" },
   { label: "Is greater than", value: "greaterThan" },
   { label: "Is greater than or equal to", value: "greaterThanOrEqual" },
-  { label: "Is between", value: "between" },
+  { label: "Is between", value: "isBetween" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ];
@@ -48,7 +48,7 @@ export const DATE_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is after", value: "after" },
   { label: "Is on or before", value: "onOrBefore" },
   { label: "Is on or after", value: "onOrAfter" },
-  { label: "Is between", value: "between" },
+  { label: "Is between", value: "isBetween" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ];
@@ -210,7 +210,7 @@ export function getFilterFn<TData>(): FilterFn<TData> {
         return cellValue <= value;
       }
 
-      if (operator === "between" && typeof endValue === "number") {
+      if (operator === "isBetween" && typeof endValue === "number") {
         return cellValue >= value && cellValue <= endValue;
       }
     }
@@ -236,7 +236,7 @@ export function getFilterFn<TData>(): FilterFn<TData> {
           return cellDate >= filterDate;
         }
 
-        if (operator === "between" && typeof endValue === "string") {
+        if (operator === "isBetween" && typeof endValue === "string") {
           const filterDate2 = new Date(endValue);
           return cellDate >= filterDate && cellDate <= filterDate2;
         }
@@ -260,7 +260,7 @@ export function getFilterFn<TData>(): FilterFn<TData> {
     if (operator === "isAnyOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return cellValue.some((v) =>
-          value.some((fv) => String(v) === String(fv)),
+          value.some((fv) => String(v) === String(fv))
         );
       }
       return value.some((fv) => String(cellValue) === String(fv));
@@ -269,7 +269,7 @@ export function getFilterFn<TData>(): FilterFn<TData> {
     if (operator === "isNoneOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return !cellValue.some((v) =>
-          value.some((fv) => String(v) === String(fv)),
+          value.some((fv) => String(v) === String(fv))
         );
       }
       return !value.some((fv) => String(cellValue) === String(fv));
