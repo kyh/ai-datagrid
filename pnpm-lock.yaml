@@ -31,13 +31,16 @@ importers:
         version: 5.2.2(react-hook-form@7.68.0(react@19.2.1))
       '@loremllm/transport':
         specifier: ^0.5.1
-        version: 0.5.1(ai@5.0.112(zod@4.1.13))
+        version: 0.5.1(ai@5.0.114(zod@4.1.13))
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@tanstack/react-virtual':
         specifier: ^3.13.13
         version: 3.13.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      ai:
+        specifier: ^5.0.114
+        version: 5.0.114(zod@4.1.13)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1623,6 +1626,12 @@ packages:
 
   ai@5.0.112:
     resolution: {integrity: sha512-Y0dluYpe5wn81UkfHbZL78mH6CsceUfMiu4oPRaWZvjlmcoXSPdEAsPcYbOjvX8ZPvQc6m4kNZhkcEXmT2ln4w==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  ai@5.0.114:
+    resolution: {integrity: sha512-q/lxcJA6avYn/TXTaE41VX6p9lN245mDU9bIGuPpfk6WxDMvmMoUKUIS0/aXAPYN3UmkUn/r9rvq/8C98RoCWw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3501,9 +3510,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@loremllm/transport@0.5.1(ai@5.0.112(zod@4.1.13))':
+  '@loremllm/transport@0.5.1(ai@5.0.114(zod@4.1.13))':
     dependencies:
-      ai: 5.0.112(zod@4.1.13)
+      ai: 5.0.114(zod@4.1.13)
 
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
@@ -4643,6 +4652,14 @@ snapshots:
   acorn@8.15.0: {}
 
   ai@5.0.112(zod@4.1.13):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.21(zod@4.1.13)
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.19(zod@4.1.13)
+      '@opentelemetry/api': 1.9.0
+      zod: 4.1.13
+
+  ai@5.0.114(zod@4.1.13):
     dependencies:
       '@ai-sdk/gateway': 2.0.21(zod@4.1.13)
       '@ai-sdk/provider': 2.0.0

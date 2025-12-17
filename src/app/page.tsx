@@ -28,6 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Chat } from "@/components/chat/chat";
 
 type DataType = "people" | "blank";
 
@@ -217,42 +218,45 @@ export default function DataGridPage() {
   );
 
   return (
-    <DataGridImpl
-      key={dataType}
-      header={
-        <header className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
-                <MenuIcon />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {(Object.keys(dataTypeConfigs) as DataType[]).map((type) => (
-                <DropdownMenuItem
-                  key={type}
-                  onClick={() => onDataTypeChange(type)}
-                  className={dataType === type ? "bg-accent" : ""}
-                >
-                  {dataTypeConfigs[type].label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <h1>Data Grid</h1>
-        </header>
-      }
-      pinnedColumns={config.pinnedColumns}
-      data={data}
-      onDataChange={setData}
-      columns={columns}
-      onRowAdd={onRowAdd}
-      onRowsAdd={onRowsAdd}
-      onRowsDelete={onRowsDelete}
-      onFilesUpload={onFilesUpload}
-      onFilesDelete={onFilesDelete}
-      height={windowSize.height - 48}
-    />
+    <>
+      <DataGridImpl
+        key={dataType}
+        header={
+          <header className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm">
+                  <MenuIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {(Object.keys(dataTypeConfigs) as DataType[]).map((type) => (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={() => onDataTypeChange(type)}
+                    className={dataType === type ? "bg-accent" : ""}
+                  >
+                    {dataTypeConfigs[type].label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <h1>Data Grid</h1>
+          </header>
+        }
+        pinnedColumns={config.pinnedColumns}
+        data={data}
+        onDataChange={setData}
+        columns={columns}
+        onRowAdd={onRowAdd}
+        onRowsAdd={onRowsAdd}
+        onRowsDelete={onRowsDelete}
+        onFilesUpload={onFilesUpload}
+        onFilesDelete={onFilesDelete}
+        height={windowSize.height - 48}
+      />
+      <Chat />
+    </>
   );
 }
 
