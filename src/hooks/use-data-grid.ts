@@ -37,7 +37,7 @@ import type {
   SearchState,
   SelectionState,
   UpdateCell,
-} from "@/types/data-grid";
+} from "@/lib/data-grid-types";
 
 const DEFAULT_ROW_HEIGHT = "short";
 const OVERSCAN = 6;

@@ -47,7 +47,7 @@ import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCellKey, getLineCount } from "@/lib/data-grid";
 import { cn } from "@/components/ui/utils";
-import type { DataGridCellProps, FileCellData } from "@/types/data-grid";
+import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 
 export function ShortTextCell<TData>({
   cell,

@@ -5,7 +5,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import type { SearchState } from "@/types/data-grid";
+import type { SearchState } from "@/lib/data-grid-types";
 
 interface DataGridSearchProps extends SearchState {}
 

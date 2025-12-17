@@ -51,7 +51,11 @@ import {
 } from "@/lib/data-grid-filters";
 import { formatDate } from "@/components/ui/utils";
 import { cn } from "@/components/ui/utils";
-import type { FilterOperator, FilterValue, CellOpts } from "@/types/data-grid";
+import type {
+  FilterOperator,
+  FilterValue,
+  CellOpts,
+} from "@/lib/data-grid-types";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];

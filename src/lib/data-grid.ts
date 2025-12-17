@@ -5,7 +5,7 @@ import type {
   CellOpts,
   FileCellData,
   RowHeightValue,
-} from "@/types/data-grid";
+} from "@/lib/data-grid-types";
 import {
   BaselineIcon,
   CalendarIcon,

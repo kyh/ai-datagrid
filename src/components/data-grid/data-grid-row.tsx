@@ -17,7 +17,7 @@ import {
   getRowHeightValue,
 } from "@/lib/data-grid";
 import { cn } from "@/components/ui/utils";
-import type { CellPosition, RowHeightValue } from "@/types/data-grid";
+import type { CellPosition, RowHeightValue } from "@/lib/data-grid-types";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
@@ -187,7 +187,7 @@ function DataGridRowImpl<TData>({
       {...props}
       ref={rowRef}
       className={cn(
-        "absolute flex w-full border-b will-change-transform",
+        "absolute flex w-full border-b will-change-transform group",
         className
       )}
       style={{

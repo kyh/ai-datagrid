@@ -7,7 +7,7 @@ import type {
   NumberFilterOperator,
   SelectFilterOperator,
   TextFilterOperator,
-} from "@/types/data-grid";
+} from "@/lib/data-grid-types";
 
 export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
   label: string;
