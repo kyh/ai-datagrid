@@ -1,20 +1,18 @@
 import type { InferUITools, UIMessage, UIMessageStreamWriter } from "ai";
 
 import type { DataPart } from "../messages/data-parts";
-import { generateFrameBlock } from "./generate-frame-block";
-import { generateImageBlock } from "./generate-image-block";
-import { generateTextBlock } from "./generate-text-block";
+import { generateColumns } from "./generate-columns";
+import { enrichData } from "./enrich-data";
 
 type WriterParams = {
   writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
   gatewayApiKey?: string;
 };
 
-export function generateTools({ writer, gatewayApiKey }: WriterParams) {
+export function generateTools({ writer }: WriterParams) {
   return {
-    generateTextBlock: generateTextBlock({ writer }),
-    generateFrameBlock: generateFrameBlock({ writer }),
-    generateImageBlock: generateImageBlock({ writer, gatewayApiKey }),
+    generateColumns: generateColumns({ writer }),
+    enrichData: enrichData({ writer }),
   };
 }
 

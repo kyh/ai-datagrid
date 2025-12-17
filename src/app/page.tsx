@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Chat } from "@/components/chat/chat";
+import type { UpdateCell } from "@/lib/data-grid-types";
 
 type DataType = "people" | "blank";
 
@@ -217,6 +218,50 @@ export default function DataGridPage() {
     [filterFn]
   );
 
+  const tableMetaRef = React.useRef<
+    ReturnType<typeof useDataGrid<DataRow>>["tableMeta"] | null
+  >(null);
+
+  const onColumnsGenerated = React.useCallback(
+    (newColumns: ColumnDef<unknown>[]) => {
+      // Replace existing columns with new ones, keeping only system columns like "select" and "index"
+      const existingSystemColumns = columns.filter(
+        (col) => col.id === "select" || col.id === "index"
+      );
+      setColumns([
+        ...existingSystemColumns,
+        ...newColumns,
+      ] as ColumnDef<DataRow>[]);
+    },
+    [columns]
+  );
+
+  const onDataEnriched = React.useCallback(
+    (updates: UpdateCell[]) => {
+      // Use tableMeta's onDataUpdate if available, otherwise update data directly
+      if (tableMetaRef.current?.onDataUpdate) {
+        tableMetaRef.current.onDataUpdate(updates);
+      } else {
+        // Fallback: update data directly
+        setData((prev) => {
+          const newData = [...prev];
+          for (const update of updates) {
+            // Ensure row exists
+            while (newData.length <= update.rowIndex) {
+              newData.push(config.createNewRow());
+            }
+            const row = newData[update.rowIndex];
+            if (row) {
+              (row as Record<string, unknown>)[update.columnId] = update.value;
+            }
+          }
+          return newData;
+        });
+      }
+    },
+    [config]
+  );
+
   return (
     <>
       <DataGridImpl
@@ -254,8 +299,12 @@ export default function DataGridPage() {
         onFilesUpload={onFilesUpload}
         onFilesDelete={onFilesDelete}
         height={windowSize.height - 48}
+        tableMetaRef={tableMetaRef}
       />
-      <Chat />
+      <Chat
+        onColumnsGenerated={onColumnsGenerated}
+        onDataEnriched={onDataEnriched}
+      />
     </>
   );
 }
@@ -264,15 +313,19 @@ interface DataGridDemoImplProps extends UseDataGridProps<DataRow> {
   header: React.ReactNode;
   height: number;
   pinnedColumns: string[];
+  tableMetaRef?: React.MutableRefObject<
+    ReturnType<typeof useDataGrid<DataRow>>["tableMeta"] | null
+  >;
 }
 
 function DataGridImpl({
   header,
   height,
   pinnedColumns,
+  tableMetaRef,
   ...props
 }: DataGridDemoImplProps) {
-  const { table, ...dataGridProps } = useDataGrid<DataRow>({
+  const { table, tableMeta, ...dataGridProps } = useDataGrid<DataRow>({
     getRowId: (row, index) => {
       if ("id" in row && typeof row.id === "string") {
         return row.id;
@@ -289,6 +342,12 @@ function DataGridImpl({
     ...props,
   });
 
+  React.useEffect(() => {
+    if (tableMetaRef) {
+      tableMetaRef.current = tableMeta;
+    }
+  }, [tableMeta, tableMetaRef]);
+
   return (
     <div className="flex flex-col min-h-dvh">
       <div className="flex items-center gap-2 p-2">
@@ -304,7 +363,12 @@ function DataGridImpl({
           <DataGridViewMenu table={table} align="end" />
         </div>
       </div>
-      <DataGrid {...dataGridProps} table={table} height={height} />
+      <DataGrid
+        {...dataGridProps}
+        table={table}
+        tableMeta={tableMeta}
+        height={height}
+      />
       <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
     </div>
   );

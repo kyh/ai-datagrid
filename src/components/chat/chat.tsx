@@ -12,8 +12,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
+import type { DataPart } from "@/ai/messages/data-parts";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { UpdateCell } from "@/lib/data-grid-types";
+import { getFilterFn } from "@/lib/data-grid-filters";
+import type { z } from "zod";
+import { columnDefinitionSchema } from "@/ai/messages/data-parts";
+import { updateCellSchema } from "@/lib/data-grid-schema";
+import { GenerateModeChatUIMessage } from "@/ai/messages/types";
 
-export const Chat = () => {
+interface ChatProps {
+  onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
+  onDataEnriched?: (updates: UpdateCell[]) => void;
+}
+
+export const Chat = ({
+  onColumnsGenerated,
+  onDataEnriched,
+}: ChatProps = {}) => {
+  const filterFn = getFilterFn();
   // AI Prompt state
   const [input, setInput] = useState("");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
@@ -22,7 +39,7 @@ export const Chat = () => {
     ""
   );
 
-  const { sendMessage, status } = useChat({
+  const { sendMessage, status } = useChat<GenerateModeChatUIMessage>({
     id: apiKey,
     onError: (error) => {
       const errorMessage = error.message?.toLowerCase() || "";
@@ -45,6 +62,110 @@ export const Chat = () => {
     },
     onData: (dataPart) => {
       try {
+        const data = dataPart.data as DataPart;
+        if (!data) return;
+
+        // Handle generate-columns data part
+        if (data && "generate-columns" in data && data["generate-columns"]) {
+          const columnsData = data["generate-columns"];
+          if (columnsData.columns && onColumnsGenerated) {
+            // Convert column definitions to ColumnDef format
+            type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
+            const columns: ColumnDef<unknown>[] = columnsData.columns.map(
+              (col: ColumnDefinition): ColumnDef<unknown> => {
+                const baseMeta = {
+                  label: col.label,
+                };
+
+                // Build cell config based on variant
+                let cellConfig:
+                  | { variant: "short-text" }
+                  | { variant: "long-text" }
+                  | {
+                      variant: "number";
+                      min?: number;
+                      max?: number;
+                      step?: number;
+                    }
+                  | {
+                      variant: "select";
+                      options: Array<{ label: string; value: string }>;
+                    }
+                  | {
+                      variant: "multi-select";
+                      options: Array<{ label: string; value: string }>;
+                    }
+                  | { variant: "checkbox" }
+                  | { variant: "date" }
+                  | { variant: "url" }
+                  | { variant: "file" };
+
+                switch (col.variant) {
+                  case "number":
+                    cellConfig = {
+                      variant: "number",
+                      ...(col.min !== undefined && { min: col.min }),
+                      ...(col.max !== undefined && { max: col.max }),
+                      ...(col.step !== undefined && { step: col.step }),
+                    };
+                    break;
+                  case "select":
+                  case "multi-select":
+                    cellConfig = {
+                      variant: col.variant,
+                      options: col.options || [],
+                    };
+                    break;
+                  case "short-text":
+                  case "long-text":
+                  case "checkbox":
+                  case "date":
+                  case "url":
+                  case "file":
+                    cellConfig = { variant: col.variant };
+                    break;
+                }
+
+                return {
+                  id: col.id,
+                  accessorKey: col.id,
+                  header: col.label,
+                  minSize: 180,
+                  filterFn,
+                  meta: {
+                    ...baseMeta,
+                    cell: cellConfig,
+                  },
+                };
+              }
+            );
+            onColumnsGenerated(columns);
+            toast.success(
+              `Generated ${columns.length} column${
+                columns.length !== 1 ? "s" : ""
+              }`
+            );
+          }
+        }
+
+        // Handle enrich-data data part
+        if (data && "enrich-data" in data && data["enrich-data"]) {
+          const enrichData = data["enrich-data"];
+          if (enrichData.updates && onDataEnriched) {
+            type CellUpdate = z.infer<typeof updateCellSchema>;
+            const updates: UpdateCell[] = enrichData.updates.map(
+              (update: CellUpdate) => ({
+                rowIndex: update.rowIndex,
+                columnId: update.columnId,
+                value: update.value,
+              })
+            );
+            onDataEnriched(updates);
+            toast.success(
+              `Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`
+            );
+          }
+        }
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : "Failed to process data part"

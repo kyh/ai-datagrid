@@ -1,12 +1,9 @@
 import { streamChatResponse } from "@/ai/response/stream-chat-response";
 
-import type {
-  GenerateModeChatUIMessage,
-  BuildModeChatUIMessage,
-} from "@/ai/messages/types";
+import type { GenerateModeChatUIMessage } from "@/ai/messages/types";
 
 type BodyData = {
-  messages: GenerateModeChatUIMessage[] | BuildModeChatUIMessage[];
+  messages: GenerateModeChatUIMessage[];
   gatewayApiKey?: string;
 };
 
