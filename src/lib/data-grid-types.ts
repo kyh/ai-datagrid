@@ -1,36 +1,65 @@
 import type { Cell, RowData, TableMeta } from "@tanstack/react-table";
-import type { z } from "zod";
-import type {
-  cellSchema,
-  cellSelectOptionSchema,
-  fileCellDataSchema,
-  rowHeightValueSchema,
-  cellPositionSchema,
-  updateCellSchema,
-  filterValueSchema,
-} from "@/lib/data-grid-schema";
 
-// Derive types from Zod schemas
-export type CellSelectOption = z.infer<typeof cellSelectOptionSchema> & {
+export type Direction = "ltr" | "rtl";
+
+export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
+
+export interface CellSelectOption {
+  label: string;
+  value: string;
   icon?: React.FC<React.SVGProps<SVGSVGElement>>;
-};
+  count?: number;
+}
 
-export type CellOpts = z.infer<typeof cellSchema>;
+export type CellOpts =
+  | {
+      variant: "short-text";
+    }
+  | {
+      variant: "long-text";
+    }
+  | {
+      variant: "number";
+      min?: number;
+      max?: number;
+      step?: number;
+    }
+  | {
+      variant: "select";
+      options: CellSelectOption[];
+    }
+  | {
+      variant: "multi-select";
+      options: CellSelectOption[];
+    }
+  | {
+      variant: "checkbox";
+    }
+  | {
+      variant: "date";
+    }
+  | {
+      variant: "url";
+    }
+  | {
+      variant: "file";
+      maxFileSize?: number;
+      maxFiles?: number;
+      accept?: string;
+      multiple?: boolean;
+    };
 
-export type RowHeightValue = z.infer<typeof rowHeightValueSchema>;
-
-export type CellPosition = z.infer<typeof cellPositionSchema>;
-
-export type UpdateCell = z.infer<typeof updateCellSchema>;
-
-export type FileCellData = z.infer<typeof fileCellDataSchema>;
+export interface UpdateCell {
+  rowIndex: number;
+  columnId: string;
+  value: unknown;
+}
 
 declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
     cell?: CellOpts;
-    hideVariantLabel?: boolean;
   }
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
@@ -41,7 +70,6 @@ declare module "@tanstack/react-table" {
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
     searchOpen?: boolean;
-    readOnly?: boolean;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
@@ -84,6 +112,8 @@ declare module "@tanstack/react-table" {
     }) => void;
     onCellsCopy?: () => void;
     onCellsCut?: () => void;
+    onCellsPaste?: (expand?: boolean) => void;
+    onSelectionClear?: () => void;
     onFilesUpload?: (params: {
       files: File[];
       rowIndex: number;
@@ -98,12 +128,14 @@ declare module "@tanstack/react-table" {
     onContextMenuOpenChange?: (open: boolean) => void;
     pasteDialog?: PasteDialogState;
     onPasteDialogOpenChange?: (open: boolean) => void;
-    onPasteWithExpansion?: () => void;
-    onPasteWithoutExpansion?: () => void;
+    readOnly?: boolean;
   }
 }
 
-// CellPosition is now derived from schema above
+export interface CellPosition {
+  rowIndex: number;
+  columnId: string;
+}
 
 export interface CellRange {
   start: CellPosition;
@@ -170,7 +202,13 @@ export interface DataGridCellProps<TData> {
   readOnly: boolean;
 }
 
-// FileCellData is now derived from schema above
+export interface FileCellData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
 
 export type TextFilterOperator =
   | "contains"
@@ -221,10 +259,8 @@ export type FilterOperator =
   | SelectFilterOperator
   | BooleanFilterOperator;
 
-// FilterValue is now derived from schema above, but we keep FilterOperator type separate
-export type FilterValue = Omit<
-  z.infer<typeof filterValueSchema>,
-  "operator"
-> & {
+export interface FilterValue {
   operator: FilterOperator;
-};
+  value?: string | number | string[];
+  endValue?: string | number;
+}

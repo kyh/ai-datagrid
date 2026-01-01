@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import type { Table } from "@tanstack/react-table";
 import { Check, Settings2 } from "lucide-react";
 import * as React from "react";
@@ -27,10 +28,12 @@ interface DataGridViewMenuProps<TData>
 
 export function DataGridViewMenu<TData>({
   table,
-  className,
   disabled,
+  className,
   ...props
 }: DataGridViewMenuProps<TData>) {
+  const dir = useDirection();
+
   const columns = React.useMemo(
     () =>
       table
@@ -48,6 +51,7 @@ export function DataGridViewMenu<TData>({
         <Button
           aria-label="Toggle columns"
           role="combobox"
+          dir={dir}
           variant="outline"
           size="sm"
           className="ms-auto hidden h-8 font-normal lg:flex"
@@ -57,7 +61,11 @@ export function DataGridViewMenu<TData>({
           View
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn("w-44 p-0", className)} {...props}>
+      <PopoverContent
+        dir={dir}
+        className={cn("w-44 p-0", className)}
+        {...props}
+      >
         <Command>
           <CommandInput placeholder="Search columns..." />
           <CommandList>

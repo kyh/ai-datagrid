@@ -19,6 +19,8 @@ import {
 import { cn } from "@/components/ui/utils";
 import type { CellPosition, RowHeightValue } from "@/lib/data-grid-types";
 
+type Direction = "ltr" | "rtl";
+
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
   tableMeta: TableMeta<TData>;
@@ -33,6 +35,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   cellSelectionKeys: Set<string>;
   searchMatchColumns: Set<string> | null;
   activeSearchMatch: CellPosition | null;
+  dir: Direction;
   readOnly: boolean;
   stretchColumns: boolean;
 }
@@ -140,6 +143,7 @@ function DataGridRowImpl<TData>({
   cellSelectionKeys,
   searchMatchColumns,
   activeSearchMatch,
+  dir,
   readOnly,
   stretchColumns,
   className,
@@ -187,7 +191,7 @@ function DataGridRowImpl<TData>({
       {...props}
       ref={rowRef}
       className={cn(
-        "absolute flex w-full border-b will-change-transform group",
+        "absolute flex w-full border-b will-change-transform",
         className
       )}
       style={{

@@ -1,18 +1,6 @@
 "use client";
 
-import {
-  Check,
-  File,
-  FileArchive,
-  FileAudio,
-  FileImage,
-  FileSpreadsheet,
-  FileText,
-  FileVideo,
-  Presentation,
-  Upload,
-  X,
-} from "lucide-react";
+import { Check, Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
@@ -45,7 +33,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getCellKey, getLineCount } from "@/lib/data-grid";
+import {
+  formatDateForDisplay,
+  formatDateToString,
+  formatFileSize,
+  getCellKey,
+  getFileIcon,
+  getLineCount,
+  getUrlHref,
+  parseLocalDate,
+} from "@/lib/data-grid";
 import { cn } from "@/components/ui/utils";
 import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 
@@ -232,7 +229,6 @@ export function LongTextCell<TData>({
     setValue(initialValue ?? "");
   }
 
-  // Debounced auto-save (300ms delay)
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     if (!readOnly) {
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
@@ -257,8 +253,8 @@ export function LongTextCell<TData>({
   }, [tableMeta, initialValue, rowIndex, columnId, readOnly]);
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         // Immediately save any pending changes when closing
@@ -294,7 +290,6 @@ export function LongTextCell<TData>({
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = event.target.value;
       setValue(newValue);
-      // Debounced auto-save
       debouncedSave(newValue);
     },
     [debouncedSave]
@@ -384,11 +379,14 @@ export function NumberCell<TData>({
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
   const cellOpts = cell.column.columnDef.meta?.cell;
   const numberCellOpts = cellOpts?.variant === "number" ? cellOpts : null;
   const min = numberCellOpts?.min;
   const max = numberCellOpts?.max;
   const step = numberCellOpts?.step;
+
+  const prevIsEditingRef = React.useRef(isEditing);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -449,9 +447,12 @@ export function NumberCell<TData>({
   );
 
   React.useEffect(() => {
-    if (isEditing && inputRef.current) {
+    const wasEditing = prevIsEditingRef.current;
+    prevIsEditingRef.current = isEditing;
+
+    // Only focus when we start editing (transition from false to true)
+    if (isEditing && !wasEditing && inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select();
     }
   }, [isEditing]);
 
@@ -473,40 +474,21 @@ export function NumberCell<TData>({
     >
       {isEditing ? (
         <input
-          ref={inputRef}
           type="number"
+          ref={inputRef}
           value={value}
           min={min}
           max={max}
           step={step}
+          className="w-full border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           onBlur={onBlur}
           onChange={onChange}
-          className="w-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
         <span data-slot="grid-cell-content">{value}</span>
       )}
     </DataGridCellWrapper>
   );
-}
-
-function getUrlHref(urlString: string): string {
-  if (!urlString || urlString.trim() === "") return "";
-
-  const trimmed = urlString.trim();
-
-  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
-    return "";
-  }
-
-  // Check if it already has a protocol
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-
-  // Add http:// prefix for links without protocol
-  return `http://${trimmed}`;
 }
 
 export function UrlCell<TData>({
@@ -872,8 +854,8 @@ export function SelectCell<TData>({
   );
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         tableMeta?.onCellEditingStop?.();
@@ -931,7 +913,7 @@ export function SelectCell<TData>({
             {displayLabel ? (
               <Badge
                 variant="secondary"
-                className="whitespace-pre-wrap px-1.5 text-xs"
+                className="whitespace-pre-wrap px-1.5 py-px"
               >
                 <SelectValue />
               </Badge>
@@ -958,7 +940,7 @@ export function SelectCell<TData>({
         <Badge
           data-slot="grid-cell-content"
           variant="secondary"
-          className="whitespace-pre-wrap px-1.5 text-xs"
+          className="whitespace-pre-wrap px-1.5 py-px"
         >
           {displayLabel}
         </Badge>
@@ -1045,8 +1027,8 @@ export function MultiSelectCell<TData>({
   }, [tableMeta, rowIndex, columnId, readOnly]);
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         setSearchValue("");
@@ -1156,7 +1138,7 @@ export function MultiSelectCell<TData>({
                     <Badge
                       key={value}
                       variant="secondary"
-                      className="gap-1 px-1.5 text-xs"
+                      className="gap-1 px-1.5 py-px"
                     >
                       {label}
                       <button
@@ -1232,7 +1214,7 @@ export function MultiSelectCell<TData>({
             <Badge
               key={selectedValues[index]}
               variant="secondary"
-              className="shrink-0 px-1.5 text-xs"
+              className="px-1.5 py-px"
             >
               {label}
             </Badge>
@@ -1240,7 +1222,7 @@ export function MultiSelectCell<TData>({
           {hiddenBadgeCount > 0 && (
             <Badge
               variant="outline"
-              className="shrink-0 px-1.5 text-muted-foreground text-xs"
+              className="px-1.5 py-px text-muted-foreground"
             >
               +{hiddenBadgeCount}
             </Badge>
@@ -1249,12 +1231,6 @@ export function MultiSelectCell<TData>({
       ) : null}
     </DataGridCellWrapper>
   );
-}
-
-function formatDateForDisplay(dateStr: string) {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString();
 }
 
 export function DateCell<TData>({
@@ -1280,13 +1256,15 @@ export function DateCell<TData>({
     setValue(initialValue ?? "");
   }
 
-  const selectedDate = value ? new Date(value) : undefined;
+  // Parse date as local time to avoid timezone shifts
+  const selectedDate = value ? parseLocalDate(value) ?? undefined : undefined;
 
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
       if (!date || readOnly) return;
 
-      const formattedDate = date.toISOString().split("T")[0] ?? "";
+      // Format using local date components to avoid timezone issues
+      const formattedDate = formatDateToString(date);
       setValue(formattedDate);
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
       tableMeta?.onCellEditingStop?.();
@@ -1295,8 +1273,8 @@ export function DateCell<TData>({
   );
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         tableMeta?.onCellEditingStop?.();
@@ -1363,39 +1341,6 @@ export function DateCell<TData>({
       </Popover>
     </DataGridCellWrapper>
   );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
-}
-
-function getFileIcon(
-  type: string
-): React.ComponentType<React.SVGProps<SVGSVGElement>> {
-  if (type.startsWith("image/")) return FileImage;
-  if (type.startsWith("video/")) return FileVideo;
-  if (type.startsWith("audio/")) return FileAudio;
-  if (type.includes("pdf")) return FileText;
-  if (type.includes("zip") || type.includes("rar")) return FileArchive;
-  if (
-    type.includes("word") ||
-    type.includes("document") ||
-    type.includes("doc")
-  )
-    return FileText;
-  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
-    return FileSpreadsheet;
-  if (
-    type.includes("presentation") ||
-    type.includes("powerpoint") ||
-    type.includes("ppt")
-  )
-    return Presentation;
-  return File;
 }
 
 export function FileCell<TData>({
@@ -1828,8 +1773,8 @@ export function FileCell<TData>({
   );
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      if (open && !readOnly) {
         setError(null);
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
@@ -2075,7 +2020,6 @@ export function FileCell<TData>({
             const isUploading = uploadingFiles.has(file.id);
 
             if (isUploading) {
-              // Show skeleton for uploading files
               return (
                 <Skeleton
                   key={file.id}
@@ -2087,15 +2031,15 @@ export function FileCell<TData>({
               );
             }
 
+            const FileIcon = getFileIcon(file.type);
+
             return (
               <Badge
                 key={file.id}
                 variant="secondary"
-                className="shrink-0 gap-1 px-1.5 text-xs"
+                className="gap-1 px-1.5 py-px"
               >
-                {React.createElement(getFileIcon(file.type), {
-                  className: "size-3 shrink-0",
-                })}
+                {FileIcon && <FileIcon className="size-3 shrink-0" />}
                 <span className="max-w-[100px] truncate">{file.name}</span>
               </Badge>
             );
@@ -2103,7 +2047,7 @@ export function FileCell<TData>({
           {hiddenFileCount > 0 && (
             <Badge
               variant="outline"
-              className="shrink-0 px-1.5 text-muted-foreground text-xs"
+              className="px-1.5 py-px text-muted-foreground"
             >
               +{hiddenFileCount}
             </Badge>

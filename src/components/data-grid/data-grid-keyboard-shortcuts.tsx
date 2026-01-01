@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -33,12 +34,13 @@ export const DataGridKeyboardShortcuts = React.memo(
   DataGridKeyboardShortcutsImpl,
   (prev, next) => {
     return prev.enableSearch === next.enableSearch;
-  }
+  },
 );
 
 function DataGridKeyboardShortcutsImpl({
   enableSearch = false,
 }: DataGridKeyboardShortcutsProps) {
+  const dir = useDirection();
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -66,7 +68,7 @@ function DataGridKeyboardShortcutsImpl({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setInput(event.target.value);
     },
-    []
+    [],
   );
 
   const shortcutGroups: ShortcutGroup[] = React.useMemo(
@@ -299,7 +301,7 @@ function DataGridKeyboardShortcutsImpl({
         ],
       },
     ],
-    [modKey, enableSearch]
+    [modKey, enableSearch],
   );
 
   const filteredGroups = React.useMemo(() => {
@@ -312,7 +314,7 @@ function DataGridKeyboardShortcutsImpl({
         shortcuts: group.shortcuts.filter(
           (shortcut) =>
             shortcut.description.toLowerCase().includes(query) ||
-            shortcut.keys.some((key) => key.toLowerCase().includes(query))
+            shortcut.keys.some((key) => key.toLowerCase().includes(query)),
         ),
       }))
       .filter((group) => group.shortcuts.length > 0);
@@ -335,6 +337,7 @@ function DataGridKeyboardShortcutsImpl({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        dir={dir}
         className="max-w-2xl px-0"
         onOpenAutoFocus={onOpenAutoFocus}
         showCloseButton={false}
@@ -353,7 +356,7 @@ function DataGridKeyboardShortcutsImpl({
         </DialogHeader>
         <div className="px-6">
           <div className="relative">
-            <SearchIcon className="-translate-y-1/2 absolute start-3 top-1/2 size-3.5 text-muted-foreground" />
+            <SearchIcon className="absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={inputRef}
               placeholder="Search shortcuts..."

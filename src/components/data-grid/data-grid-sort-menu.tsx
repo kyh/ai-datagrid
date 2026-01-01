@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
 import {
   ArrowDownUp,
@@ -59,6 +60,7 @@ export function DataGridSortMenu<TData>({
   disabled,
   ...props
 }: DataGridSortMenuProps<TData>) {
+  const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -173,6 +175,7 @@ export function DataGridSortMenu<TData>({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            dir={dir}
             variant="outline"
             size="sm"
             className="font-normal"
@@ -194,6 +197,7 @@ export function DataGridSortMenu<TData>({
         <PopoverContent
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
+          dir={dir}
           className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
           {...props}
         >
@@ -215,19 +219,23 @@ export function DataGridSortMenu<TData>({
           </div>
           {sorting.length > 0 && (
             <SortableContent asChild>
-              <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
+              <div
+                role="list"
+                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
+              >
                 {sorting.map((sort) => (
                   <DataTableSortItem
                     key={sort.id}
                     sort={sort}
                     sortItemId={`${id}-sort-${sort.id}`}
+                    dir={dir}
                     columns={columns}
                     columnLabels={columnLabels}
                     onSortUpdate={onSortUpdate}
                     onSortRemove={onSortRemove}
                   />
                 ))}
-              </ul>
+              </div>
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
@@ -254,7 +262,7 @@ export function DataGridSortMenu<TData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div className="flex items-center gap-2">
+        <div dir={dir} className="flex items-center gap-2">
           <div className="h-8 w-44 rounded-sm bg-primary/10" />
           <div className="h-8 w-24 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
@@ -268,6 +276,7 @@ export function DataGridSortMenu<TData>({
 interface DataTableSortItemProps {
   sort: ColumnSort;
   sortItemId: string;
+  dir: "ltr" | "rtl";
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   onSortUpdate: (sortId: string, updates: Partial<ColumnSort>) => void;
@@ -277,6 +286,7 @@ interface DataTableSortItemProps {
 function DataTableSortItem({
   sort,
   sortItemId,
+  dir,
   columns,
   columnLabels,
   onSortUpdate,
@@ -291,7 +301,7 @@ function DataTableSortItem({
     React.useState(false);
 
   const onItemKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLLIElement>) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
@@ -313,7 +323,8 @@ function DataTableSortItem({
 
   return (
     <SortableItem value={sort.id} asChild>
-      <li
+      <div
+        role="listitem"
         id={sortItemId}
         tabIndex={-1}
         className="flex items-center gap-2"
@@ -334,6 +345,7 @@ function DataTableSortItem({
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
+            dir={dir}
             className="w-(--radix-popover-trigger-width) p-0"
           >
             <Command>
@@ -399,7 +411,7 @@ function DataTableSortItem({
             <GripVertical />
           </Button>
         </SortableItemHandle>
-      </li>
+      </div>
     </SortableItem>
   );
 }
