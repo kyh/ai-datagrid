@@ -17,9 +17,11 @@ import {
   getRowHeightValue,
 } from "@/lib/data-grid";
 import { cn } from "@/components/ui/utils";
-import type { CellPosition, RowHeightValue } from "@/lib/data-grid-types";
-
-type Direction = "ltr" | "rtl";
+import type {
+  CellPosition,
+  Direction,
+  RowHeightValue,
+} from "@/lib/data-grid-types";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
@@ -229,7 +231,7 @@ function DataGridRowImpl<TData>({
               "border-e": columnId !== "select",
             })}
             style={{
-              ...getCommonPinningStyles({ column: cell.column }),
+              ...getCommonPinningStyles({ column: cell.column, dir }),
               width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >

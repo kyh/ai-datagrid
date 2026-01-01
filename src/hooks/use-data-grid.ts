@@ -2917,7 +2917,7 @@ function useDataGrid<TData>({
                 tableRef,
                 viewportOffset: VIEWPORT_OFFSET,
                 direction,
-                isRtl,
+                isRtl: dir === "rtl",
               });
             }
           }

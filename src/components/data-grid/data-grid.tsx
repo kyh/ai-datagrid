@@ -15,8 +15,6 @@ import type { Direction } from "@/lib/data-grid-types";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 
-type Direction = "ltr" | "rtl";
-
 interface DataGridProps<TData>
   extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
@@ -158,7 +156,7 @@ export function DataGrid<TData>({
                       "border-e": header.column.id !== "select",
                     })}
                     style={{
-                      ...getCommonPinningStyles({ column: header.column }),
+                      ...getCommonPinningStyles({ column: header.column, dir }),
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >
