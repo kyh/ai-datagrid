@@ -32,11 +32,11 @@ export const streamChatResponse = async (
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
       originalMessages: messages,
-      execute: ({ writer }) => {
+      execute: async ({ writer }) => {
         const result = streamText({
           model,
           system: generatePrompt,
-          messages: convertToModelMessages(messages),
+          messages: await convertToModelMessages(messages),
           stopWhen: stepCountIs(5),
           toolChoice: "required",
           tools: generateTools({ writer, gatewayApiKey }),
