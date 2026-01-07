@@ -1,6 +1,8 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
+import { Direction as RadixDirection } from "radix-ui";
+
+const useDirection = RadixDirection.useDirection;
 import type { Table } from "@tanstack/react-table";
 import { Check, Settings2 } from "lucide-react";
 import * as React from "react";

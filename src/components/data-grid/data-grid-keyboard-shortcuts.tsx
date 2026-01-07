@@ -1,6 +1,8 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
+import { Direction as RadixDirection } from "radix-ui";
+
+const useDirection = RadixDirection.useDirection;
 import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";

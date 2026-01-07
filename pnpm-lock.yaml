@@ -32,9 +32,6 @@ importers:
       '@loremllm/transport':
         specifier: ^0.5.1
         version: 0.5.1(ai@6.0.5(zod@4.2.1))
-      '@radix-ui/react-direction':
-        specifier: ^1.1.1
-        version: 1.1.1(@types/react@19.2.7)(react@19.2.1)
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)

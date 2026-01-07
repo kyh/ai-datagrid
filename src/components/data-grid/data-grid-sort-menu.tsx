@@ -1,6 +1,8 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
+import { Direction as RadixDirection } from "radix-ui";
+
+const useDirection = RadixDirection.useDirection;
 import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
 import {
   ArrowDownUp,
