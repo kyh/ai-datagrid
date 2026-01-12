@@ -49,7 +49,7 @@ export type CellOpts =
       multiple?: boolean;
     };
 
-export interface UpdateCell {
+export interface CellUpdate {
   rowIndex: number;
   columnId: string;
   value: unknown;
@@ -69,6 +69,7 @@ declare module "@tanstack/react-table" {
     focusedCell?: CellPosition | null;
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
+    getVisualRowIndex?: (rowId: string) => number | undefined;
     searchOpen?: boolean;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
@@ -80,7 +81,7 @@ declare module "@tanstack/react-table" {
       checked: boolean,
       shiftKey: boolean
     ) => void;
-    onDataUpdate?: (params: UpdateCell | Array<UpdateCell>) => void;
+    onDataUpdate?: (params: CellUpdate | Array<CellUpdate>) => void;
     onRowsDelete?: (rowIndices: number[]) => void | Promise<void>;
     onColumnClick?: (columnId: string) => void;
     onCellClick?: (
@@ -94,11 +95,7 @@ declare module "@tanstack/react-table" {
       columnId: string,
       event: React.MouseEvent
     ) => void;
-    onCellMouseEnter?: (
-      rowIndex: number,
-      columnId: string,
-      event: React.MouseEvent
-    ) => void;
+    onCellMouseEnter?: (rowIndex: number, columnId: string) => void;
     onCellMouseUp?: () => void;
     onCellContextMenu?: (
       rowIndex: number,

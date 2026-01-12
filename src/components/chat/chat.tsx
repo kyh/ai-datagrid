@@ -14,7 +14,7 @@ import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
 import type { DataPart } from "@/ai/messages/data-parts";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { UpdateCell } from "@/lib/data-grid-types";
+import type { CellUpdate } from "@/lib/data-grid-types";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { z } from "zod";
 import { columnDefinitionSchema } from "@/ai/messages/data-parts";
@@ -23,7 +23,7 @@ import { GenerateModeChatUIMessage } from "@/ai/messages/types";
 
 interface ChatProps {
   onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
-  onDataEnriched?: (updates: UpdateCell[]) => void;
+  onDataEnriched?: (updates: CellUpdate[]) => void;
 }
 
 export const Chat = ({
@@ -152,9 +152,9 @@ export const Chat = ({
         if (data && "enrich-data" in data && data["enrich-data"]) {
           const enrichData = data["enrich-data"];
           if (enrichData.updates && onDataEnriched) {
-            type CellUpdate = z.infer<typeof updateCellSchema>;
-            const updates: UpdateCell[] = enrichData.updates.map(
-              (update: CellUpdate) => ({
+            type LocalCellUpdate = z.infer<typeof updateCellSchema>;
+            const updates: CellUpdate[] = enrichData.updates.map(
+              (update: LocalCellUpdate) => ({
                 rowIndex: update.rowIndex,
                 columnId: update.columnId,
                 value: update.value,

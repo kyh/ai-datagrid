@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAsRef } from "@/hooks/use-as-ref";
 import { parseCellKey } from "@/lib/data-grid";
-import type { ContextMenuState, UpdateCell } from "@/lib/data-grid-types";
+import type { CellUpdate, ContextMenuState } from "@/lib/data-grid-types";
 
 interface DataGridContextMenuProps<TData> {
   tableMeta: TableMeta<TData>;
@@ -148,7 +148,7 @@ function ContextMenuImpl<TData>({
     )
       return;
 
-    const updates: Array<UpdateCell> = [];
+    const updates: Array<CellUpdate> = [];
 
     for (const cellKey of selectionState.selectedCells) {
       const { rowIndex, columnId } = parseCellKey(cellKey);

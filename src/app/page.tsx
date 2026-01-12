@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Chat } from "@/components/chat/chat";
-import type { UpdateCell } from "@/lib/data-grid-types";
+import type { CellUpdate } from "@/lib/data-grid-types";
 
 type DataType = "people" | "blank";
 
@@ -237,7 +237,7 @@ export default function DataGridPage() {
   );
 
   const onDataEnriched = React.useCallback(
-    (updates: UpdateCell[]) => {
+    (updates: CellUpdate[]) => {
       // Use tableMeta's onDataUpdate if available, otherwise update data directly
       if (tableMetaRef.current?.onDataUpdate) {
         tableMetaRef.current.onDataUpdate(updates);

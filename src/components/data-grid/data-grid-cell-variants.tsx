@@ -221,6 +221,7 @@ export function LongTextCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const pendingCharRef = React.useRef<string | null>(null);
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const prevInitialValueRef = React.useRef(initialValue);
@@ -275,6 +276,23 @@ export function LongTextCell<TData>({
       textareaRef.current.focus();
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
+      // Insert pending character using execCommand so it's part of undo history
+      // Use requestAnimationFrame to ensure focus has fully settled
+      if (pendingCharRef.current) {
+        const char = pendingCharRef.current;
+        pendingCharRef.current = null;
+        requestAnimationFrame(() => {
+          if (
+            textareaRef.current &&
+            document.activeElement === textareaRef.current
+          ) {
+            document.execCommand("insertText", false, char);
+            textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+          }
+        });
+      } else {
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+      }
     }
   }, []);
 
@@ -320,6 +338,24 @@ export function LongTextCell<TData>({
     [onSave, onCancel, value, initialValue, tableMeta, rowIndex, columnId]
   );
 
+  const onWrapperKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (
+        isFocused &&
+        !isEditing &&
+        !readOnly &&
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        // Store the character to be inserted after textarea focuses
+        // This ensures it's part of the textarea's undo history
+        pendingCharRef.current = event.key;
+      }
+    },
+    [isFocused, isEditing, readOnly]
+  );
+
   return (
     <Popover open={isEditing} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
@@ -336,6 +372,7 @@ export function LongTextCell<TData>({
           isSearchMatch={isSearchMatch}
           isActiveSearchMatch={isActiveSearchMatch}
           readOnly={readOnly}
+          onKeyDown={onWrapperKeyDown}
         >
           <span data-slot="grid-cell-content">{value}</span>
         </DataGridCellWrapper>
@@ -350,7 +387,7 @@ export function LongTextCell<TData>({
       >
         <Textarea
           placeholder="Enter text..."
-          className="max-h-[300px] min-h-[150px] resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-0"
+          className="max-h-[300px] min-h-[150px] resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
           ref={textareaRef}
           value={value}
           onBlur={onBlur}
@@ -870,7 +907,7 @@ export function SelectCell<TData>({
         event.preventDefault();
         setValue(initialValue);
         tableMeta?.onCellEditingStop?.();
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
@@ -1052,7 +1089,7 @@ export function MultiSelectCell<TData>({
         setSelectedValues(cellValue);
         setSearchValue("");
         tableMeta?.onCellEditingStop?.();
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         setSearchValue("");
         tableMeta?.onCellEditingStop?.({
@@ -1289,7 +1326,7 @@ export function DateCell<TData>({
         event.preventDefault();
         setValue(initialValue);
         tableMeta?.onCellEditingStop?.();
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
@@ -1813,11 +1850,16 @@ export function FileCell<TData>({
         } else if (event.key === " ") {
           event.preventDefault();
           onDropzoneClick();
+        } else if (event.key === "Tab") {
+          event.preventDefault();
+          tableMeta?.onCellEditingStop?.({
+            direction: event.shiftKey ? "left" : "right",
+          });
         }
       } else if (isFocused && event.key === "Enter") {
         event.preventDefault();
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
