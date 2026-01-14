@@ -1,48 +1,33 @@
 import {
   convertToModelMessages,
-  createGateway,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  stepCountIs,
-  streamText,
-  LanguageModel,
 } from "ai";
 
 import type { GenerateModeChatUIMessage } from "../messages/types";
-import { generateTools } from "../tools";
-import generatePrompt from "./stream-chat-response-prompt";
+import { createSpreadsheetAgent } from "../agent";
 
-type ExecuteParams = {
-  writer: Parameters<
-    Parameters<typeof createUIMessageStream>[0]["execute"]
-  >[0]["writer"];
-};
-
+/**
+ * Streams a chat response using the AI SDK v6 Agent abstraction.
+ *
+ * This function creates a ToolLoopAgent-based spreadsheet assistant that can:
+ * - Generate column definitions
+ * - Enrich data in the spreadsheet
+ *
+ * The agent runs in a tool loop for up to 5 steps, with tool choice required.
+ */
 export const streamChatResponse = async (
   messages: GenerateModeChatUIMessage[],
   gatewayApiKey: string
 ) => {
-  const model = createGateway({
-    apiKey:
-      gatewayApiKey === process.env.SECRET_KEY
-        ? process.env.AI_GATEWAY_API_KEY
-        : gatewayApiKey,
-  })("openai/gpt-5.1-instant");
-
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
       originalMessages: messages,
       execute: async ({ writer }) => {
-        const result = streamText({
-          model,
-          system: generatePrompt,
+        const agent = createSpreadsheetAgent({ gatewayApiKey, writer });
+
+        const result = await agent.stream({
           messages: await convertToModelMessages(messages),
-          stopWhen: stepCountIs(5),
-          toolChoice: "required",
-          tools: generateTools({ writer, gatewayApiKey }),
-          onError: () => {
-            // Error handling is done via toast notifications in the UI
-          },
         });
 
         void result.consumeStream();
