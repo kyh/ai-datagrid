@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Datagrid
 
-## Getting Started
+<img width="2400" height="1260" alt="AI Datagrid" src="https://github.com/user-attachments/assets/TODO" />
 
-First, run the development server:
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fkyh%2Fai-datagrid)
+
+A forkable Next.js template featuring an Excel-like UI with AI integration. Build your own Airtable, Notion database, or Google Sheets alternative.
+
+## Features
+
+**Data Grid**
+- Excel-like editing with inline cell editing
+- Column resizing, reordering, sorting, filtering
+- Virtual scrolling for large datasets
+- Multi-select, copy/paste, keyboard navigation
+
+**Column Types**
+- Text, number, date, select, multi-select
+- Checkbox, URL, email
+- Custom column definitions
+
+**AI**
+- Natural language data manipulation
+- Auto-generate rows and columns
+- Data analysis and insights
+- Formula suggestions
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Clone
+git clone https://github.com/kyh/ai-datagrid.git
+cd ai-datagrid
+
+# Install
+pnpm install
+
+# Run
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── ai/              # AI integration, prompts, tools
+├── app/             # Next.js app dir, API routes
+├── components/
+│   ├── chat/        # Chat interface
+│   ├── data-grid/   # Grid: columns, cells, controls
+│   └── ui/          # shadcn/ui components
+├── data/            # Seed data
+├── hooks/           # Shared hooks
+└── lib/             # Utils, types, schemas
+```
 
-## Learn More
+## Customization
 
-To learn more about Next.js, take a look at the following resources:
+**Add column types**
+1. Define type in `src/lib/types.ts`
+2. Create cell renderer in `src/components/data-grid/`
+3. Add editor component for inline editing
+4. Create filter logic if needed
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Customize AI**
+- Prompts: `src/ai/`
+- Tools: `src/ai/tools/`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Theming**
+- Colors: `src/app/globals.css`
+- Components follow shadcn/ui patterns
 
-## Deploy on Vercel
+## Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- TanStack Table
+- TanStack Virtual
+- dnd-kit
+- Radix UI + shadcn/ui
+- Tailwind CSS 4
+- Vercel AI SDK
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Use Cases
+
+- Database interfaces (Airtable alternative)
+- Admin dashboards
+- Data entry apps
+- Inventory management
+- CRM systems
+
+## Resources
+
+- [Next.js](https://nextjs.org/docs)
+- [TanStack Table](https://tanstack.com/table)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [Vercel AI SDK](https://sdk.vercel.ai/docs)
+
+## License
+
+MIT
