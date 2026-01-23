@@ -1,0 +1,273 @@
+import {
+  createGateway,
+  InferUITools,
+  stepCountIs,
+  tool,
+  ToolLoopAgent,
+  type UIMessage,
+  type UIMessageStreamWriter,
+} from "ai";
+import { z } from "zod";
+
+import { columnDefinitionSchema, type DataPart } from "./messages/data-parts";
+import type { Metadata } from "./messages/metadata";
+import { updateCellSchema } from "@/lib/data-grid-schema";
+import generatePrompt from "./response/stream-chat-response-prompt";
+
+// -----------------------------------------------------------------------------
+// Tool Descriptions
+// -----------------------------------------------------------------------------
+
+const generateColumnsDescription = `Use this tool to generate column definitions for a spreadsheet. This tool creates the structure (columns) of a spreadsheet based on user requirements.
+
+## When to Use This Tool
+
+Use Generate Columns when:
+1. The user wants to create a new spreadsheet structure (e.g., "create a sales tracker", "make a project management sheet")
+2. The user asks to add columns to an existing spreadsheet
+3. The user wants to set up a spreadsheet for a specific purpose
+
+## Column Properties
+
+- **id**: Unique identifier for the column (use kebab-case, e.g., "product-name", "sales-date")
+- **label**: Display name shown in the header (e.g., "Product Name", "Sales Date")
+- **variant**: Cell type that determines how data is displayed and edited:
+  - **short-text**: Short text input (names, titles, descriptions)
+  - **long-text**: Multi-line text (notes, descriptions, comments)
+  - **number**: Numeric values (prices, quantities, scores)
+  - **date**: Date values (deadlines, start dates, birthdays)
+  - **select**: Single selection from options (status, category, priority)
+  - **multi-select**: Multiple selections from options (tags, skills, categories)
+  - **checkbox**: Boolean true/false (completed, active, verified)
+  - **url**: Web URLs (websites, links, resources)
+  - **file**: File attachments (documents, images, files)
+- **options**: Array of {label, value} objects for select and multi-select variants
+- **min, max, step**: Optional constraints for number variant
+
+## Intelligent Column Type Inference
+
+When generating columns, intelligently infer the appropriate variant based on:
+- Column name/context (e.g., "email" → url, "age" → number, "status" → select)
+- User's description of the spreadsheet purpose
+- Common patterns (e.g., "completed" → checkbox, "tags" → multi-select)
+
+## Best Practices
+
+- Use descriptive, user-friendly labels
+- Choose appropriate variants based on the data type
+- For select/multi-select, provide meaningful options
+- Use kebab-case for IDs, Title Case for labels
+- Consider the user's intent when inferring column types
+
+## Examples
+
+<example>
+User: Create a sales tracker spreadsheet
+Assistant: I'll create a sales tracker with columns for tracking sales data.
+*Uses Generate Columns with:*
+- id: "date", label: "Date", variant: "date"
+- id: "product", label: "Product", variant: "short-text"
+- id: "quantity", label: "Quantity", variant: "number"
+- id: "price", label: "Price", variant: "number"
+- id: "total", label: "Total", variant: "number"
+- id: "salesperson", label: "Salesperson", variant: "short-text"
+- id: "status", label: "Status", variant: "select", options: [{label: "Pending", value: "pending"}, {label: "Completed", value: "completed"}, {label: "Cancelled", value: "cancelled"}]
+</example>
+
+<example>
+User: Add columns for a project management sheet
+Assistant: I'll add project management columns to track tasks and progress.
+*Uses Generate Columns with:*
+- id: "task-name", label: "Task Name", variant: "short-text"
+- id: "description", label: "Description", variant: "long-text"
+- id: "assignee", label: "Assignee", variant: "short-text"
+- id: "priority", label: "Priority", variant: "select", options: [{label: "High", value: "high"}, {label: "Medium", value: "medium"}, {label: "Low", value: "low"}]
+- id: "due-date", label: "Due Date", variant: "date"
+- id: "completed", label: "Completed", variant: "checkbox"
+- id: "tags", label: "Tags", variant: "multi-select", options: [{label: "Frontend", value: "frontend"}, {label: "Backend", value: "backend"}, {label: "Design", value: "design"}]
+</example>
+
+## Summary
+
+Use Generate Columns to create the structure of a spreadsheet. Intelligently infer column types based on context and user intent.`;
+
+const enrichDataDescription = `Use this tool to populate spreadsheet rows with data. This tool adds or updates cell values in the spreadsheet.
+
+## When to Use This Tool
+
+Use Enrich Data when:
+1. The user wants to add data to the spreadsheet (e.g., "add 10 customers", "populate with sample data")
+2. The user wants to fill in rows with specific information
+3. The user asks to generate data for existing columns
+4. The user wants to update existing cell values
+
+## Cell Update Properties
+
+- **rowIndex**: Zero-based index of the target row (0 = first row, 1 = second row, etc.)
+- **columnId**: The ID of the column to update (must match an existing column ID)
+- **value**: The cell value, typed appropriately based on the column variant:
+  - **short-text/long-text**: String
+  - **number**: Number
+  - **date**: Date string (ISO format) or Date object
+  - **select**: String (must match one of the column's option values)
+  - **multi-select**: Array of strings (each must match column's option values)
+  - **checkbox**: Boolean
+  - **url**: String (valid URL)
+  - **file**: Array of file objects (if applicable)
+
+## Best Practices
+
+- Batch updates efficiently - group all updates for a row together
+- Ensure values match the column variant type
+- For select/multi-select, use exact option values
+- For dates, use ISO format strings (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+- Generate realistic, varied data when populating multiple rows
+- Respect existing data - don't overwrite unless explicitly requested
+
+## Examples
+
+<example>
+User: Add 5 sample customers
+Assistant: I'll add 5 sample customer records to the spreadsheet.
+*Uses Enrich Data with:*
+- rowIndex: 0, columnId: "name", value: "John Doe"
+- rowIndex: 0, columnId: "email", value: "john@example.com"
+- rowIndex: 0, columnId: "age", value: 32
+- rowIndex: 1, columnId: "name", value: "Jane Smith"
+- rowIndex: 1, columnId: "email", value: "jane@example.com"
+- rowIndex: 1, columnId: "age", value: 28
+... (continues for 5 rows)
+</example>
+
+<example>
+User: Fill in the sales data for last month
+Assistant: I'll populate the sales data with realistic values for last month.
+*Uses Enrich Data with:*
+- rowIndex: 0, columnId: "date", value: "2024-01-15"
+- rowIndex: 0, columnId: "product", value: "Widget A"
+- rowIndex: 0, columnId: "quantity", value: 10
+- rowIndex: 0, columnId: "price", value: 29.99
+- rowIndex: 0, columnId: "status", value: "completed"
+... (continues for multiple rows)
+</example>
+
+## Summary
+
+Use Enrich Data to populate spreadsheet cells with values. Ensure values are properly typed according to each column's variant. Batch updates efficiently for better performance.`;
+
+// -----------------------------------------------------------------------------
+// Tool Definitions
+// -----------------------------------------------------------------------------
+
+type WriterParams = {
+  writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
+};
+
+function createGenerateColumnsTool({ writer }: WriterParams) {
+  return tool({
+    description: generateColumnsDescription,
+    inputSchema: z.object({
+      columns: z.array(columnDefinitionSchema),
+    }),
+    execute: async ({ columns }, { toolCallId }) => {
+      writer.write({
+        id: toolCallId,
+        type: "data-generate-columns",
+        data: {
+          "generate-columns": {
+            columns,
+            status: "done",
+          },
+        } as any,
+      });
+
+      return `Successfully generated ${columns.length} column${
+        columns.length !== 1 ? "s" : ""
+      }.`;
+    },
+  });
+}
+
+function createEnrichDataTool({ writer }: WriterParams) {
+  return tool({
+    description: enrichDataDescription,
+    inputSchema: z.object({
+      updates: z.array(updateCellSchema),
+    }),
+    execute: async ({ updates }, { toolCallId }) => {
+      writer.write({
+        id: toolCallId,
+        type: "data-enrich-data",
+        data: {
+          "enrich-data": {
+            updates,
+            status: "done",
+          },
+        } as any,
+      });
+
+      const uniqueRows = new Set(updates.map((u) => u.rowIndex)).size;
+      return `Successfully updated ${updates.length} cell${
+        updates.length !== 1 ? "s" : ""
+      } across ${uniqueRows} row${uniqueRows !== 1 ? "s" : "s"}.`;
+    },
+  });
+}
+
+function createTools({ writer }: WriterParams) {
+  return {
+    generateColumns: createGenerateColumnsTool({ writer }),
+    enrichData: createEnrichDataTool({ writer }),
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Agent Types
+// -----------------------------------------------------------------------------
+
+export type GenerateToolSet = InferUITools<ReturnType<typeof createTools>>;
+
+export type SpreadsheetAgentUIMessage = UIMessage<
+  Metadata,
+  DataPart,
+  GenerateToolSet
+>;
+
+// -----------------------------------------------------------------------------
+// Agent Factory
+// -----------------------------------------------------------------------------
+
+type CreateAgentParams = {
+  gatewayApiKey: string;
+  writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
+};
+
+/**
+ * Creates a spreadsheet agent with the AI SDK v6 ToolLoopAgent abstraction.
+ *
+ * The agent is configured with:
+ * - Model: OpenAI GPT-5.1 via Vercel Gateway
+ * - Instructions: Spreadsheet assistant system prompt
+ * - Tools: generateColumns and enrichData
+ * - Step limit: 5 steps max
+ * - Tool choice: Required (always use a tool)
+ */
+export function createSpreadsheetAgent({
+  gatewayApiKey,
+  writer,
+}: CreateAgentParams) {
+  const model = createGateway({
+    apiKey:
+      gatewayApiKey === process.env.SECRET_KEY
+        ? process.env.AI_GATEWAY_API_KEY
+        : gatewayApiKey,
+  })("openai/gpt-5.1-instant");
+
+  return new ToolLoopAgent({
+    model,
+    instructions: generatePrompt,
+    tools: createTools({ writer }),
+    stopWhen: stepCountIs(5),
+    toolChoice: "required",
+  });
+}
