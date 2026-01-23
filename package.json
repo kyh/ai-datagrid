@@ -1,6 +1,22 @@
 {
   "name": "ai-datagrid",
   "version": "0.1.0",
+  "description": "Forkable Next.js template featuring an AI-powered spreadsheet",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kyh/ai-datagrid"
+  },
+  "keywords": [
+    "nextjs",
+    "react",
+    "datagrid",
+    "spreadsheet",
+    "ai",
+    "tanstack-table",
+    "template"
+  ],
+  "author": "kyh",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
