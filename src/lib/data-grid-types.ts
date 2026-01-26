@@ -60,6 +60,8 @@ declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
     cell?: CellOpts;
+    /** Optional AI prompt for enriching this column's data */
+    prompt?: string;
   }
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
@@ -126,6 +128,16 @@ declare module "@tanstack/react-table" {
     pasteDialog?: PasteDialogState;
     onPasteDialogOpenChange?: (open: boolean) => void;
     readOnly?: boolean;
+    onColumnUpdate?: (
+      columnId: string,
+      updates: Partial<{
+        label: string;
+        variant: CellOpts["variant"];
+        prompt: string;
+      }>
+    ) => void;
+    onColumnDelete?: (columnId: string) => void;
+    onEnrichColumn?: (columnId: string, prompt: string) => void;
   }
 }
 

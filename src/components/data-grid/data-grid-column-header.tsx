@@ -13,6 +13,7 @@ import {
   EyeOffIcon,
   PinIcon,
   PinOffIcon,
+  SettingsIcon,
   XIcon,
 } from "lucide-react";
 import * as React from "react";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { getColumnVariant } from "@/lib/data-grid";
 import { cn } from "@/components/ui/utils";
+import { DataGridColumnConfig } from "./data-grid-column-config";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.ComponentProps<typeof DropdownMenuTrigger> {
@@ -221,6 +223,27 @@ export function DataGridColumnHeader<TData, TValue>({
                 <EyeOffIcon />
                 Hide column
               </DropdownMenuItem>
+            </>
+          )}
+          {(table.options.meta?.onColumnUpdate ||
+            table.options.meta?.onEnrichColumn) && (
+            <>
+              <DropdownMenuSeparator />
+              <DataGridColumnConfig
+                column={column}
+                table={table}
+                onColumnUpdate={table.options.meta?.onColumnUpdate}
+                onColumnDelete={table.options.meta?.onColumnDelete}
+                onEnrichColumn={table.options.meta?.onEnrichColumn}
+              >
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  <SettingsIcon />
+                  Configure
+                </DropdownMenuItem>
+              </DataGridColumnConfig>
             </>
           )}
         </DropdownMenuContent>

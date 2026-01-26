@@ -135,6 +135,7 @@ export const Chat = ({
                   meta: {
                     ...baseMeta,
                     cell: cellConfig,
+                    ...(col.prompt && { prompt: col.prompt }),
                   },
                 };
               }
