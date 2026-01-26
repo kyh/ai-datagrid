@@ -177,7 +177,8 @@ export const Chat = ({
   const isLoading = status === "submitted" || status === "streaming";
 
   const handleTextareaFocus = () => {
-    if (!apiKey) {
+    // Skip modal in local dev (env var handles auth server-side)
+    if (!apiKey && process.env.NODE_ENV !== "development") {
       setShowApiKeyModal(true);
     }
   };
