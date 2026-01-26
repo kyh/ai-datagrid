@@ -33,6 +33,8 @@ const columnDefinitionSchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   step: z.number().optional(),
+  // Optional AI prompt for enriching column data
+  prompt: z.string().optional(),
 });
 
 // Type for the data field in messages

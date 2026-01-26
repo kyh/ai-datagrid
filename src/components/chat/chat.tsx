@@ -136,6 +136,7 @@ export const Chat = ({
                   meta: {
                     ...baseMeta,
                     cell: cellConfig,
+                    ...(col.prompt && { prompt: col.prompt }),
                   },
                 };
               }
@@ -215,7 +216,7 @@ export const Chat = ({
         setInput("");
       }
     },
-    [input, isLoading, apiKey, sendMessage, setInput]
+    [input, isLoading, apiKey, sendMessage, setInput, getSelectionContext]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

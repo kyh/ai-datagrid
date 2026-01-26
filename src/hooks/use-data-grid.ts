@@ -132,6 +132,16 @@ interface UseDataGridProps<TData>
     rowIndex: number;
     columnId: string;
   }) => void | Promise<void>;
+  onColumnUpdate?: (
+    columnId: string,
+    updates: Partial<{
+      label: string;
+      variant: import("@/lib/data-grid-types").CellOpts["variant"];
+      prompt: string;
+    }>
+  ) => void;
+  onColumnDelete?: (columnId: string) => void;
+  onEnrichColumn?: (columnId: string, prompt: string) => void;
   rowHeight?: RowHeightValue;
   onRowHeightChange?: (rowHeight: RowHeightValue) => void;
   overscan?: number;
@@ -2157,6 +2167,9 @@ function useDataGrid<TData>({
         : undefined,
       onContextMenuOpenChange,
       onPasteDialogOpenChange,
+      onColumnUpdate: propsRef.current.onColumnUpdate,
+      onColumnDelete: propsRef.current.onColumnDelete,
+      onEnrichColumn: propsRef.current.onEnrichColumn,
     };
   }, [
     propsRef,

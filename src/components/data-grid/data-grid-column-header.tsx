@@ -15,6 +15,7 @@ import {
   EyeOffIcon,
   PinIcon,
   PinOffIcon,
+  SettingsIcon,
   TableColumnsSplitIcon,
   XIcon,
 } from "lucide-react";
@@ -44,6 +45,7 @@ import {
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellOpts } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
+import { DataGridColumnConfig } from "./data-grid-column-config";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -299,7 +301,7 @@ export function DataGridColumnHeader<TData, TValue>({
                   <TableColumnsSplitIcon />
                   Insert column right
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
+              <DropdownMenuSeparator />
               </>
             )}
             {column.getCanPin() && (
@@ -350,6 +352,7 @@ export function DataGridColumnHeader<TData, TValue>({
             )}
             {column.getCanHide() && (
               <>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
                   onSelect={() => column.toggleVisibility(false)}
@@ -357,6 +360,27 @@ export function DataGridColumnHeader<TData, TValue>({
                   <EyeOffIcon />
                   Hide column
                 </DropdownMenuItem>
+              </>
+            )}
+            {(table.options.meta?.onColumnUpdate ||
+              table.options.meta?.onEnrichColumn) && (
+              <>
+                <DropdownMenuSeparator />
+                <DataGridColumnConfig
+                  column={column}
+                  table={table}
+                  onColumnUpdate={table.options.meta?.onColumnUpdate}
+                  onColumnDelete={table.options.meta?.onColumnDelete}
+                  onEnrichColumn={table.options.meta?.onEnrichColumn}
+                >
+                  <DropdownMenuItem
+                    className="[&_svg]:text-muted-foreground"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <SettingsIcon />
+                    Configure
+                  </DropdownMenuItem>
+                </DataGridColumnConfig>
               </>
             )}
           </DropdownMenuContent>

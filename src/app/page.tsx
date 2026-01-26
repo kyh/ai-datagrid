@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Chat } from "@/components/chat/chat";
-import type { CellUpdate } from "@/lib/data-grid-types";
+import type { CellOpts, CellUpdate } from "@/lib/data-grid-types";
 import type { SelectionContext } from "@/lib/selection-context";
 import { parseCellKey } from "@/lib/data-grid";
 
@@ -259,7 +259,7 @@ export default function DataGridPage() {
     []
   );
 
-  const getSelectionContext = React.useCallback((): SelectionContext | null => {
+const getSelectionContext = React.useCallback((): SelectionContext | null => {
     const selectionState = tableMetaRef.current?.selectionState;
     if (!selectionState || selectionState.selectedCells.size === 0) {
       return null;
@@ -302,6 +302,71 @@ export default function DataGridPage() {
     };
   }, [columns]);
 
+  const onColumnUpdate = React.useCallback(
+    (
+      columnId: string,
+      updates: Partial<{
+        label: string;
+        variant: CellOpts["variant"];
+        prompt: string;
+      }>
+    ) => {
+      setColumns((prev) =>
+        prev.map((col): ColumnDef<DataRow> => {
+          if (col.id !== columnId) return col;
+
+          const currentMeta = col.meta ?? {};
+          const currentCell = currentMeta.cell ?? { variant: "short-text" as const };
+
+          // Build new cell config based on variant change
+          let newCell: CellOpts = currentCell;
+          if (updates.variant && updates.variant !== currentCell.variant) {
+            // When variant changes, create new cell config
+            switch (updates.variant) {
+              case "select":
+              case "multi-select":
+                newCell = { variant: updates.variant, options: [] };
+                break;
+              case "number":
+                newCell = { variant: updates.variant };
+                break;
+              case "file":
+                newCell = { variant: updates.variant };
+                break;
+              default:
+                newCell = { variant: updates.variant };
+            }
+          }
+
+          return {
+            ...col,
+            header: updates.label ?? col.header,
+            meta: {
+              ...currentMeta,
+              label: updates.label ?? currentMeta.label,
+              cell: newCell,
+              prompt: updates.prompt ?? currentMeta.prompt,
+            },
+          } as ColumnDef<DataRow>;
+        })
+      );
+    },
+    []
+  );
+
+  const onColumnDelete = React.useCallback((columnId: string) => {
+    setColumns((prev) => prev.filter((col) => col.id !== columnId));
+  }, []);
+
+  const onEnrichColumn = React.useCallback(
+    (_columnId: string, _prompt: string) => {
+      // TODO: integrate with AI chat to enrich column data using the prompt
+      // This would trigger the AI to process data for this column
+      console.log(`Enrich column ${_columnId} with prompt: ${_prompt}`);
+    },
+    []
+  );
+
   return (
     <>
       <DataGridImpl
@@ -338,6 +403,9 @@ export default function DataGridPage() {
         onRowsDelete={onRowsDelete}
         onFilesUpload={onFilesUpload}
         onFilesDelete={onFilesDelete}
+        onColumnUpdate={onColumnUpdate}
+        onColumnDelete={onColumnDelete}
+        onEnrichColumn={onEnrichColumn}
         height={windowSize.height - 48}
         tableMetaRef={tableMetaRef}
       />
