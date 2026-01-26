@@ -1,15 +1,17 @@
 import { streamChatResponse } from "@/ai/response/stream-chat-response";
 
 import type { GenerateModeChatUIMessage } from "@/ai/messages/types";
+import type { SelectionContext } from "@/lib/selection-context";
 
 type BodyData = {
   messages: GenerateModeChatUIMessage[];
   gatewayApiKey?: string;
+  selectionContext?: SelectionContext;
 };
 
 export async function POST(request: Request) {
   const bodyData = (await request.json()) as BodyData;
-  const { messages, gatewayApiKey } = bodyData;
+  const { messages, gatewayApiKey, selectionContext } = bodyData;
 
   // Local dev: always use env key. Production: use client key
   const apiKey =
@@ -21,5 +23,5 @@ export async function POST(request: Request) {
     return new Response("Gateway API key is required", { status: 400 });
   }
 
-  return streamChatResponse(messages, apiKey);
+  return streamChatResponse(messages, apiKey, selectionContext ?? null);
 }

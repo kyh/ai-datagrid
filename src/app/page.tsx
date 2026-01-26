@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Chat } from "@/components/chat/chat";
 import type { CellUpdate } from "@/lib/data-grid-types";
+import type { SelectionContext } from "@/lib/selection-context";
+import { parseCellKey } from "@/lib/data-grid";
 
 type DataType = "people" | "blank";
 
@@ -238,29 +240,67 @@ export default function DataGridPage() {
 
   const onDataEnriched = React.useCallback(
     (updates: CellUpdate[]) => {
-      // Use tableMeta's onDataUpdate if available, otherwise update data directly
-      if (tableMetaRef.current?.onDataUpdate) {
-        tableMetaRef.current.onDataUpdate(updates);
-      } else {
-        // Fallback: update data directly
-        setData((prev) => {
-          const newData = [...prev];
-          for (const update of updates) {
-            // Ensure row exists
-            while (newData.length <= update.rowIndex) {
-              newData.push(config.createNewRow());
-            }
-            const row = newData[update.rowIndex];
-            if (row) {
-              (row as Record<string, unknown>)[update.columnId] = update.value;
-            }
+      // Update data directly - can't use tableMetaRef as state may be stale during streaming
+      setData((prev) => {
+        const newData = [...prev];
+        for (const update of updates) {
+          // Ensure row exists
+          while (newData.length <= update.rowIndex) {
+            newData.push({} as DataRow);
           }
-          return newData;
-        });
-      }
+          const row = newData[update.rowIndex];
+          if (row) {
+            (row as Record<string, unknown>)[update.columnId] = update.value;
+          }
+        }
+        return newData;
+      });
     },
-    [config]
+    []
   );
+
+  const getSelectionContext = React.useCallback((): SelectionContext | null => {
+    const selectionState = tableMetaRef.current?.selectionState;
+    if (!selectionState || selectionState.selectedCells.size === 0) {
+      return null;
+    }
+
+    const selectedCells: Array<{ rowIndex: number; columnId: string }> = [];
+    const rowSet = new Set<number>();
+    const colSet = new Set<string>();
+
+    for (const cellKey of selectionState.selectedCells) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      selectedCells.push({ rowIndex, columnId });
+      rowSet.add(rowIndex);
+      colSet.add(columnId);
+    }
+
+    const rows = Array.from(rowSet).sort((a, b) => a - b);
+    const cols = Array.from(colSet);
+
+    // Get column metadata for the selected columns
+    const currentColumns: SelectionContext["currentColumns"] = columns
+      .filter((col) => col.id && cols.includes(col.id))
+      .map((col) => ({
+        id: col.id ?? "",
+        label:
+          (col.meta as { label?: string } | undefined)?.label ?? col.id ?? "",
+        variant:
+          (col.meta as { cell?: { variant?: string } } | undefined)?.cell
+            ?.variant ?? "short-text",
+      }));
+
+    return {
+      selectedCells,
+      bounds: {
+        minRow: rows[0] ?? 0,
+        maxRow: rows[rows.length - 1] ?? 0,
+        columns: cols,
+      },
+      currentColumns,
+    };
+  }, [columns]);
 
   return (
     <>
@@ -304,6 +344,7 @@ export default function DataGridPage() {
       <Chat
         onColumnsGenerated={onColumnsGenerated}
         onDataEnriched={onDataEnriched}
+        getSelectionContext={getSelectionContext}
       />
     </>
   );

@@ -3,10 +3,8 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
-  InputGroupText,
   InputGroupTextarea,
 } from "../ui/input-group";
-import { Separator } from "../ui/separator";
 import { toast } from "sonner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -15,6 +13,7 @@ import { useChat } from "@ai-sdk/react";
 import type { DataPart } from "@/ai/messages/data-parts";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CellUpdate } from "@/lib/data-grid-types";
+import type { SelectionContext } from "@/lib/selection-context";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { z } from "zod";
 import { columnDefinitionSchema } from "@/ai/messages/data-parts";
@@ -24,11 +23,13 @@ import { GenerateModeChatUIMessage } from "@/ai/messages/types";
 interface ChatProps {
   onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
+  getSelectionContext?: () => SelectionContext | null;
 }
 
 export const Chat = ({
   onColumnsGenerated,
   onDataEnriched,
+  getSelectionContext,
 }: ChatProps = {}) => {
   const filterFn = getFilterFn();
   // AI Prompt state
@@ -198,9 +199,13 @@ export const Chat = ({
       e.preventDefault();
       if (!input.trim() || isLoading) return;
 
-      const buildRequestBody = () => ({
-        ...(apiKey ? { gatewayApiKey: apiKey } : {}),
-      });
+      const buildRequestBody = () => {
+        const selectionContext = getSelectionContext?.() ?? null;
+        return {
+          ...(apiKey ? { gatewayApiKey: apiKey } : {}),
+          ...(selectionContext ? { selectionContext } : {}),
+        };
+      };
 
       try {
         sendMessage({ text: input }, { body: buildRequestBody() });
@@ -246,11 +251,9 @@ export const Chat = ({
               >
                 <KeyIcon className="size-3" />
               </InputGroupButton>
-              <InputGroupText className="ml-auto">52% used</InputGroupText>
-              <Separator orientation="vertical" className="h-4!" />
               <InputGroupButton
                 variant="default"
-                className="rounded-full"
+                className="ml-auto rounded-full"
                 size="icon-xs"
                 type="submit"
                 disabled={!input.trim() || isLoading}

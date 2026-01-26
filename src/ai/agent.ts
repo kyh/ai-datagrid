@@ -12,6 +12,7 @@ import { z } from "zod";
 import { columnDefinitionSchema, type DataPart } from "./messages/data-parts";
 import type { Metadata } from "./messages/metadata";
 import { updateCellSchema } from "@/lib/data-grid-schema";
+import type { SelectionContext } from "@/lib/selection-context";
 import generatePrompt from "./response/stream-chat-response-prompt";
 
 // -----------------------------------------------------------------------------
@@ -240,7 +241,47 @@ export type SpreadsheetAgentUIMessage = UIMessage<
 type CreateAgentParams = {
   gatewayApiKey: string;
   writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
+  selectionContext: SelectionContext | null;
 };
+
+/**
+ * Builds selection mode instructions to append to the system prompt.
+ */
+function buildSelectionModeInstructions(
+  selectionContext: SelectionContext
+): string {
+  const { bounds, currentColumns } = selectionContext;
+  const columnIds = currentColumns.map((c) => c.id).join(", ");
+  const columnDetails = currentColumns
+    .map((c) => `  - ${c.id}: "${c.label}" (${c.variant})`)
+    .join("\n");
+
+  return `
+
+# Selection Mode Active
+
+The user has selected specific cells in the spreadsheet. You MUST follow these rules:
+
+## Selected Region
+- Rows: ${bounds.minRow} to ${bounds.maxRow} (${bounds.maxRow - bounds.minRow + 1} row${bounds.maxRow - bounds.minRow + 1 !== 1 ? "s" : ""})
+- Columns: ${bounds.columns.join(", ")}
+
+## Available Columns
+${columnDetails}
+
+## CRITICAL RULES
+
+1. **DO NOT generate new columns** - Use ONLY the existing column IDs from: [${columnIds}]
+2. **Only populate the selected rows** - Row indices ${bounds.minRow} to ${bounds.maxRow} only
+3. **Map data semantically** - Choose which existing columns to populate based on what makes sense for the user's request
+4. **Skip the generateColumns tool** - It is NOT needed when selection mode is active
+
+## Example
+If user selects columns A, B, C (rows 0-4) and asks "fill with restaurants":
+- Use enrichData tool ONLY
+- Populate rows 0-4 with restaurant data
+- Map restaurant name to column A, address to column B, etc. (based on column labels/types)`;
+}
 
 /**
  * Creates a spreadsheet agent with the AI SDK v6 ToolLoopAgent abstraction.
@@ -255,6 +296,7 @@ type CreateAgentParams = {
 export function createSpreadsheetAgent({
   gatewayApiKey,
   writer,
+  selectionContext,
 }: CreateAgentParams) {
   const model = createGateway({
     apiKey:
@@ -263,9 +305,14 @@ export function createSpreadsheetAgent({
         : gatewayApiKey,
   })("openai/gpt-5.1-instant");
 
+  // Build dynamic instructions based on selection context
+  const instructions = selectionContext
+    ? generatePrompt + buildSelectionModeInstructions(selectionContext)
+    : generatePrompt;
+
   return new ToolLoopAgent({
     model,
-    instructions: generatePrompt,
+    instructions,
     tools: createTools({ writer }),
     stopWhen: stepCountIs(5),
     toolChoice: "required",
