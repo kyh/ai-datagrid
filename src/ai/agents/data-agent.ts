@@ -103,13 +103,7 @@ function createEnrichDataTool({ writer }: WriterParams) {
       writer.write({
         id: toolCallId,
         type: "data-enrich-data",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AI SDK data part typing limitation
-        data: {
-          "enrich-data": {
-            updates,
-            status: "done",
-          },
-        } as any,
+        data: { updates, status: "done" },
       });
 
       const uniqueRows = new Set(updates.map((u) => u.rowIndex)).size;

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
-import type { DataPart, ColumnUpdate } from "@/ai/messages/data-parts";
+import type { ColumnUpdate } from "@/ai/messages/data-parts";
 import type { ExistingColumn } from "@/ai/agents/table-agent";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CellUpdate } from "@/lib/data-grid-types";
@@ -86,19 +86,17 @@ export const Chat = ({
           JSON.stringify(dataPart, null, 2),
         );
         try {
-          const data = dataPart.data as DataPart;
-          if (!data) {
+          if (!dataPart.data) {
             console.log("[Chat] No data in dataPart");
             return;
           }
 
           // Handle generate-columns data part
-          if (data && "generate-columns" in data && data["generate-columns"]) {
-            const columnsData = data["generate-columns"];
-            if (columnsData.columns && onColumnsGenerated) {
+          if (dataPart.type === "data-generate-columns") {
+            if (dataPart.data.columns && onColumnsGenerated) {
               // Convert column definitions to ColumnDef format
               type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
-              const columns: ColumnDef<unknown>[] = columnsData.columns.map(
+              const columns: ColumnDef<unknown>[] = dataPart.data.columns.map(
                 (col: ColumnDefinition): ColumnDef<unknown> => {
                   const baseMeta = {
                     label: col.label,
@@ -177,55 +175,36 @@ export const Chat = ({
           }
 
           // Handle update-columns data part
-          if (data && "update-columns" in data && data["update-columns"]) {
-            const updateData = data["update-columns"];
-            if (
-              updateData.updates &&
-              updateData.updates.length > 0 &&
-              onColumnsUpdated
-            ) {
-              onColumnsUpdated(updateData.updates);
+          if (dataPart.type === "data-update-columns") {
+            const { updates } = dataPart.data;
+            if (updates && updates.length > 0 && onColumnsUpdated) {
+              onColumnsUpdated(updates);
               toast.success(
-                `Updated ${updateData.updates.length} column${
-                  updateData.updates.length !== 1 ? "s" : ""
-                }`,
+                `Updated ${updates.length} column${updates.length !== 1 ? "s" : ""}`,
               );
             }
           }
 
           // Handle delete-columns data part
-          if (data && "delete-columns" in data && data["delete-columns"]) {
-            const deleteData = data["delete-columns"];
-            if (
-              deleteData.columnIds &&
-              deleteData.columnIds.length > 0 &&
-              onColumnsDeleted
-            ) {
-              onColumnsDeleted(deleteData.columnIds);
+          if (dataPart.type === "data-delete-columns") {
+            const { columnIds } = dataPart.data;
+            if (columnIds && columnIds.length > 0 && onColumnsDeleted) {
+              onColumnsDeleted(columnIds);
               toast.success(
-                `Deleted ${deleteData.columnIds.length} column${
-                  deleteData.columnIds.length !== 1 ? "s" : ""
-                }`,
+                `Deleted ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`,
               );
             }
           }
 
           // Handle enrich-data data part
-          if (data && "enrich-data" in data && data["enrich-data"]) {
-            const enrichData = data["enrich-data"];
-            if (
-              enrichData.updates &&
-              enrichData.updates.length > 0 &&
-              onDataEnriched
-            ) {
-              type LocalCellUpdate = z.infer<typeof updateCellSchema>;
-              const updates: CellUpdate[] = enrichData.updates.map(
-                (update: LocalCellUpdate) => ({
-                  rowIndex: update.rowIndex,
-                  columnId: update.columnId,
-                  value: update.value,
-                }),
-              );
+          if (dataPart.type === "data-enrich-data") {
+            const { updates: enrichUpdates } = dataPart.data;
+            if (enrichUpdates && enrichUpdates.length > 0 && onDataEnriched) {
+              const updates: CellUpdate[] = enrichUpdates.map((update) => ({
+                rowIndex: update.rowIndex,
+                columnId: update.columnId,
+                value: update.value,
+              }));
               console.log("[Chat] Calling onDataEnriched with:", updates);
               onDataEnriched(updates);
 
@@ -279,7 +258,7 @@ export const Chat = ({
   }, [input]);
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: { preventDefault: () => void }) => {
       e.preventDefault();
       if (isLoading) return;
       if (!input.trim() && !hasSelection) return;
@@ -343,7 +322,7 @@ export const Chat = ({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if ((input.trim() || hasSelection) && !isLoading) {
-        handleSubmit(e as any);
+        handleSubmit(e);
       }
     }
   };

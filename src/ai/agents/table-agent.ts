@@ -181,13 +181,7 @@ function createGenerateColumnsTool({ writer }: WriterParams) {
       writer.write({
         id: toolCallId,
         type: "data-generate-columns",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AI SDK data part typing limitation
-        data: {
-          "generate-columns": {
-            columns,
-            status: "done",
-          },
-        } as any,
+        data: { columns, status: "done" },
       });
 
       return `Successfully generated ${columns.length} column${
@@ -207,13 +201,7 @@ function createUpdateColumnsTool({ writer }: WriterParams) {
       writer.write({
         id: toolCallId,
         type: "data-update-columns",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AI SDK data part typing limitation
-        data: {
-          "update-columns": {
-            updates,
-            status: "done",
-          },
-        } as any,
+        data: { updates, status: "done" },
       });
 
       return `Successfully updated ${updates.length} column${
@@ -231,13 +219,7 @@ function createDeleteColumnsTool({ writer }: WriterParams) {
       writer.write({
         id: toolCallId,
         type: "data-delete-columns",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AI SDK data part typing limitation
-        data: {
-          "delete-columns": {
-            columnIds,
-            status: "done",
-          },
-        } as any,
+        data: { columnIds, status: "done" },
       });
 
       return `Successfully deleted ${columnIds.length} column${

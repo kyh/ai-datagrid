@@ -54,23 +54,23 @@ const columnDeleteSchema = z.object({
 // Type for column update
 export type ColumnUpdate = z.infer<typeof columnUpdateSchema>;
 
-// Type for the data field in messages
-// All keys are optional - we check which one is present at runtime
+// DataPart maps data type names to their value types
+// Used as the generic parameter for UIMessageStreamWriter and useChat
+// The AI SDK uses this to provide proper type narrowing in onData callback
 export type DataPart = {
-  "generate-columns"?: {
+  "generate-columns": {
     columns: z.infer<typeof columnDefinitionSchema>[];
     status: "done";
   };
-  "update-columns"?: {
+  "update-columns": {
     updates: ColumnUpdate[];
     status: "done";
   };
-  "delete-columns"?: {
+  "delete-columns": {
     columnIds: string[];
     status: "done";
   };
-  "enrich-data"?: {
-    // Reuse updateCellSchema from data-grid-schema
+  "enrich-data": {
     updates: z.infer<typeof updateCellSchema>[];
     status: "done";
   };
