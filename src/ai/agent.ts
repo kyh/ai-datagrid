@@ -286,7 +286,8 @@ ${columnDetails}
 2. Update ONLY rows ${bounds.minRow} to ${bounds.maxRow}
 3. Follow column INSTRUCTIONS (if provided) to generate appropriate values
 4. Generate realistic, meaningful data - NEVER return empty strings
-5. Call enrichData tool with your updates immediately
+5. Call enrichData tool ONCE PER CELL - each call should update exactly ONE cell
+6. Stop after all cells are updated
 
 ## Example Call
 If column ID is "A" (not "name"), you MUST use:
@@ -318,7 +319,7 @@ export function createGenerateAgent({
     instructions: generatePrompt,
     tools: { generateColumns: createGenerateColumnsTool({ writer }) },
     stopWhen: stepCountIs(5),
-    toolChoice: "required",
+    toolChoice: "auto",
   });
 }
 
@@ -341,12 +342,18 @@ export function createEnrichAgent({
 
   const instructions = buildEnrichInstructions(selectionContext);
 
+  // Calculate max steps: one per cell + buffer for completion
+  const { bounds } = selectionContext;
+  const numRows = bounds.maxRow - bounds.minRow + 1;
+  const numCols = bounds.columns.length;
+  const maxSteps = numRows * numCols + 2;
+
   return new ToolLoopAgent({
     model,
     instructions,
     tools: { enrichData: createEnrichDataTool({ writer }) },
-    stopWhen: stepCountIs(5),
-    toolChoice: "required",
+    stopWhen: stepCountIs(maxSteps),
+    toolChoice: "auto",
   });
 }
 
