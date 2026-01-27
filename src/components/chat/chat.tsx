@@ -1,4 +1,4 @@
-import { ArrowUpIcon, KeyIcon } from "lucide-react";
+import { KeyIcon, SparklesIcon } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -24,16 +24,25 @@ interface ChatProps {
   onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
   getSelectionContext?: () => SelectionContext | null;
+  onGeneratingCellsChange?: (cells: Set<string>) => void;
+  hasSelection?: boolean;
 }
 
 export const Chat = ({
   onColumnsGenerated,
   onDataEnriched,
   getSelectionContext,
+  onGeneratingCellsChange,
+  hasSelection = false,
 }: ChatProps = {}) => {
   const filterFn = getFilterFn();
   // AI Prompt state
   const [input, setInput] = useState("");
+  const [enrichProgress, setEnrichProgress] = useState<{
+    total: number;
+    completed: number;
+  } | null>(null);
+  const generatingCellsRef = useRef<Set<string>>(new Set());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, , removeApiKey] = useLocalStorage<string>(
     GATEWAY_API_KEY_STORAGE_KEY,
@@ -62,9 +71,13 @@ export const Chat = ({
       }
     },
     onData: (dataPart) => {
+      console.log("[Chat] onData received:", JSON.stringify(dataPart, null, 2));
       try {
         const data = dataPart.data as DataPart;
-        if (!data) return;
+        if (!data) {
+          console.log("[Chat] No data in dataPart");
+          return;
+        }
 
         // Handle generate-columns data part
         if (data && "generate-columns" in data && data["generate-columns"]) {
@@ -153,7 +166,7 @@ export const Chat = ({
         // Handle enrich-data data part
         if (data && "enrich-data" in data && data["enrich-data"]) {
           const enrichData = data["enrich-data"];
-          if (enrichData.updates && onDataEnriched) {
+          if (enrichData.updates && enrichData.updates.length > 0 && onDataEnriched) {
             type LocalCellUpdate = z.infer<typeof updateCellSchema>;
             const updates: CellUpdate[] = enrichData.updates.map(
               (update: LocalCellUpdate) => ({
@@ -162,7 +175,27 @@ export const Chat = ({
                 value: update.value,
               })
             );
+            console.log("[Chat] Calling onDataEnriched with:", updates);
             onDataEnriched(updates);
+
+            // Remove completed cells from generating set
+            for (const update of updates) {
+              const cellKey = `${update.rowIndex}:${update.columnId}`;
+              generatingCellsRef.current.delete(cellKey);
+            }
+            onGeneratingCellsChange?.(new Set(generatingCellsRef.current));
+
+            // Update progress
+            setEnrichProgress((prev) => {
+              if (!prev) return null;
+              const newCompleted = prev.completed + updates.length;
+              // Clear progress when done
+              if (newCompleted >= prev.total) {
+                return null;
+              }
+              return { ...prev, completed: newCompleted };
+            });
+
             toast.success(
               `Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`
             );
@@ -198,10 +231,25 @@ export const Chat = ({
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!input.trim() || isLoading) return;
+      if (isLoading) return;
+      if (!input.trim() && !hasSelection) return;
+
+      const selectionContext = getSelectionContext?.() ?? null;
+
+      // Set generating cells before sending
+      if (selectionContext) {
+        const cellKeys = new Set(
+          selectionContext.selectedCells.map(
+            (c) => `${c.rowIndex}:${c.columnId}`
+          )
+        );
+        console.log("[Chat] Setting generating cells:", [...cellKeys]);
+        generatingCellsRef.current = cellKeys;
+        onGeneratingCellsChange?.(cellKeys);
+        setEnrichProgress({ total: cellKeys.size, completed: 0 });
+      }
 
       const buildRequestBody = () => {
-        const selectionContext = getSelectionContext?.() ?? null;
         return {
           ...(apiKey ? { gatewayApiKey: apiKey } : {}),
           ...(selectionContext ? { selectionContext } : {}),
@@ -209,20 +257,20 @@ export const Chat = ({
       };
 
       try {
-        sendMessage({ text: input }, { body: buildRequestBody() });
+        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
         setInput("");
       } catch {
-        sendMessage({ text: input }, { body: buildRequestBody() });
+        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
         setInput("");
       }
     },
-    [input, isLoading, apiKey, sendMessage, setInput, getSelectionContext]
+    [input, isLoading, hasSelection, apiKey, sendMessage, setInput, getSelectionContext, onGeneratingCellsChange]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (input.trim() && !isLoading) {
+      if ((input.trim() || hasSelection) && !isLoading) {
         handleSubmit(e as any);
       }
     }
@@ -230,7 +278,22 @@ export const Chat = ({
 
   return (
     <>
-      <div className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 w-full max-w-lg">
+      <div className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 w-full max-w-lg" data-grid-chat>
+        {enrichProgress && (
+          <div className="mb-2 px-4">
+            <div className="text-xs text-muted-foreground mb-1">
+              {enrichProgress.completed}/{enrichProgress.total} cells
+            </div>
+            <div className="h-1 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{
+                  width: `${(enrichProgress.completed / enrichProgress.total) * 100}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <InputGroup className="border border-border/50 supports-backdrop-filter:bg-background/80 bg-background/95 backdrop-blur shadow rounded-[1.25rem]">
             <InputGroupTextarea
@@ -255,12 +318,12 @@ export const Chat = ({
               <InputGroupButton
                 variant="default"
                 className="ml-auto rounded-full"
-                size="icon-xs"
+                size="sm"
                 type="submit"
-                disabled={!input.trim() || isLoading}
+                disabled={(!input.trim() && !hasSelection) || isLoading}
               >
-                <ArrowUpIcon />
-                <span className="sr-only">Send</span>
+                {hasSelection ? "Enrich" : "Generate"}
+                <SparklesIcon className="size-3" />
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>

@@ -42,6 +42,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   readOnly: boolean;
   stretchColumns: boolean;
   adjustLayout: boolean;
+  generatingCells: Set<string>;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -144,6 +145,11 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if generatingCells changed (reference check)
+  if (prev.generatingCells !== next.generatingCells) {
+    return false;
+  }
+
   // Skip re-render - props are equal
   return true;
 }) as typeof DataGridRowImpl;
@@ -166,6 +172,7 @@ function DataGridRowImpl<TData>({
   readOnly,
   stretchColumns,
   adjustLayout,
+  generatingCells,
   className,
   style,
   ref,
@@ -238,6 +245,9 @@ function DataGridRowImpl<TData>({
 
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
+        const isGenerating = generatingCells.has(
+          getCellKey(virtualRowIndex, columnId)
+        );
 
         const nextCell = visibleCells[colIndex + 1];
         const isLastColumn = colIndex === visibleCells.length - 1;
@@ -285,6 +295,7 @@ function DataGridRowImpl<TData>({
                 isSelected={isCellSelected}
                 isSearchMatch={isSearchMatch}
                 isActiveSearchMatch={isActiveSearchMatch}
+                isGenerating={isGenerating}
                 readOnly={readOnly}
               />
             )}

@@ -196,6 +196,8 @@ function createEnrichDataTool({ writer }: WriterParams) {
       updates: z.array(updateCellSchema),
     }),
     execute: async ({ updates }, { toolCallId }) => {
+      console.log("[EnrichDataTool] Called with updates:", JSON.stringify(updates, null, 2));
+
       writer.write({
         id: toolCallId,
         type: "data-enrich-data",
@@ -208,9 +210,11 @@ function createEnrichDataTool({ writer }: WriterParams) {
       });
 
       const uniqueRows = new Set(updates.map((u) => u.rowIndex)).size;
-      return `Successfully updated ${updates.length} cell${
+      const result = `Successfully updated ${updates.length} cell${
         updates.length !== 1 ? "s" : ""
       } across ${uniqueRows} row${uniqueRows !== 1 ? "s" : "s"}.`;
+      console.log("[EnrichDataTool] Result:", result);
+      return result;
     },
   });
 }
@@ -245,59 +249,63 @@ type CreateAgentParams = {
 };
 
 /**
- * Builds selection mode instructions to append to the system prompt.
+ * Builds focused enrich instructions for the enrich agent.
+ * This prompt emphasizes exact column ID usage and includes column prompts.
  */
-function buildSelectionModeInstructions(
-  selectionContext: SelectionContext
-): string {
+function buildEnrichInstructions(selectionContext: SelectionContext): string {
+  console.log("[buildEnrichInstructions] Building instructions for:", JSON.stringify(selectionContext, null, 2));
   const { bounds, currentColumns } = selectionContext;
-  const columnIds = currentColumns.map((c) => c.id).join(", ");
+
   const columnDetails = currentColumns
-    .map((c) => `  - ${c.id}: "${c.label}" (${c.variant})`)
+    .map((c) => {
+      let detail = `- Column ID: "${c.id}" | Label: "${c.label}" | Type: ${c.variant}`;
+      if (c.prompt) {
+        detail += `\n  INSTRUCTIONS: "${c.prompt}"`;
+      }
+      return detail;
+    })
     .join("\n");
 
-  return `
+  const exactIds = currentColumns.map((c) => `"${c.id}"`).join(", ");
 
-# Selection Mode Active
+  const instructions = `You are a data enrichment assistant. Your ONLY job is to populate cells with data using the enrichData tool.
 
-The user has selected specific cells in the spreadsheet. You MUST follow these rules:
+## CRITICAL: Use EXACT Column IDs
+The column IDs below are case-sensitive. You MUST use them EXACTLY as shown.
+DO NOT use column labels as IDs. DO NOT modify or kebab-case the IDs.
 
 ## Selected Region
 - Rows: ${bounds.minRow} to ${bounds.maxRow} (${bounds.maxRow - bounds.minRow + 1} row${bounds.maxRow - bounds.minRow + 1 !== 1 ? "s" : ""})
-- Columns: ${bounds.columns.join(", ")}
+- Column IDs to use: [${exactIds}]
 
-## Available Columns
+## Columns to Populate
 ${columnDetails}
 
-## CRITICAL RULES
+## STRICT RULES
+1. Use ONLY these exact column IDs: [${exactIds}]
+2. Update ONLY rows ${bounds.minRow} to ${bounds.maxRow}
+3. Follow column INSTRUCTIONS (if provided) to generate appropriate values
+4. Generate realistic, meaningful data - NEVER return empty strings
+5. Call enrichData tool with your updates immediately
 
-1. **DO NOT generate new columns** - Use ONLY the existing column IDs from: [${columnIds}]
-2. **Only populate the selected rows** - Row indices ${bounds.minRow} to ${bounds.maxRow} only
-3. **Map data semantically** - Choose which existing columns to populate based on what makes sense for the user's request
-4. **Skip the generateColumns tool** - It is NOT needed when selection mode is active
+## Example Call
+If column ID is "A" (not "name"), you MUST use:
+{ "rowIndex": 0, "columnId": "A", "value": "John Doe" }
+NOT:
+{ "rowIndex": 0, "columnId": "name", "value": "John Doe" }`;
 
-## Example
-If user selects columns A, B, C (rows 0-4) and asks "fill with restaurants":
-- Use enrichData tool ONLY
-- Populate rows 0-4 with restaurant data
-- Map restaurant name to column A, address to column B, etc. (based on column labels/types)`;
+  console.log("[buildEnrichInstructions] Final instructions:\n", instructions);
+  return instructions;
 }
 
 /**
- * Creates a spreadsheet agent with the AI SDK v6 ToolLoopAgent abstraction.
- *
- * The agent is configured with:
- * - Model: OpenAI GPT-5.1 via Vercel Gateway
- * - Instructions: Spreadsheet assistant system prompt
- * - Tools: generateColumns and enrichData
- * - Step limit: 5 steps max
- * - Tool choice: Required (always use a tool)
+ * Creates a generate-only agent for column creation.
+ * Used when no selection context exists (generate flow).
  */
-export function createSpreadsheetAgent({
+export function createGenerateAgent({
   gatewayApiKey,
   writer,
-  selectionContext,
-}: CreateAgentParams) {
+}: Omit<CreateAgentParams, "selectionContext">) {
   const model = createGateway({
     apiKey:
       gatewayApiKey === process.env.SECRET_KEY
@@ -305,16 +313,40 @@ export function createSpreadsheetAgent({
         : gatewayApiKey,
   })("openai/gpt-5.1-instant");
 
-  // Build dynamic instructions based on selection context
-  const instructions = selectionContext
-    ? generatePrompt + buildSelectionModeInstructions(selectionContext)
-    : generatePrompt;
-
   return new ToolLoopAgent({
     model,
-    instructions,
-    tools: createTools({ writer }),
+    instructions: generatePrompt,
+    tools: { generateColumns: createGenerateColumnsTool({ writer }) },
     stopWhen: stepCountIs(5),
     toolChoice: "required",
   });
 }
+
+/**
+ * Creates an enrich-only agent for data population.
+ * Used when selection context exists (enrich flow).
+ * Has focused instructions with exact column IDs and prompts.
+ */
+export function createEnrichAgent({
+  gatewayApiKey,
+  writer,
+  selectionContext,
+}: CreateAgentParams & { selectionContext: SelectionContext }) {
+  const model = createGateway({
+    apiKey:
+      gatewayApiKey === process.env.SECRET_KEY
+        ? process.env.AI_GATEWAY_API_KEY
+        : gatewayApiKey,
+  })("openai/gpt-5.1-instant");
+
+  const instructions = buildEnrichInstructions(selectionContext);
+
+  return new ToolLoopAgent({
+    model,
+    instructions,
+    tools: { enrichData: createEnrichDataTool({ writer }) },
+    stopWhen: stepCountIs(5),
+    toolChoice: "required",
+  });
+}
+

@@ -55,6 +55,76 @@ export interface CellUpdate {
   value: unknown;
 }
 
+/**
+ * Discriminated union for type-safe cell values.
+ * Use this for internal operations where type safety is needed.
+ * CellUpdate keeps `value: unknown` for runtime boundaries.
+ */
+export type TypedCellValue =
+  | { variant: "short-text"; value: string }
+  | { variant: "long-text"; value: string }
+  | { variant: "number"; value: number }
+  | { variant: "date"; value: string }
+  | { variant: "checkbox"; value: boolean }
+  | { variant: "select"; value: string }
+  | { variant: "multi-select"; value: string[] }
+  | { variant: "url"; value: string }
+  | { variant: "file"; value: FileCellData[] };
+
+/**
+ * Validates that a value matches the expected type for a given cell variant.
+ * Returns true if the value is valid for the variant, false otherwise.
+ */
+export function validateCellValue(
+  variant: CellOpts["variant"],
+  value: unknown
+): boolean {
+  if (value === null || value === undefined) {
+    return true; // Allow null/undefined for all variants
+  }
+
+  switch (variant) {
+    case "short-text":
+    case "long-text":
+    case "date":
+    case "url":
+      return typeof value === "string";
+
+    case "number":
+      return typeof value === "number" && !Number.isNaN(value);
+
+    case "checkbox":
+      return typeof value === "boolean";
+
+    case "select":
+      return typeof value === "string";
+
+    case "multi-select":
+      return (
+        Array.isArray(value) && value.every((item) => typeof item === "string")
+      );
+
+    case "file":
+      return (
+        Array.isArray(value) &&
+        value.every(
+          (item) =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof item.id === "string" &&
+            typeof item.name === "string" &&
+            typeof item.size === "number" &&
+            typeof item.type === "string"
+        )
+      );
+
+    default: {
+      const _exhaustive: never = variant;
+      return false;
+    }
+  }
+}
+
 declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
@@ -138,6 +208,12 @@ declare module "@tanstack/react-table" {
     ) => void;
     onColumnDelete?: (columnId: string) => void;
     onEnrichColumn?: (columnId: string, prompt: string) => void;
+    onColumnAdd?: (config: {
+      label: string;
+      variant: CellOpts["variant"];
+      prompt: string;
+      insertAfterColumnId?: string;
+    }) => void;
   }
 }
 
@@ -208,6 +284,7 @@ export interface DataGridCellProps<TData> {
   isSelected: boolean;
   isSearchMatch: boolean;
   isActiveSearchMatch: boolean;
+  isGenerating: boolean;
   readOnly: boolean;
 }
 

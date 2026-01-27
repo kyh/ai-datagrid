@@ -18,6 +18,7 @@ import { cn } from "@/components/ui/utils";
 import type { Direction } from "@/lib/data-grid-types";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
+const EMPTY_GENERATING_CELLS_SET = new Set<string>();
 
 interface DataGridProps<TData>
   extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
@@ -54,6 +55,8 @@ export function DataGrid<TData>({
   height = 600,
   stretchColumns = false,
   className,
+  hasSelection: _hasSelection,
+  generatingCells,
   ...props
 }: DataGridProps<TData>) {
   const rows = table.getRowModel().rows;
@@ -233,6 +236,7 @@ export function DataGrid<TData>({
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}
                 adjustLayout={adjustLayout}
+                generatingCells={generatingCells ?? EMPTY_GENERATING_CELLS_SET}
               />
             );
           })}

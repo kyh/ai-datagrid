@@ -6,7 +6,7 @@ import {
 
 import type { GenerateModeChatUIMessage } from "../messages/types";
 import type { SelectionContext } from "@/lib/selection-context";
-import { createSpreadsheetAgent } from "../agent";
+import { createGenerateAgent, createEnrichAgent } from "../agent";
 
 /**
  * Streams a chat response using the AI SDK v6 Agent abstraction.
@@ -22,16 +22,19 @@ export const streamChatResponse = async (
   gatewayApiKey: string,
   selectionContext: SelectionContext | null
 ) => {
+  console.log("[streamChatResponse] Called with selectionContext:", JSON.stringify(selectionContext, null, 2));
+
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
       originalMessages: messages,
       execute: async ({ writer }) => {
-        const agent = createSpreadsheetAgent({
-          gatewayApiKey,
-          writer,
-          selectionContext,
-        });
+        // Use specialized agent based on selection context
+        console.log("[streamChatResponse] Creating agent, hasSelectionContext:", !!selectionContext);
+        const agent = selectionContext
+          ? createEnrichAgent({ gatewayApiKey, writer, selectionContext })
+          : createGenerateAgent({ gatewayApiKey, writer });
 
+        console.log("[streamChatResponse] Starting agent stream");
         const result = await agent.stream({
           messages: await convertToModelMessages(messages),
         });

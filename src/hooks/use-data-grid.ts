@@ -142,6 +142,12 @@ interface UseDataGridProps<TData>
   ) => void;
   onColumnDelete?: (columnId: string) => void;
   onEnrichColumn?: (columnId: string, prompt: string) => void;
+  onColumnAdd?: (config: {
+    label: string;
+    variant: import("@/lib/data-grid-types").CellOpts["variant"];
+    prompt: string;
+    insertAfterColumnId?: string;
+  }) => void;
   rowHeight?: RowHeightValue;
   onRowHeightChange?: (rowHeight: RowHeightValue) => void;
   overscan?: number;
@@ -152,6 +158,7 @@ interface UseDataGridProps<TData>
   enableSearch?: boolean;
   enablePaste?: boolean;
   readOnly?: boolean;
+  generatingCells?: Set<string>;
 }
 
 function useDataGrid<TData>({
@@ -161,6 +168,7 @@ function useDataGrid<TData>({
   overscan = OVERSCAN,
   dir: dirProp,
   initialState,
+  generatingCells,
   ...props
 }: UseDataGridProps<TData>) {
   const dir = useDirection(dirProp);
@@ -343,6 +351,8 @@ function useDataGrid<TData>({
     prevCellSelectionMapRef.current = stableMap;
     return stableMap;
   }, [selectionState.selectedCells, prevCellSelectionMapRef]);
+
+  const hasSelection = selectionState.selectedCells.size > 0;
 
   const columnIds = React.useMemo(() => {
     return columns
@@ -2170,6 +2180,7 @@ function useDataGrid<TData>({
       onColumnUpdate: propsRef.current.onColumnUpdate,
       onColumnDelete: propsRef.current.onColumnDelete,
       onEnrichColumn: propsRef.current.onEnrichColumn,
+      onColumnAdd: propsRef.current.onColumnAdd,
     };
   }, [
     propsRef,
@@ -2260,7 +2271,7 @@ function useDataGrid<TData>({
     tableRef.current = table;
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnSizingInfo and columnSizing are used for calculating the column size vars
+  // biome-ignore lint/correctness/useExhaustiveDependencies: columnSizingInfo, columnSizing, and columns are used for calculating the column size vars
   const columnSizeVars = React.useMemo(() => {
     const headers = table.getFlatHeaders();
     const colSizes: { [key: string]: number } = {};
@@ -2269,7 +2280,7 @@ function useDataGrid<TData>({
       colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
     }
     return colSizes;
-  }, [table.getState().columnSizingInfo, table.getState().columnSizing]);
+  }, [table.getState().columnSizingInfo, table.getState().columnSizing, columns]);
 
   const adjustLayout = React.useMemo(() => {
     const columnPinning = table.getState().columnPinning;
@@ -3298,12 +3309,14 @@ function useDataGrid<TData>({
       searchMatchesByRow,
       activeSearchMatch,
       cellSelectionMap,
+      hasSelection,
       focusedCell,
       editingCell,
       rowHeight,
       contextMenu,
       pasteDialog,
       adjustLayout,
+      generatingCells,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
     }),
     [
@@ -3320,6 +3333,7 @@ function useDataGrid<TData>({
       searchMatchesByRow,
       activeSearchMatch,
       cellSelectionMap,
+      hasSelection,
       focusedCell,
       editingCell,
       rowHeight,
@@ -3327,6 +3341,7 @@ function useDataGrid<TData>({
       pasteDialog,
       adjustLayout,
       onRowAdd,
+      generatingCells,
     ]
   );
 }

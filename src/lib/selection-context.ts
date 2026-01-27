@@ -13,5 +13,6 @@ export interface SelectionContext {
     id: string;
     label: string;
     variant: string;
+    prompt?: string;
   }>;
 }

@@ -22,6 +22,7 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isSearchMatch !== next.isSearchMatch) return false;
   if (prev.isActiveSearchMatch !== next.isActiveSearchMatch) return false;
+  if (prev.isGenerating !== next.isGenerating) return false;
   if (prev.readOnly !== next.readOnly) return false;
   if (prev.rowIndex !== next.rowIndex) return false;
   if (prev.columnId !== next.columnId) return false;
@@ -55,9 +56,16 @@ function DataGridCellImpl<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
   rowHeight,
 }: DataGridCellProps<TData>) {
+  if (isGenerating) {
+    return (
+      <span className="text-muted-foreground italic text-sm">Generating...</span>
+    );
+  }
+
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 
@@ -109,6 +117,7 @@ function DataGridCellImpl<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      isGenerating={isGenerating}
       readOnly={readOnly}
     />
   );

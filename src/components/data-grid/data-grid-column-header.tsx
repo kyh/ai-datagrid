@@ -10,13 +10,12 @@ import type {
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  ChevronRightIcon,
   EllipsisVerticalIcon,
   EyeOffIcon,
   PinIcon,
   PinOffIcon,
-  SettingsIcon,
   TableColumnsSplitIcon,
+  TrashIcon,
   XIcon,
 } from "lucide-react";
 import * as React from "react";
@@ -32,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -45,14 +45,11 @@ import {
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellOpts } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
-import { DataGridColumnConfig } from "./data-grid-column-config";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
   header: Header<TData, TValue>;
   table: Table<TData>;
-  onColumnRename?: (columnId: string, newLabel: string) => void;
-  onColumnTypeChange?: (columnId: string, newType: CellOpts["variant"]) => void;
   onColumnInsert?: (columnId: string, position: "left" | "right") => void;
 }
 
@@ -76,8 +73,6 @@ export function DataGridColumnHeader<TData, TValue>({
   table,
   className,
   onPointerDown,
-  onColumnRename,
-  onColumnTypeChange,
   onColumnInsert,
   ...props
 }: DataGridColumnHeaderProps<TData, TValue>) {
@@ -88,8 +83,19 @@ export function DataGridColumnHeader<TData, TValue>({
       ? column.columnDef.header
       : column.id;
 
+  const currentPrompt = column.columnDef.meta?.prompt ?? "";
+
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [editedLabel, setEditedLabel] = React.useState(label);
+  const [editedPrompt, setEditedPrompt] = React.useState(currentPrompt);
+
+  // Sync local state when props change (e.g., after external update)
+  React.useEffect(() => {
+    if (!popoverOpen) {
+      setEditedLabel(label);
+      setEditedPrompt(currentPrompt);
+    }
+  }, [label, currentPrompt, popoverOpen]);
 
   const isAnyColumnResizing =
     table.getState().columnSizingInfo.isResizingColumn;
@@ -146,34 +152,26 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const handleLabelBlur = React.useCallback(() => {
-    if (editedLabel !== label && onColumnRename) {
-      onColumnRename(column.id, editedLabel);
-    }
-  }, [editedLabel, label, column.id, onColumnRename]);
+  const handlePopoverOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (!open) {
+        // Save changes on close
+        const updates: { label?: string; prompt?: string } = {};
 
-  const handleLabelKeyDown = React.useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.currentTarget.blur();
-      } else if (e.key === "Escape") {
-        setEditedLabel(label);
-        e.currentTarget.blur();
+        if (editedLabel !== label) {
+          updates.label = editedLabel;
+        }
+        if (editedPrompt !== currentPrompt) {
+          updates.prompt = editedPrompt;
+        }
+        if (Object.keys(updates).length > 0) {
+          table.options.meta?.onColumnUpdate?.(column.id, updates);
+        }
       }
+      setPopoverOpen(open);
     },
-    [label]
+    [editedLabel, editedPrompt, label, currentPrompt, column.id, table.options.meta]
   );
-
-  const handleTypeSelect = React.useCallback(
-    (newType: CellOpts["variant"]) => {
-      onColumnTypeChange?.(column.id, newType);
-    },
-    [column.id, onColumnTypeChange]
-  );
-
-  React.useEffect(() => {
-    setEditedLabel(label);
-  }, [label]);
 
   return (
     <>
@@ -186,7 +184,7 @@ export function DataGridColumnHeader<TData, TValue>({
         {...props}
       >
         {/* Popover trigger for name/type editing */}
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <Popover open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
           <PopoverTrigger
             className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2 hover:bg-accent/40 data-[state=open]:bg-accent/40"
             onPointerDown={(e) => {
@@ -218,34 +216,26 @@ export function DataGridColumnHeader<TData, TValue>({
               <Input
                 value={editedLabel}
                 onChange={(e) => setEditedLabel(e.target.value)}
-                onBlur={handleLabelBlur}
-                onKeyDown={handleLabelKeyDown}
                 className="h-8"
                 autoFocus
               />
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground">Data Type</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-transparent px-2 text-sm hover:bg-accent/40">
-                    <span>{currentTypeLabel}</span>
-                    <ChevronRightIcon className="size-4 text-muted-foreground" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" sideOffset={4}>
-                    {COLUMN_TYPE_OPTIONS.map((option) => {
-                      const variant = getColumnVariant(option.value);
-                      return (
-                        <DropdownMenuItem
-                          key={option.value}
-                          onSelect={() => handleTypeSelect(option.value)}
-                          className="[&_svg]:text-muted-foreground"
-                        >
-                          {variant && <variant.icon className="size-4" />}
-                          {option.label}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex h-8 w-full items-center gap-2 rounded-md border bg-muted/50 px-2 text-sm">
+                  {columnVariant && (
+                    <columnVariant.icon className="size-4 text-muted-foreground" />
+                  )}
+                  <span>{currentTypeLabel}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Prompt</span>
+                <Textarea
+                  value={editedPrompt}
+                  onChange={(e) => setEditedPrompt(e.target.value)}
+                  placeholder="Instructions for AI enrichment, e.g., 'Find the company website'"
+                  className="min-h-16 resize-none text-sm"
+                />
               </div>
             </div>
           </PopoverContent>
@@ -362,26 +352,14 @@ export function DataGridColumnHeader<TData, TValue>({
                 </DropdownMenuItem>
               </>
             )}
-            {(table.options.meta?.onColumnUpdate ||
-              table.options.meta?.onEnrichColumn) && (
-              <>
-                <DropdownMenuSeparator />
-                <DataGridColumnConfig
-                  column={column}
-                  table={table}
-                  onColumnUpdate={table.options.meta?.onColumnUpdate}
-                  onColumnDelete={table.options.meta?.onColumnDelete}
-                  onEnrichColumn={table.options.meta?.onEnrichColumn}
-                >
-                  <DropdownMenuItem
-                    className="[&_svg]:text-muted-foreground"
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    <SettingsIcon />
-                    Configure
-                  </DropdownMenuItem>
-                </DataGridColumnConfig>
-              </>
+            {table.options.meta?.onColumnDelete && (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+                onSelect={() => table.options.meta?.onColumnDelete?.(column.id)}
+              >
+                <TrashIcon />
+                Remove column
+              </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>

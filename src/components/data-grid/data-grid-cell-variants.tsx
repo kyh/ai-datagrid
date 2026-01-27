@@ -57,6 +57,7 @@ export function ShortTextCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
@@ -215,6 +216,7 @@ export function LongTextCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
@@ -410,6 +412,7 @@ export function NumberCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as number;
@@ -539,6 +542,7 @@ export function UrlCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
@@ -754,6 +758,7 @@ export function CheckboxCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: Omit<DataGridCellProps<TData>, "isEditing">) {
   const initialValue = cell.getValue() as boolean;
@@ -866,6 +871,7 @@ export function SelectCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
@@ -997,6 +1003,7 @@ export function MultiSelectCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const cellValue = React.useMemo(() => {
@@ -1281,6 +1288,7 @@ export function DateCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
@@ -1391,6 +1399,7 @@ export function FileCell<TData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  isGenerating,
   readOnly,
 }: DataGridCellProps<TData>) {
   const cellValue = React.useMemo(

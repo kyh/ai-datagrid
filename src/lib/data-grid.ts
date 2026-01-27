@@ -260,7 +260,8 @@ export function getIsInPopover(element: unknown): boolean {
   return (
     element instanceof Element &&
     (element.closest("[data-grid-cell-editor]") ||
-      element.closest("[data-grid-popover]")) !== null
+      element.closest("[data-grid-popover]") ||
+      element.closest("[data-grid-chat]")) !== null
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Column, ColumnDef, Table } from "@tanstack/react-table";
+import type { Column, Table } from "@tanstack/react-table";
 import { SparklesIcon, TrashIcon } from "lucide-react";
 import * as React from "react";
 
@@ -11,13 +11,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellOpts } from "@/lib/data-grid-types";
@@ -95,10 +88,6 @@ export function DataGridColumnConfig<TData>({
     setConfig((prev) => ({ ...prev, label: e.target.value }));
   };
 
-  const handleVariantChange = (value: CellOpts["variant"]) => {
-    setConfig((prev) => ({ ...prev, variant: value }));
-  };
-
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setConfig((prev) => ({ ...prev, prompt: e.target.value }));
   };
@@ -112,9 +101,6 @@ export function DataGridColumnConfig<TData>({
 
     if (config.label !== currentLabel) {
       updates.label = config.label;
-    }
-    if (config.variant !== currentVariant) {
-      updates.variant = config.variant;
     }
     if (config.prompt !== currentPrompt) {
       updates.prompt = config.prompt;
@@ -160,37 +146,18 @@ export function DataGridColumnConfig<TData>({
           />
         </div>
 
-        {/* Data Type */}
+        {/* Data Type (readonly) */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Data Type</label>
-          <Select value={config.variant} onValueChange={handleVariantChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue>
-                {columnVariant && (
-                  <span className="flex items-center gap-2">
-                    <columnVariant.icon className="size-4 text-muted-foreground" />
-                    {CELL_VARIANTS.find((v) => v.value === config.variant)
-                      ?.label ?? config.variant}
-                  </span>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {CELL_VARIANTS.map((variant) => {
-                const variantInfo = getColumnVariant(variant.value);
-                return (
-                  <SelectItem key={variant.value} value={variant.value}>
-                    <span className="flex items-center gap-2">
-                      {variantInfo && (
-                        <variantInfo.icon className="size-4 text-muted-foreground" />
-                      )}
-                      {variant.label}
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/50 text-sm">
+            {columnVariant && (
+              <columnVariant.icon className="size-4 text-muted-foreground" />
+            )}
+            <span>
+              {CELL_VARIANTS.find((v) => v.value === config.variant)?.label ??
+                config.variant}
+            </span>
+          </div>
         </div>
 
         {/* AI Prompt */}

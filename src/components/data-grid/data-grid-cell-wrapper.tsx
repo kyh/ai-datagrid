@@ -7,7 +7,7 @@ import { cn } from "@/components/ui/utils";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
 interface DataGridCellWrapperProps<TData>
-  extends DataGridCellProps<TData>,
+  extends Omit<DataGridCellProps<TData>, "isGenerating">,
     React.ComponentProps<"div"> {}
 
 export function DataGridCellWrapper<TData>({

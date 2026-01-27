@@ -168,21 +168,271 @@ function generatePerson(id: number): Person {
 }
 
 export function getPeopleData(): Person[] {
-  return Array.from({ length: 10000 }, (_, i) => generatePerson(i + 1));
+  return Array.from({ length: 50 }, (_, i) => generatePerson(i + 1));
 }
 
 export const initialData = getPeopleData();
 
-export interface BlankRow {
+// Company data
+export interface Company {
+  id: string;
+  name?: string;
+  industry?: string;
+  employees?: number;
+  website?: string;
+  description?: string;
+  revenue?: number;
+  founded?: string;
+  headquarters?: string;
+  status?: string;
+  isPublic?: boolean;
+}
+
+export const industries = [
+  "Technology",
+  "Healthcare",
+  "Finance",
+  "Retail",
+  "Manufacturing",
+  "Education",
+  "Energy",
+  "Real Estate",
+] as const;
+
+export const companyStatuses = [
+  "Active",
+  "Acquired",
+  "IPO",
+  "Private",
+  "Startup",
+] as const;
+
+const companyDescriptions = [
+  "A leading provider of innovative solutions in the industry. Known for exceptional customer service and cutting-edge technology.",
+  "Fast-growing company focused on disrupting traditional markets with modern approaches and sustainable practices.",
+  "Established enterprise with a strong track record of delivering value to shareholders and customers alike.",
+  "Innovative startup backed by top-tier venture capital firms, focused on solving complex industry challenges.",
+  "Global corporation with operations in over 50 countries, serving millions of customers worldwide.",
+];
+
+function generateCompany(id: number): Company {
+  const companyName = faker.company.name();
+
+  return {
+    id: faker.string.nanoid(8),
+    name: companyName,
+    industry: faker.helpers.arrayElement(industries),
+    employees: faker.number.int({ min: 10, max: 50000 }),
+    website: `https://${companyName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+    description: faker.helpers.arrayElement(companyDescriptions),
+    revenue: faker.number.int({ min: 100000, max: 10000000000 }),
+    founded: faker.date
+      .between({ from: "1950-01-01", to: "2023-01-01" })
+      .getFullYear()
+      .toString(),
+    headquarters: `${faker.location.city()}, ${faker.location.country()}`,
+    status: faker.helpers.arrayElement(companyStatuses),
+    isPublic: faker.datatype.boolean(),
+  };
+}
+
+export function getCompaniesData(): Company[] {
+  return Array.from({ length: 50 }, (_, i) => generateCompany(i + 1));
+}
+
+export function getCompaniesColumns(
+  filterFn: FilterFn<Company>
+): ColumnDef<Company>[] {
+  return [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          aria-label="Select all"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      ),
+      cell: ({ row, table }) => (
+        <Checkbox
+          aria-label="Select row"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => {
+            const onRowSelect = table.options.meta?.onRowSelect;
+            if (onRowSelect) {
+              onRowSelect(row.index, !!value, false);
+            } else {
+              row.toggleSelected(!!value);
+            }
+          }}
+          onClick={(event: React.MouseEvent) => {
+            if (event.shiftKey) {
+              event.preventDefault();
+              const onRowSelect = table.options.meta?.onRowSelect;
+              if (onRowSelect) {
+                onRowSelect(row.index, !row.getIsSelected(), true);
+              }
+            }
+          }}
+        />
+      ),
+      size: 40,
+      enableSorting: false,
+      enableHiding: false,
+      enableResizing: false,
+    },
+    {
+      id: "name",
+      accessorKey: "name",
+      header: "Company Name",
+      minSize: 200,
+      filterFn,
+      meta: {
+        label: "Company Name",
+        cell: {
+          variant: "short-text",
+        },
+      },
+    },
+    {
+      id: "industry",
+      accessorKey: "industry",
+      header: "Industry",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Industry",
+        cell: {
+          variant: "select",
+          options: industries.map((i) => ({ label: i, value: i })),
+        },
+      },
+    },
+    {
+      id: "employees",
+      accessorKey: "employees",
+      header: "Employees",
+      minSize: 120,
+      filterFn,
+      meta: {
+        label: "Employees",
+        cell: {
+          variant: "number",
+          min: 1,
+          max: 1000000,
+        },
+      },
+    },
+    {
+      id: "website",
+      accessorKey: "website",
+      header: "Website",
+      minSize: 200,
+      filterFn,
+      meta: {
+        label: "Website",
+        cell: {
+          variant: "url",
+        },
+      },
+    },
+    {
+      id: "description",
+      accessorKey: "description",
+      header: "Description",
+      minSize: 200,
+      filterFn,
+      meta: {
+        label: "Description",
+        cell: {
+          variant: "long-text",
+        },
+      },
+    },
+    {
+      id: "revenue",
+      accessorKey: "revenue",
+      header: "Revenue",
+      minSize: 140,
+      filterFn,
+      meta: {
+        label: "Revenue",
+        cell: {
+          variant: "number",
+        },
+      },
+    },
+    {
+      id: "founded",
+      accessorKey: "founded",
+      header: "Founded",
+      minSize: 100,
+      filterFn,
+      meta: {
+        label: "Founded",
+        cell: {
+          variant: "short-text",
+        },
+      },
+    },
+    {
+      id: "headquarters",
+      accessorKey: "headquarters",
+      header: "Headquarters",
+      minSize: 180,
+      filterFn,
+      meta: {
+        label: "Headquarters",
+        cell: {
+          variant: "short-text",
+        },
+      },
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: "Status",
+      minSize: 120,
+      filterFn,
+      meta: {
+        label: "Status",
+        cell: {
+          variant: "select",
+          options: companyStatuses.map((s) => ({ label: s, value: s })),
+        },
+      },
+    },
+    {
+      id: "isPublic",
+      accessorKey: "isPublic",
+      header: "Public",
+      minSize: 100,
+      filterFn,
+      meta: {
+        label: "Public",
+        cell: {
+          variant: "checkbox",
+        },
+      },
+    },
+  ];
+}
+
+export interface SpreadsheetRow {
   [key: string]: string;
 }
 
-export function getBlankData(): BlankRow[] {
+export function getSpreadsheetData(): SpreadsheetRow[] {
   const columns = Array.from({ length: 26 }, (_, i) =>
     String.fromCharCode(65 + i)
   ); // A-Z
   return Array.from({ length: 1001 }, () => {
-    const row: BlankRow = {};
+    const row: SpreadsheetRow = {};
     for (const col of columns) {
       row[col] = "";
     }
@@ -190,9 +440,9 @@ export function getBlankData(): BlankRow[] {
   });
 }
 
-export function getBlankColumns(
-  filterFn: FilterFn<BlankRow>
-): ColumnDef<BlankRow>[] {
+export function getSpreadsheetColumns(
+  filterFn: FilterFn<SpreadsheetRow>
+): ColumnDef<SpreadsheetRow>[] {
   const columns = Array.from({ length: 26 }, (_, i) =>
     String.fromCharCode(65 + i)
   ); // A-Z
