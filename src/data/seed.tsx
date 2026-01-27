@@ -241,7 +241,7 @@ export function getCompaniesData(): Company[] {
 }
 
 export function getCompaniesColumns(
-  filterFn: FilterFn<Company>
+  filterFn: FilterFn<Company>,
 ): ColumnDef<Company>[] {
   return [
     {
@@ -429,7 +429,7 @@ export interface SpreadsheetRow {
 
 export function getSpreadsheetData(): SpreadsheetRow[] {
   const columns = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i)
+    String.fromCharCode(65 + i),
   ); // A-Z
   return Array.from({ length: 1001 }, () => {
     const row: SpreadsheetRow = {};
@@ -441,10 +441,10 @@ export function getSpreadsheetData(): SpreadsheetRow[] {
 }
 
 export function getSpreadsheetColumns(
-  filterFn: FilterFn<SpreadsheetRow>
+  filterFn: FilterFn<SpreadsheetRow>,
 ): ColumnDef<SpreadsheetRow>[] {
   const columns = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i)
+    String.fromCharCode(65 + i),
   ); // A-Z
 
   return [
@@ -482,7 +482,7 @@ export function getSpreadsheetColumns(
 }
 
 export function getPeopleColumns(
-  filterFn: FilterFn<Person>
+  filterFn: FilterFn<Person>,
 ): ColumnDef<Person>[] {
   return [
     {
@@ -753,7 +753,10 @@ function generateArticle(): Article {
     category: faker.helpers.arrayElement(articleCategories),
     publishDate: faker.date.recent({ days: 90 }).toISOString().split("T")[0],
     readTime: faker.number.int({ min: 2, max: 15 }),
-    tags: faker.helpers.arrayElements(articleTags, { min: 1, max: 3 }) as string[],
+    tags: faker.helpers.arrayElements(articleTags, {
+      min: 1,
+      max: 3,
+    }) as string[],
     excerpt: faker.lorem.paragraph(),
     url: `https://example.com/articles/${faker.helpers.slugify(title).toLowerCase()}`,
     isFeatured: faker.datatype.boolean({ probability: 0.2 }),
@@ -765,7 +768,7 @@ export function getArticlesData(): Article[] {
 }
 
 export function getArticlesColumns(
-  filterFn: FilterFn<Article>
+  filterFn: FilterFn<Article>,
 ): ColumnDef<Article>[] {
   return [
     {
@@ -945,7 +948,7 @@ export function getRecipesData(): Recipe[] {
 }
 
 export function getRecipesColumns(
-  filterFn: FilterFn<Recipe>
+  filterFn: FilterFn<Recipe>,
 ): ColumnDef<Recipe>[] {
   return [
     {
@@ -978,7 +981,8 @@ export function getRecipesColumns(
   ];
 }
 
-export const recipeDemoPrompt = "Add columns for cuisine type, difficulty level, prep time (minutes), cooking time (minutes), and calories. Then fill in appropriate values for each recipe.";
+export const recipeDemoPrompt =
+  "Add columns for cuisine type, difficulty level, prep time (minutes), cooking time (minutes), and calories";
 
 // Email Demo - Enrich cells demo
 export interface EmailContact {
@@ -1011,7 +1015,7 @@ export function getEmailContactsData(): EmailContact[] {
 }
 
 export function getEmailContactsColumns(
-  filterFn: FilterFn<EmailContact>
+  filterFn: FilterFn<EmailContact>,
 ): ColumnDef<EmailContact>[] {
   return [
     {
@@ -1117,4 +1121,3 @@ export function getEmailContactsColumns(
     },
   ];
 }
-

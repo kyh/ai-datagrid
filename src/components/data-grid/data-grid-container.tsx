@@ -13,6 +13,7 @@ import { useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { Chat } from "@/components/chat/chat";
 import type { CellOpts, CellUpdate } from "@/lib/data-grid-types";
+import type { ColumnUpdate } from "@/ai/messages/data-parts";
 import type { SelectionContext } from "@/lib/selection-context";
 import { parseCellKey } from "@/lib/data-grid";
 
@@ -184,8 +185,34 @@ export function DataGridContainer<T>({
 
   const onColumnsGenerated = React.useCallback(
     (newColumns: ColumnDef<unknown>[]) => {
-      const systemColumns = columns.filter((col) => col.id === "select" || col.id === "index");
-      setColumns([...systemColumns, ...newColumns] as ColumnDef<T>[]);
+      // Get IDs of existing non-system columns
+      const existingIds = new Set(
+        columns
+          .filter((col) => col.id !== "select" && col.id !== "index" && col.id !== "add-column")
+          .map((col) => col.id)
+      );
+
+      // Filter out new columns that would duplicate existing ones
+      const columnsToAdd = newColumns.filter((col) => !existingIds.has(col.id));
+      const newColumnIds = columnsToAdd.map((col) => col.id).filter(Boolean) as string[];
+
+      // Add new columns
+      setColumns((prev) => [...prev, ...columnsToAdd] as ColumnDef<T>[]);
+
+      // Initialize new column properties in existing data rows
+      if (newColumnIds.length > 0) {
+        setData((prev) =>
+          prev.map((row) => {
+            const updates: Record<string, unknown> = {};
+            for (const colId of newColumnIds) {
+              if (!(colId in (row as Record<string, unknown>))) {
+                updates[colId] = undefined;
+              }
+            }
+            return Object.keys(updates).length > 0 ? { ...row, ...updates } : row;
+          })
+        );
+      }
     },
     [columns]
   );
@@ -211,6 +238,64 @@ export function DataGridContainer<T>({
     },
     [columns]
   );
+
+  const onColumnsUpdated = React.useCallback(
+    (updates: ColumnUpdate[]) => {
+      for (const update of updates) {
+        onColumnUpdate(update.columnId, {
+          label: update.label,
+          variant: update.variant as CellOpts["variant"],
+          prompt: update.prompt,
+        });
+        // Handle options update for select/multi-select
+        if (update.options) {
+          setColumns((prev) =>
+            prev.map((col): ColumnDef<T> => {
+              if (col.id !== update.columnId) return col;
+              const currentMeta = col.meta ?? {};
+              const currentCell = currentMeta.cell as { variant: string; options?: Array<{ label: string; value: string }> } | undefined;
+              if (currentCell && (currentCell.variant === "select" || currentCell.variant === "multi-select")) {
+                return {
+                  ...col,
+                  meta: {
+                    ...currentMeta,
+                    cell: {
+                      ...currentCell,
+                      options: update.options,
+                    },
+                  },
+                } as ColumnDef<T>;
+              }
+              return col;
+            })
+          );
+        }
+      }
+    },
+    [onColumnUpdate]
+  );
+
+  const onColumnsDeleted = React.useCallback(
+    (columnIds: string[]) => {
+      for (const columnId of columnIds) {
+        onColumnDelete(columnId);
+      }
+    },
+    [onColumnDelete]
+  );
+
+  const getExistingColumns = React.useCallback(() => {
+    return columns
+      .filter((col) => col.id && col.id !== "select" && col.id !== "index" && col.id !== "add-column")
+      .map((col) => {
+        const meta = col.meta as { label?: string; prompt?: string } | undefined;
+        return {
+          id: col.id ?? "",
+          label: meta?.label ?? col.id ?? "",
+          prompt: meta?.prompt,
+        };
+      });
+  }, [columns]);
 
   const getSelectionContext = React.useCallback((): SelectionContext | null => {
     const selectionState = tableMeta.selectionState;
@@ -267,8 +352,11 @@ export function DataGridContainer<T>({
         <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
         <Chat
           onColumnsGenerated={onColumnsGenerated}
+          onColumnsUpdated={onColumnsUpdated}
+          onColumnsDeleted={onColumnsDeleted}
           onDataEnriched={onDataEnriched}
           getSelectionContext={getSelectionContext}
+          getExistingColumns={getExistingColumns}
           hasSelection={hasSelection}
           initialInput={initialChatInput}
         />

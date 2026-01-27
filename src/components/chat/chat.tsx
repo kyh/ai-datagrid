@@ -10,7 +10,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
-import type { DataPart } from "@/ai/messages/data-parts";
+import type { DataPart, ColumnUpdate } from "@/ai/messages/data-parts";
+import type { ExistingColumn } from "@/ai/agents/table-agent";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CellUpdate } from "@/lib/data-grid-types";
 import type { SelectionContext } from "@/lib/selection-context";
@@ -23,16 +24,22 @@ import { useDataGridStore } from "@/stores/data-grid-store";
 
 interface ChatProps {
   onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
+  onColumnsUpdated?: (updates: ColumnUpdate[]) => void;
+  onColumnsDeleted?: (columnIds: string[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
   getSelectionContext?: () => SelectionContext | null;
+  getExistingColumns?: () => ExistingColumn[];
   hasSelection?: boolean;
   initialInput?: string;
 }
 
 export const Chat = ({
   onColumnsGenerated,
+  onColumnsUpdated,
+  onColumnsDeleted,
   onDataEnriched,
   getSelectionContext,
+  getExistingColumns,
   hasSelection = false,
   initialInput = "",
 }: ChatProps = {}) => {
@@ -48,167 +55,209 @@ export const Chat = ({
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, , removeApiKey] = useLocalStorage<string>(
     GATEWAY_API_KEY_STORAGE_KEY,
-    ""
+    "",
   );
 
-  const { sendMessage, status, setMessages } = useChat<GenerateModeChatUIMessage>({
-    id: apiKey,
-    onError: (error) => {
-      const errorMessage = error.message?.toLowerCase() || "";
-      const isAuthError =
-        errorMessage.includes("unauthorized") ||
-        errorMessage.includes("authentication") ||
-        errorMessage.includes("invalid api key") ||
-        errorMessage.includes("401") ||
-        errorMessage.includes("403");
+  const { sendMessage, status, setMessages } =
+    useChat<GenerateModeChatUIMessage>({
+      id: apiKey,
+      onError: (error) => {
+        const errorMessage = error.message?.toLowerCase() || "";
+        const isAuthError =
+          errorMessage.includes("unauthorized") ||
+          errorMessage.includes("authentication") ||
+          errorMessage.includes("invalid api key") ||
+          errorMessage.includes("401") ||
+          errorMessage.includes("403");
 
-      if (isAuthError) {
-        removeApiKey();
-        toast.error(
-          "Invalid API key. Please enter a valid Vercel Gateway API key."
+        if (isAuthError) {
+          removeApiKey();
+          toast.error(
+            "Invalid API key. Please enter a valid Vercel Gateway API key.",
+          );
+          setShowApiKeyModal(true);
+        } else {
+          toast.error(error.message || "Failed to generate block");
+        }
+      },
+      onData: (dataPart) => {
+        console.log(
+          "[Chat] onData received:",
+          JSON.stringify(dataPart, null, 2),
         );
-        setShowApiKeyModal(true);
-      } else {
-        toast.error(error.message || "Failed to generate block");
-      }
-    },
-    onData: (dataPart) => {
-      console.log("[Chat] onData received:", JSON.stringify(dataPart, null, 2));
-      try {
-        const data = dataPart.data as DataPart;
-        if (!data) {
-          console.log("[Chat] No data in dataPart");
-          return;
-        }
-
-        // Handle generate-columns data part
-        if (data && "generate-columns" in data && data["generate-columns"]) {
-          const columnsData = data["generate-columns"];
-          if (columnsData.columns && onColumnsGenerated) {
-            // Convert column definitions to ColumnDef format
-            type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
-            const columns: ColumnDef<unknown>[] = columnsData.columns.map(
-              (col: ColumnDefinition): ColumnDef<unknown> => {
-                const baseMeta = {
-                  label: col.label,
-                };
-
-                // Build cell config based on variant
-                let cellConfig:
-                  | { variant: "short-text" }
-                  | { variant: "long-text" }
-                  | {
-                      variant: "number";
-                      min?: number;
-                      max?: number;
-                      step?: number;
-                    }
-                  | {
-                      variant: "select";
-                      options: Array<{ label: string; value: string }>;
-                    }
-                  | {
-                      variant: "multi-select";
-                      options: Array<{ label: string; value: string }>;
-                    }
-                  | { variant: "checkbox" }
-                  | { variant: "date" }
-                  | { variant: "url" }
-                  | { variant: "file" };
-
-                switch (col.variant) {
-                  case "number":
-                    cellConfig = {
-                      variant: "number",
-                      ...(col.min !== undefined && { min: col.min }),
-                      ...(col.max !== undefined && { max: col.max }),
-                      ...(col.step !== undefined && { step: col.step }),
-                    };
-                    break;
-                  case "select":
-                  case "multi-select":
-                    cellConfig = {
-                      variant: col.variant,
-                      options: col.options || [],
-                    };
-                    break;
-                  case "short-text":
-                  case "long-text":
-                  case "checkbox":
-                  case "date":
-                  case "url":
-                  case "file":
-                    cellConfig = { variant: col.variant };
-                    break;
-                }
-
-                return {
-                  id: col.id,
-                  accessorKey: col.id,
-                  header: col.label,
-                  minSize: 180,
-                  filterFn,
-                  meta: {
-                    ...baseMeta,
-                    cell: cellConfig,
-                    ...(col.prompt && { prompt: col.prompt }),
-                  },
-                };
-              }
-            );
-            onColumnsGenerated(columns);
-            toast.success(
-              `Generated ${columns.length} column${
-                columns.length !== 1 ? "s" : ""
-              }`
-            );
+        try {
+          const data = dataPart.data as DataPart;
+          if (!data) {
+            console.log("[Chat] No data in dataPart");
+            return;
           }
-        }
 
-        // Handle enrich-data data part
-        if (data && "enrich-data" in data && data["enrich-data"]) {
-          const enrichData = data["enrich-data"];
-          if (enrichData.updates && enrichData.updates.length > 0 && onDataEnriched) {
-            type LocalCellUpdate = z.infer<typeof updateCellSchema>;
-            const updates: CellUpdate[] = enrichData.updates.map(
-              (update: LocalCellUpdate) => ({
-                rowIndex: update.rowIndex,
-                columnId: update.columnId,
-                value: update.value,
-              })
-            );
-            console.log("[Chat] Calling onDataEnriched with:", updates);
-            onDataEnriched(updates);
+          // Handle generate-columns data part
+          if (data && "generate-columns" in data && data["generate-columns"]) {
+            const columnsData = data["generate-columns"];
+            if (columnsData.columns && onColumnsGenerated) {
+              // Convert column definitions to ColumnDef format
+              type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
+              const columns: ColumnDef<unknown>[] = columnsData.columns.map(
+                (col: ColumnDefinition): ColumnDef<unknown> => {
+                  const baseMeta = {
+                    label: col.label,
+                  };
 
-            // Remove completed cells from generating set
-            for (const update of updates) {
-              const cellKey = `${update.rowIndex}:${update.columnId}`;
-              removeGeneratingCell(cellKey);
+                  // Build cell config based on variant
+                  let cellConfig:
+                    | { variant: "short-text" }
+                    | { variant: "long-text" }
+                    | {
+                        variant: "number";
+                        min?: number;
+                        max?: number;
+                        step?: number;
+                      }
+                    | {
+                        variant: "select";
+                        options: Array<{ label: string; value: string }>;
+                      }
+                    | {
+                        variant: "multi-select";
+                        options: Array<{ label: string; value: string }>;
+                      }
+                    | { variant: "checkbox" }
+                    | { variant: "date" }
+                    | { variant: "url" }
+                    | { variant: "file" };
+
+                  switch (col.variant) {
+                    case "number":
+                      cellConfig = {
+                        variant: "number",
+                        ...(col.min !== undefined && { min: col.min }),
+                        ...(col.max !== undefined && { max: col.max }),
+                        ...(col.step !== undefined && { step: col.step }),
+                      };
+                      break;
+                    case "select":
+                    case "multi-select":
+                      cellConfig = {
+                        variant: col.variant,
+                        options: col.options || [],
+                      };
+                      break;
+                    case "short-text":
+                    case "long-text":
+                    case "checkbox":
+                    case "date":
+                    case "url":
+                    case "file":
+                      cellConfig = { variant: col.variant };
+                      break;
+                  }
+
+                  return {
+                    id: col.id,
+                    accessorKey: col.id,
+                    header: col.label,
+                    minSize: 180,
+                    filterFn,
+                    meta: {
+                      ...baseMeta,
+                      cell: cellConfig,
+                      ...(col.prompt && { prompt: col.prompt }),
+                    },
+                  };
+                },
+              );
+              onColumnsGenerated(columns);
+              toast.success(
+                `Generated ${columns.length} column${
+                  columns.length !== 1 ? "s" : ""
+                }`,
+              );
             }
-
-            // Update progress
-            setEnrichProgress((prev) => {
-              if (!prev) return null;
-              const newCompleted = prev.completed + updates.length;
-              // Clear progress when done
-              if (newCompleted >= prev.total) {
-                return null;
-              }
-              return { ...prev, completed: newCompleted };
-            });
-
-            toast.success(
-              `Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`
-            );
           }
+
+          // Handle update-columns data part
+          if (data && "update-columns" in data && data["update-columns"]) {
+            const updateData = data["update-columns"];
+            if (
+              updateData.updates &&
+              updateData.updates.length > 0 &&
+              onColumnsUpdated
+            ) {
+              onColumnsUpdated(updateData.updates);
+              toast.success(
+                `Updated ${updateData.updates.length} column${
+                  updateData.updates.length !== 1 ? "s" : ""
+                }`,
+              );
+            }
+          }
+
+          // Handle delete-columns data part
+          if (data && "delete-columns" in data && data["delete-columns"]) {
+            const deleteData = data["delete-columns"];
+            if (
+              deleteData.columnIds &&
+              deleteData.columnIds.length > 0 &&
+              onColumnsDeleted
+            ) {
+              onColumnsDeleted(deleteData.columnIds);
+              toast.success(
+                `Deleted ${deleteData.columnIds.length} column${
+                  deleteData.columnIds.length !== 1 ? "s" : ""
+                }`,
+              );
+            }
+          }
+
+          // Handle enrich-data data part
+          if (data && "enrich-data" in data && data["enrich-data"]) {
+            const enrichData = data["enrich-data"];
+            if (
+              enrichData.updates &&
+              enrichData.updates.length > 0 &&
+              onDataEnriched
+            ) {
+              type LocalCellUpdate = z.infer<typeof updateCellSchema>;
+              const updates: CellUpdate[] = enrichData.updates.map(
+                (update: LocalCellUpdate) => ({
+                  rowIndex: update.rowIndex,
+                  columnId: update.columnId,
+                  value: update.value,
+                }),
+              );
+              console.log("[Chat] Calling onDataEnriched with:", updates);
+              onDataEnriched(updates);
+
+              // Remove completed cells from generating set
+              for (const update of updates) {
+                const cellKey = `${update.rowIndex}:${update.columnId}`;
+                removeGeneratingCell(cellKey);
+              }
+
+              // Update progress
+              setEnrichProgress((prev) => {
+                if (!prev) return null;
+                const newCompleted = prev.completed + updates.length;
+                // Clear progress when done
+                if (newCompleted >= prev.total) {
+                  return null;
+                }
+                return { ...prev, completed: newCompleted };
+              });
+
+              toast.success(
+                `Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`,
+              );
+            }
+          }
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to process data part",
+          );
         }
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to process data part"
-        );
-      }
-    },
-  });
+      },
+    });
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -241,8 +290,8 @@ export const Chat = ({
       if (selectionContext) {
         const cellKeys = new Set(
           selectionContext.selectedCells.map(
-            (c) => `${c.rowIndex}:${c.columnId}`
-          )
+            (c) => `${c.rowIndex}:${c.columnId}`,
+          ),
         );
         console.log("[Chat] Setting generating cells:", [...cellKeys]);
         setGeneratingCells(cellKeys);
@@ -250,9 +299,13 @@ export const Chat = ({
       }
 
       const buildRequestBody = () => {
+        const existingColumns = getExistingColumns?.();
         return {
           ...(apiKey ? { gatewayApiKey: apiKey } : {}),
           ...(selectionContext ? { selectionContext } : {}),
+          ...(existingColumns && existingColumns.length > 0
+            ? { existingColumns }
+            : {}),
         };
       };
 
@@ -260,14 +313,30 @@ export const Chat = ({
       setMessages([]);
 
       try {
-        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
+        sendMessage(
+          { text: input || "Enrich selected cells" },
+          { body: buildRequestBody() },
+        );
         setInput("");
       } catch {
-        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
+        sendMessage(
+          { text: input || "Enrich selected cells" },
+          { body: buildRequestBody() },
+        );
         setInput("");
       }
     },
-    [input, isLoading, hasSelection, apiKey, sendMessage, setInput, getSelectionContext, setGeneratingCells, setMessages]
+    [
+      input,
+      isLoading,
+      hasSelection,
+      apiKey,
+      sendMessage,
+      setInput,
+      getSelectionContext,
+      setGeneratingCells,
+      setMessages,
+    ],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -281,7 +350,10 @@ export const Chat = ({
 
   return (
     <>
-      <div className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 w-full max-w-lg" data-grid-chat>
+      <div
+        className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 w-full max-w-lg"
+        data-grid-chat
+      >
         {enrichProgress && (
           <div className="mb-2 px-4">
             <div className="text-xs text-muted-foreground mb-1">

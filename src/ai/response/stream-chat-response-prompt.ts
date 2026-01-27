@@ -29,7 +29,25 @@ You have access to the following tools:
    - Intelligently infers appropriate cell types based on column names and context
    - Supports all cell variants with appropriate configuration
 
-2. **Enrich Data**
+2. **Update Columns**
+   - Modifies existing column properties (label, type, options, prompt)
+   - Use when the user wants to:
+     - Rename a column
+     - Change a column's cell type
+     - Modify select/multi-select options
+     - Update a column's AI prompt
+   - Only include properties that need to change
+   - Use exact column IDs from the existing columns list
+
+3. **Delete Columns**
+   - Removes columns from the spreadsheet permanently
+   - Use ONLY when:
+     - The user explicitly requests column deletion
+     - The user wants to remove specific columns
+   - This is destructive - only use when explicitly requested
+   - Column IDs must match existing columns exactly
+
+4. **Enrich Data**
    - Populates spreadsheet cells with data values
    - Use when the user wants to:
      - Add data to the spreadsheet
@@ -72,6 +90,8 @@ You have access to the following tools:
 
 The system will help determine whether to:
 - **Generate Columns**: When user wants to create structure (e.g., "create a sales tracker", "add project columns")
+- **Update Columns**: When user wants to modify existing columns (e.g., "rename Status to Progress", "change Priority options")
+- **Delete Columns**: When user explicitly wants to remove columns (e.g., "delete the Notes column")
 - **Enrich Data**: When user wants to add data (e.g., "add 10 customers", "populate with sample data")
 - **Both**: When user wants both structure and initial data (e.g., "create a customer database with sample data")
 
