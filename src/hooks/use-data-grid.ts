@@ -47,6 +47,8 @@ import type {
   SearchState,
   SelectionState,
 } from "@/lib/data-grid-types";
+import { useDataGridStore, type DataGridStore } from "@/stores/data-grid-store";
+import { useShallow } from "zustand/react/shallow";
 
 const DEFAULT_ROW_HEIGHT = "short";
 const OVERSCAN = 6;
@@ -71,47 +73,6 @@ const VALID_BOOLEANS = new Set([
   "checked",
   "unchecked",
 ]);
-
-interface DataGridState {
-  sorting: SortingState;
-  columnFilters: ColumnFiltersState;
-  rowHeight: RowHeightValue;
-  rowSelection: RowSelectionState;
-  selectionState: SelectionState;
-  focusedCell: CellPosition | null;
-  editingCell: CellPosition | null;
-  cutCells: Set<string>;
-  contextMenu: ContextMenuState;
-  searchQuery: string;
-  searchMatches: CellPosition[];
-  matchIndex: number;
-  searchOpen: boolean;
-  lastClickedRowIndex: number | null;
-  pasteDialog: PasteDialogState;
-}
-
-interface DataGridStore {
-  subscribe: (callback: () => void) => () => void;
-  getState: () => DataGridState;
-  setState: <K extends keyof DataGridState>(
-    key: K,
-    value: DataGridState[K]
-  ) => void;
-  notify: () => void;
-  batch: (fn: () => void) => void;
-}
-
-function useStore<T>(
-  store: DataGridStore,
-  selector: (state: DataGridState) => T
-): T {
-  const getSnapshot = React.useCallback(
-    () => selector(store.getState()),
-    [store, selector]
-  );
-
-  return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
-}
 
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
@@ -158,7 +119,6 @@ interface UseDataGridProps<TData>
   enableSearch?: boolean;
   enablePaste?: boolean;
   readOnly?: boolean;
-  generatingCells?: Set<string>;
 }
 
 function useDataGrid<TData>({
@@ -168,7 +128,6 @@ function useDataGrid<TData>({
   overscan = OVERSCAN,
   dir: dirProp,
   initialState,
-  generatingCells,
   ...props
 }: UseDataGridProps<TData>) {
   const dir = useDirection(dirProp);
@@ -205,107 +164,101 @@ function useDataGrid<TData>({
     initialState,
   });
 
-  const listenersRef = useLazyRef(() => new Set<() => void>());
-
-  const stateRef = useLazyRef<DataGridState>(() => {
-    return {
+  // Initialize Zustand store with initial values on first render
+  const initializedRef = React.useRef(false);
+  if (!initializedRef.current) {
+    initializedRef.current = true;
+    // Set initial values from props
+    useDataGridStore.getState().batch({
       sorting: initialState?.sorting ?? [],
       columnFilters: initialState?.columnFilters ?? [],
       rowHeight: rowHeightProp,
       rowSelection: initialState?.rowSelection ?? {},
-      selectionState: {
-        selectedCells: new Set(),
-        selectionRange: null,
-        isSelecting: false,
-      },
-      focusedCell: null,
-      editingCell: null,
-      cutCells: new Set(),
-      contextMenu: {
-        open: false,
-        x: 0,
-        y: 0,
-      },
-      searchQuery: "",
-      searchMatches: [],
-      matchIndex: -1,
-      searchOpen: false,
-      lastClickedRowIndex: null,
-      pasteDialog: {
-        open: false,
-        rowsNeeded: 0,
-        clipboardText: "",
-      },
-    };
-  });
+    });
+  }
 
-  const store = React.useMemo<DataGridStore>(() => {
+  // Store adapter wrapping Zustand with microtask-batched updates
+  // This prevents multiple synchronous state changes from causing multiple re-renders
+  const store = React.useMemo(() => {
+    const zustandStore = useDataGridStore;
+    const pendingUpdates: Partial<DataGridStore> = {};
     let isBatching = false;
-    let pendingNotification = false;
+    let pendingMicrotask = false;
+
+    const flushUpdates = () => {
+      pendingMicrotask = false;
+      if (Object.keys(pendingUpdates).length > 0) {
+        zustandStore.getState().batch({ ...pendingUpdates });
+        for (const key of Object.keys(pendingUpdates)) {
+          delete pendingUpdates[key as keyof typeof pendingUpdates];
+        }
+      }
+    };
+
+    const setStateImpl = <K extends keyof DataGridStore>(key: K, value: DataGridStore[K]) => {
+      (pendingUpdates as Record<K, DataGridStore[K]>)[key] = value;
+
+      if (isBatching) {
+        return; // Will be flushed when batch ends
+      }
+
+      // Schedule microtask to batch rapid updates
+      if (!pendingMicrotask) {
+        pendingMicrotask = true;
+        queueMicrotask(flushUpdates);
+      }
+    };
 
     return {
-      subscribe: (callback) => {
-        listenersRef.current.add(callback);
-        return () => listenersRef.current.delete(callback);
-      },
-      getState: () => stateRef.current,
-      setState: (key, value) => {
-        if (Object.is(stateRef.current[key], value)) return;
-        stateRef.current[key] = value;
-
-        if (isBatching) {
-          pendingNotification = true;
-        } else {
-          if (!pendingNotification) {
-            pendingNotification = true;
-            queueMicrotask(() => {
-              pendingNotification = false;
-              store.notify();
-            });
-          }
-        }
-      },
-      notify: () => {
-        for (const listener of listenersRef.current) {
-          listener();
-        }
-      },
-      batch: (fn) => {
-        if (isBatching) {
-          fn();
-          return;
-        }
-
+      getState: zustandStore.getState,
+      subscribe: zustandStore.subscribe,
+      setState: setStateImpl,
+      batch: (fn: () => void) => {
         isBatching = true;
-        const wasPending = pendingNotification;
-        pendingNotification = false;
-
         try {
           fn();
         } finally {
           isBatching = false;
-          if (pendingNotification || wasPending) {
-            pendingNotification = false;
-            store.notify();
-          }
+          flushUpdates();
         }
       },
     };
-  }, [listenersRef, stateRef]);
+  }, []);
 
-  const focusedCell = useStore(store, (state) => state.focusedCell);
-  const editingCell = useStore(store, (state) => state.editingCell);
-  const selectionState = useStore(store, (state) => state.selectionState);
-  const searchQuery = useStore(store, (state) => state.searchQuery);
-  const searchMatches = useStore(store, (state) => state.searchMatches);
-  const matchIndex = useStore(store, (state) => state.matchIndex);
-  const searchOpen = useStore(store, (state) => state.searchOpen);
-  const sorting = useStore(store, (state) => state.sorting);
-  const columnFilters = useStore(store, (state) => state.columnFilters);
-  const rowSelection = useStore(store, (state) => state.rowSelection);
-  const rowHeight = useStore(store, (state) => state.rowHeight);
-  const contextMenu = useStore(store, (state) => state.contextMenu);
-  const pasteDialog = useStore(store, (state) => state.pasteDialog);
+  // Subscribe to Zustand store state with shallow comparison to minimize re-renders
+  const {
+    focusedCell,
+    editingCell,
+    selectionState,
+    searchQuery,
+    searchMatches,
+    matchIndex,
+    searchOpen,
+    sorting,
+    columnFilters,
+    rowSelection,
+    rowHeight,
+    contextMenu,
+    pasteDialog,
+    generatingCells,
+  } = useDataGridStore(
+    useShallow((s) => ({
+      focusedCell: s.focusedCell,
+      editingCell: s.editingCell,
+      selectionState: s.selectionState,
+      searchQuery: s.searchQuery,
+      searchMatches: s.searchMatches,
+      matchIndex: s.matchIndex,
+      searchOpen: s.searchOpen,
+      sorting: s.sorting,
+      columnFilters: s.columnFilters,
+      rowSelection: s.rowSelection,
+      rowHeight: s.rowHeight,
+      contextMenu: s.contextMenu,
+      pasteDialog: s.pasteDialog,
+      generatingCells: s.generatingCells,
+    }))
+  );
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
@@ -3316,7 +3269,7 @@ function useDataGrid<TData>({
       contextMenu,
       pasteDialog,
       adjustLayout,
-      generatingCells,
+      generatingCells: generatingCells,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
     }),
     [

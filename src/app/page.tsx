@@ -242,10 +242,6 @@ export default function DataGridPage() {
     ReturnType<typeof useDataGrid<DataRow>>["tableMeta"] | null
   >(null);
 
-  const [generatingCells, setGeneratingCells] = React.useState<Set<string>>(
-    () => new Set()
-  );
-
   const onColumnsGenerated = React.useCallback(
     (newColumns: ColumnDef<unknown>[]) => {
       // Replace existing columns with new ones, keeping only system columns like "select" and "index"
@@ -556,8 +552,6 @@ const getSelectionContext = React.useCallback((): SelectionContext | null => {
         onEnrichColumn={onEnrichColumn}
         height={windowSize.height - 48}
         tableMetaRef={tableMetaRef}
-        generatingCells={generatingCells}
-        onGeneratingCellsChange={setGeneratingCells}
         onColumnsGenerated={onColumnsGenerated}
         onDataEnriched={onDataEnriched}
         getSelectionContext={getSelectionContext}
@@ -566,8 +560,7 @@ const getSelectionContext = React.useCallback((): SelectionContext | null => {
   );
 }
 
-interface DataGridDemoImplProps
-  extends Omit<UseDataGridProps<DataRow>, "generatingCells"> {
+interface DataGridDemoImplProps extends UseDataGridProps<DataRow> {
   header: React.ReactNode;
   height: number;
   pinnedColumns: string[];
@@ -575,8 +568,6 @@ interface DataGridDemoImplProps
     ReturnType<typeof useDataGrid<DataRow>>["tableMeta"] | null
   >;
   // Chat-related props
-  generatingCells?: Set<string>;
-  onGeneratingCellsChange?: (cells: Set<string>) => void;
   onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
   getSelectionContext?: () => SelectionContext | null;
@@ -589,8 +580,6 @@ function DataGridImpl({
   tableMetaRef,
   columns,
   onColumnAdd,
-  generatingCells,
-  onGeneratingCellsChange,
   onColumnsGenerated,
   onDataEnriched,
   getSelectionContext,
@@ -619,7 +608,6 @@ function DataGridImpl({
     },
     enableSearch: true,
     enablePaste: true,
-    generatingCells,
     ...props,
   });
 
@@ -656,7 +644,6 @@ function DataGridImpl({
         onColumnsGenerated={onColumnsGenerated}
         onDataEnriched={onDataEnriched}
         getSelectionContext={getSelectionContext}
-        onGeneratingCellsChange={onGeneratingCellsChange}
         hasSelection={hasSelection}
       />
     </div>

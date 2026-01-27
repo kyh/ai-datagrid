@@ -19,12 +19,12 @@ import type { z } from "zod";
 import { columnDefinitionSchema } from "@/ai/messages/data-parts";
 import { updateCellSchema } from "@/lib/data-grid-schema";
 import { GenerateModeChatUIMessage } from "@/ai/messages/types";
+import { useDataGridStore } from "@/stores/data-grid-store";
 
 interface ChatProps {
   onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
   getSelectionContext?: () => SelectionContext | null;
-  onGeneratingCellsChange?: (cells: Set<string>) => void;
   hasSelection?: boolean;
 }
 
@@ -32,9 +32,10 @@ export const Chat = ({
   onColumnsGenerated,
   onDataEnriched,
   getSelectionContext,
-  onGeneratingCellsChange,
   hasSelection = false,
 }: ChatProps = {}) => {
+  // Use Zustand store for generating cells state
+  const { setGeneratingCells, removeGeneratingCell } = useDataGridStore();
   const filterFn = getFilterFn();
   // AI Prompt state
   const [input, setInput] = useState("");
@@ -42,7 +43,6 @@ export const Chat = ({
     total: number;
     completed: number;
   } | null>(null);
-  const generatingCellsRef = useRef<Set<string>>(new Set());
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, , removeApiKey] = useLocalStorage<string>(
     GATEWAY_API_KEY_STORAGE_KEY,
@@ -181,9 +181,8 @@ export const Chat = ({
             // Remove completed cells from generating set
             for (const update of updates) {
               const cellKey = `${update.rowIndex}:${update.columnId}`;
-              generatingCellsRef.current.delete(cellKey);
+              removeGeneratingCell(cellKey);
             }
-            onGeneratingCellsChange?.(new Set(generatingCellsRef.current));
 
             // Update progress
             setEnrichProgress((prev) => {
@@ -244,8 +243,7 @@ export const Chat = ({
           )
         );
         console.log("[Chat] Setting generating cells:", [...cellKeys]);
-        generatingCellsRef.current = cellKeys;
-        onGeneratingCellsChange?.(cellKeys);
+        setGeneratingCells(cellKeys);
         setEnrichProgress({ total: cellKeys.size, completed: 0 });
       }
 
@@ -264,7 +262,7 @@ export const Chat = ({
         setInput("");
       }
     },
-    [input, isLoading, hasSelection, apiKey, sendMessage, setInput, getSelectionContext, onGeneratingCellsChange]
+    [input, isLoading, hasSelection, apiKey, sendMessage, setInput, getSelectionContext, setGeneratingCells]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
