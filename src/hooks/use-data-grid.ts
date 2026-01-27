@@ -164,18 +164,16 @@ function useDataGrid<TData>({
     initialState,
   });
 
-  // Initialize Zustand store with initial values on first render
-  const initializedRef = React.useRef(false);
-  if (!initializedRef.current) {
-    initializedRef.current = true;
-    // Set initial values from props
+  // Initialize Zustand store with initial values on mount
+  React.useEffect(() => {
     useDataGridStore.getState().batch({
       sorting: initialState?.sorting ?? [],
       columnFilters: initialState?.columnFilters ?? [],
       rowHeight: rowHeightProp,
       rowSelection: initialState?.rowSelection ?? {},
     });
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Store adapter wrapping Zustand with microtask-batched updates
   // This prevents multiple synchronous state changes from causing multiple re-renders

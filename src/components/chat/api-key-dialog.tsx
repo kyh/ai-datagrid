@@ -26,14 +26,14 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
     GATEWAY_API_KEY_STORAGE_KEY,
     ""
   );
-  const [apiKeyInput, setApiKeyInput] = React.useState("");
+  const [apiKeyInput, setApiKeyInput] = React.useState(apiKey);
 
-  // Sync input with stored value when dialog opens
-  React.useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       setApiKeyInput(apiKey);
     }
-  }, [open, apiKey]);
+    onOpenChange(nextOpen);
+  };
 
   const handleSaveApiKey = () => {
     if (apiKeyInput.trim()) {
@@ -46,7 +46,7 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Enter Vercel Gateway API Key</DialogTitle>

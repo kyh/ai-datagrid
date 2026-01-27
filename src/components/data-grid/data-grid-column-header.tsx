@@ -89,14 +89,6 @@ export function DataGridColumnHeader<TData, TValue>({
   const [editedLabel, setEditedLabel] = React.useState(label);
   const [editedPrompt, setEditedPrompt] = React.useState(currentPrompt);
 
-  // Sync local state when props change (e.g., after external update)
-  React.useEffect(() => {
-    if (!popoverOpen) {
-      setEditedLabel(label);
-      setEditedPrompt(currentPrompt);
-    }
-  }, [label, currentPrompt, popoverOpen]);
-
   const isAnyColumnResizing =
     table.getState().columnSizingInfo.isResizingColumn;
 
@@ -154,7 +146,11 @@ export function DataGridColumnHeader<TData, TValue>({
 
   const handlePopoverOpenChange = React.useCallback(
     (open: boolean) => {
-      if (!open) {
+      if (open) {
+        // Reset to current values when opening
+        setEditedLabel(label);
+        setEditedPrompt(currentPrompt);
+      } else {
         // Save changes on close
         const updates: { label?: string; prompt?: string } = {};
 

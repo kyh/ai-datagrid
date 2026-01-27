@@ -62,13 +62,16 @@ function DataGridSearchImpl({
 
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
-    if (searchOpen) {
-      requestAnimationFrame(() => {
-        inputRef.current?.focus();
-      });
-    }
-  }, [searchOpen]);
+  // Focus input when search opens
+  const setInputRef = React.useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+      if (node && searchOpen) {
+        requestAnimationFrame(() => node.focus());
+      }
+    },
+    [searchOpen]
+  );
 
   React.useEffect(() => {
     if (!searchOpen) return;
@@ -176,7 +179,7 @@ function DataGridSearchImpl({
           spellCheck={false}
           placeholder="Find in table..."
           className="h-8 w-64"
-          ref={inputRef}
+          ref={setInputRef}
           value={searchQuery}
           onChange={onChange}
           onKeyDown={onKeyDown}

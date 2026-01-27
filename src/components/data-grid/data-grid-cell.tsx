@@ -62,7 +62,9 @@ function DataGridCellImpl<TData>({
 }: DataGridCellProps<TData>) {
   if (isGenerating) {
     return (
-      <span className="text-muted-foreground italic text-sm">Generating...</span>
+      <span className="block size-full px-2 py-1.5 text-muted-foreground italic text-sm">
+        Generating...
+      </span>
     );
   }
 

@@ -49,7 +49,7 @@ export const Chat = ({
     ""
   );
 
-  const { sendMessage, status } = useChat<GenerateModeChatUIMessage>({
+  const { sendMessage, status, setMessages } = useChat<GenerateModeChatUIMessage>({
     id: apiKey,
     onError: (error) => {
       const errorMessage = error.message?.toLowerCase() || "";
@@ -254,6 +254,9 @@ export const Chat = ({
         };
       };
 
+      // Clear previous messages to start fresh
+      setMessages([]);
+
       try {
         sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
         setInput("");
@@ -262,7 +265,7 @@ export const Chat = ({
         setInput("");
       }
     },
-    [input, isLoading, hasSelection, apiKey, sendMessage, setInput, getSelectionContext, setGeneratingCells]
+    [input, isLoading, hasSelection, apiKey, sendMessage, setInput, getSelectionContext, setGeneratingCells, setMessages]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

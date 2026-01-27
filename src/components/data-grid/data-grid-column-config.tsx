@@ -73,16 +73,16 @@ export function DataGridColumnConfig<TData>({
     prompt: currentPrompt,
   });
 
-  // Reset state when popover opens
-  React.useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       setConfig({
         label: currentLabel,
         variant: currentVariant,
         prompt: currentPrompt,
       });
     }
-  }, [open, currentLabel, currentVariant, currentPrompt]);
+    setOpen(nextOpen);
+  };
 
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setConfig((prev) => ({ ...prev, label: e.target.value }));
@@ -127,7 +127,7 @@ export function DataGridColumnConfig<TData>({
   const columnVariant = getColumnVariant(config.variant);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent align="start" className="w-72 space-y-4">
         {/* Column Name */}
