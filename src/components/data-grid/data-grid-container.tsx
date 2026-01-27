@@ -49,6 +49,7 @@ export interface DataGridContainerProps<T> {
   createNewRows: (count: number) => T[];
   pinnedColumns: string[];
   defaultColumnId: string;
+  initialChatInput?: string;
 }
 
 export function DataGridContainer<T>({
@@ -59,6 +60,7 @@ export function DataGridContainer<T>({
   createNewRows,
   pinnedColumns,
   defaultColumnId,
+  initialChatInput,
 }: DataGridContainerProps<T>) {
   const windowSize = useWindowSize({ defaultHeight: 760 });
   const [data, setData] = React.useState<T[]>(initialData);
@@ -268,6 +270,7 @@ export function DataGridContainer<T>({
           onDataEnriched={onDataEnriched}
           getSelectionContext={getSelectionContext}
           hasSelection={hasSelection}
+          initialInput={initialChatInput}
         />
       </div>
     </>

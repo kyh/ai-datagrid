@@ -26,6 +26,7 @@ interface ChatProps {
   onDataEnriched?: (updates: CellUpdate[]) => void;
   getSelectionContext?: () => SelectionContext | null;
   hasSelection?: boolean;
+  initialInput?: string;
 }
 
 export const Chat = ({
@@ -33,12 +34,13 @@ export const Chat = ({
   onDataEnriched,
   getSelectionContext,
   hasSelection = false,
+  initialInput = "",
 }: ChatProps = {}) => {
   // Use Zustand store for generating cells state
   const { setGeneratingCells, removeGeneratingCell } = useDataGridStore();
   const filterFn = getFilterFn();
   // AI Prompt state
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialInput);
   const [enrichProgress, setEnrichProgress] = useState<{
     total: number;
     completed: number;

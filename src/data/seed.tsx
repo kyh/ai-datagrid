@@ -707,3 +707,414 @@ export function getPeopleColumns(
     },
   ];
 }
+
+// Article data
+export interface Article {
+  id: string;
+  title?: string;
+  author?: string;
+  category?: string;
+  publishDate?: string;
+  readTime?: number;
+  tags?: string[];
+  excerpt?: string;
+  url?: string;
+  isFeatured?: boolean;
+}
+
+export const articleCategories = [
+  "Technology",
+  "Business",
+  "Science",
+  "Health",
+  "Entertainment",
+  "Sports",
+  "Politics",
+  "Travel",
+] as const;
+
+export const articleTags = [
+  "Breaking",
+  "Opinion",
+  "Analysis",
+  "Interview",
+  "Review",
+  "Tutorial",
+  "News",
+  "Feature",
+] as const;
+
+function generateArticle(): Article {
+  const title = faker.lorem.sentence({ min: 4, max: 8 }).slice(0, -1);
+  return {
+    id: faker.string.nanoid(8),
+    title,
+    author: faker.person.fullName(),
+    category: faker.helpers.arrayElement(articleCategories),
+    publishDate: faker.date.recent({ days: 90 }).toISOString().split("T")[0],
+    readTime: faker.number.int({ min: 2, max: 15 }),
+    tags: faker.helpers.arrayElements(articleTags, { min: 1, max: 3 }) as string[],
+    excerpt: faker.lorem.paragraph(),
+    url: `https://example.com/articles/${faker.helpers.slugify(title).toLowerCase()}`,
+    isFeatured: faker.datatype.boolean({ probability: 0.2 }),
+  };
+}
+
+export function getArticlesData(): Article[] {
+  return Array.from({ length: 50 }, () => generateArticle());
+}
+
+export function getArticlesColumns(
+  filterFn: FilterFn<Article>
+): ColumnDef<Article>[] {
+  return [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          aria-label="Select all"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      ),
+      cell: ({ row, table }) => (
+        <Checkbox
+          aria-label="Select row"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => {
+            const onRowSelect = table.options.meta?.onRowSelect;
+            if (onRowSelect) {
+              onRowSelect(row.index, !!value, false);
+            } else {
+              row.toggleSelected(!!value);
+            }
+          }}
+          onClick={(event: React.MouseEvent) => {
+            if (event.shiftKey) {
+              event.preventDefault();
+              const onRowSelect = table.options.meta?.onRowSelect;
+              if (onRowSelect) {
+                onRowSelect(row.index, !row.getIsSelected(), true);
+              }
+            }
+          }}
+        />
+      ),
+      size: 40,
+      enableSorting: false,
+      enableHiding: false,
+      enableResizing: false,
+    },
+    {
+      id: "title",
+      accessorKey: "title",
+      header: "Title",
+      minSize: 250,
+      filterFn,
+      meta: {
+        label: "Title",
+        cell: { variant: "short-text" },
+      },
+    },
+    {
+      id: "author",
+      accessorKey: "author",
+      header: "Author",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Author",
+        cell: { variant: "short-text" },
+      },
+    },
+    {
+      id: "category",
+      accessorKey: "category",
+      header: "Category",
+      minSize: 130,
+      filterFn,
+      meta: {
+        label: "Category",
+        cell: {
+          variant: "select",
+          options: articleCategories.map((c) => ({ label: c, value: c })),
+        },
+      },
+    },
+    {
+      id: "publishDate",
+      accessorKey: "publishDate",
+      header: "Published",
+      minSize: 130,
+      filterFn,
+      meta: {
+        label: "Published",
+        cell: { variant: "date" },
+      },
+    },
+    {
+      id: "readTime",
+      accessorKey: "readTime",
+      header: "Read Time (min)",
+      minSize: 120,
+      filterFn,
+      meta: {
+        label: "Read Time",
+        cell: { variant: "number", min: 1, max: 60 },
+      },
+    },
+    {
+      id: "tags",
+      accessorKey: "tags",
+      header: "Tags",
+      minSize: 200,
+      filterFn,
+      meta: {
+        label: "Tags",
+        cell: {
+          variant: "multi-select",
+          options: articleTags.map((t) => ({ label: t, value: t })),
+        },
+      },
+    },
+    {
+      id: "excerpt",
+      accessorKey: "excerpt",
+      header: "Excerpt",
+      minSize: 200,
+      filterFn,
+      meta: {
+        label: "Excerpt",
+        cell: { variant: "long-text" },
+      },
+    },
+    {
+      id: "url",
+      accessorKey: "url",
+      header: "URL",
+      minSize: 200,
+      filterFn,
+      meta: {
+        label: "URL",
+        cell: { variant: "url" },
+      },
+    },
+    {
+      id: "isFeatured",
+      accessorKey: "isFeatured",
+      header: "Featured",
+      minSize: 100,
+      filterFn,
+      meta: {
+        label: "Featured",
+        cell: { variant: "checkbox" },
+      },
+    },
+  ];
+}
+
+// Recipe Demo - Generate columns demo
+export interface Recipe {
+  id: string;
+  name: string;
+}
+
+const recipeNames = [
+  "Spaghetti Carbonara",
+  "Chicken Tikka Masala",
+  "Beef Tacos",
+  "Caesar Salad",
+  "Mushroom Risotto",
+  "Fish and Chips",
+  "Pad Thai",
+  "Margherita Pizza",
+  "Beef Bourguignon",
+  "Chocolate Lava Cake",
+];
+
+export function getRecipesData(): Recipe[] {
+  return recipeNames.map((name, i) => ({
+    id: `recipe-${i}`,
+    name,
+  }));
+}
+
+export function getRecipesColumns(
+  filterFn: FilterFn<Recipe>
+): ColumnDef<Recipe>[] {
+  return [
+    {
+      id: "index",
+      header: () => (
+        <div className="flex h-full items-center justify-center text-muted-foreground text-sm" />
+      ),
+      cell: ({ row }) => (
+        <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+          {row.index + 1}
+        </div>
+      ),
+      size: 60,
+      enableSorting: false,
+      enableHiding: false,
+      enableResizing: false,
+      enablePinning: false,
+    },
+    {
+      id: "name",
+      accessorKey: "name",
+      header: "Recipe Name",
+      minSize: 200,
+      filterFn,
+      meta: {
+        label: "Recipe Name",
+        cell: { variant: "short-text" },
+      },
+    },
+  ];
+}
+
+export const recipeDemoPrompt = "Add columns for cuisine type, difficulty level, prep time (minutes), cooking time (minutes), and calories. Then fill in appropriate values for each recipe.";
+
+// Email Demo - Enrich cells demo
+export interface EmailContact {
+  id: string;
+  email: string;
+  name?: string;
+  company?: string;
+  role?: string;
+  location?: string;
+}
+
+const emailContacts = [
+  "sarah.chen@techcorp.io",
+  "m.rodriguez@globalbank.com",
+  "james.wilson@startup.co",
+  "a.patel@consulting.net",
+  "emma.davis@healthcare.org",
+  "l.kim@university.edu",
+  "robert.brown@retail.com",
+  "n.silva@marketing.io",
+  "michael.lee@finance.com",
+  "j.anderson@media.net",
+];
+
+export function getEmailContactsData(): EmailContact[] {
+  return emailContacts.map((email, i) => ({
+    id: `contact-${i}`,
+    email,
+  }));
+}
+
+export function getEmailContactsColumns(
+  filterFn: FilterFn<EmailContact>
+): ColumnDef<EmailContact>[] {
+  return [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          aria-label="Select all"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      ),
+      cell: ({ row, table }) => (
+        <Checkbox
+          aria-label="Select row"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => {
+            const onRowSelect = table.options.meta?.onRowSelect;
+            if (onRowSelect) {
+              onRowSelect(row.index, !!value, false);
+            } else {
+              row.toggleSelected(!!value);
+            }
+          }}
+          onClick={(event: React.MouseEvent) => {
+            if (event.shiftKey) {
+              event.preventDefault();
+              const onRowSelect = table.options.meta?.onRowSelect;
+              if (onRowSelect) {
+                onRowSelect(row.index, !row.getIsSelected(), true);
+              }
+            }
+          }}
+        />
+      ),
+      size: 40,
+      enableSorting: false,
+      enableHiding: false,
+      enableResizing: false,
+    },
+    {
+      id: "email",
+      accessorKey: "email",
+      header: "Email",
+      minSize: 220,
+      filterFn,
+      meta: {
+        label: "Email",
+        cell: { variant: "short-text" },
+      },
+    },
+    {
+      id: "name",
+      accessorKey: "name",
+      header: "Name",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Name",
+        cell: { variant: "short-text" },
+        prompt: "Extract the full name from the email address pattern",
+      },
+    },
+    {
+      id: "company",
+      accessorKey: "company",
+      header: "Company",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Company",
+        cell: { variant: "short-text" },
+        prompt: "Infer the company name from the email domain",
+      },
+    },
+    {
+      id: "role",
+      accessorKey: "role",
+      header: "Role",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Role",
+        cell: { variant: "short-text" },
+        prompt: "Guess a likely job role based on the email and company",
+      },
+    },
+    {
+      id: "location",
+      accessorKey: "location",
+      header: "Location",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Location",
+        cell: { variant: "short-text" },
+        prompt: "Guess a likely location based on the company type",
+      },
+    },
+  ];
+}
+
