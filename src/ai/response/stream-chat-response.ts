@@ -7,7 +7,7 @@ import {
 import type { GenerateModeChatUIMessage } from "../messages/types";
 import type { SelectionContext } from "@/lib/selection-context";
 import { createTableAgent, type ExistingColumn } from "../agents/table-agent";
-import { createDataAgent } from "../agents/data-agent";
+import { runDataAgent } from "../agents/data-agent";
 
 /**
  * Streams a chat response using the AI SDK v6 Agent abstraction.
@@ -31,31 +31,51 @@ export const streamChatResponse = async (
     JSON.stringify(selectionContext, null, 2),
   );
 
+  // Extract the last user message for the data agent
+  const lastUserMessage = messages.findLast((m) => m.role === "user");
+  const userMessageText = lastUserMessage?.parts
+    ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join(" ") ?? "";
+
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
       originalMessages: messages,
       execute: async ({ writer }) => {
-        // Use specialized agent based on selection context
         console.log(
-          "[streamChatResponse] Creating agent, hasSelectionContext:",
+          "[streamChatResponse] Processing request, hasSelectionContext:",
           !!selectionContext,
         );
-        const agent = selectionContext
-          ? createDataAgent({ gatewayApiKey, writer, selectionContext })
-          : createTableAgent({ gatewayApiKey, writer, existingColumns });
 
-        console.log("[streamChatResponse] Starting agent stream");
-        const result = await agent.stream({
-          messages: await convertToModelMessages(messages),
-        });
+        if (selectionContext) {
+          // Use the new cell-by-cell data agent with batched concurrency
+          await runDataAgent({
+            gatewayApiKey,
+            writer,
+            selectionContext,
+            userMessage: userMessageText,
+          });
+        } else {
+          // Use the table agent for column management
+          const agent = createTableAgent({
+            gatewayApiKey,
+            writer,
+            existingColumns,
+          });
 
-        void result.consumeStream();
+          console.log("[streamChatResponse] Starting table agent stream");
+          const result = await agent.stream({
+            messages: await convertToModelMessages(messages),
+          });
 
-        writer.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-          }),
-        );
+          void result.consumeStream();
+
+          writer.merge(
+            result.toUIMessageStream({
+              sendReasoning: true,
+            }),
+          );
+        }
       },
     }),
   });
