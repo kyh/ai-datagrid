@@ -1,9 +1,20 @@
 import { createGateway, generateObject } from "ai";
 import type { UIMessage, UIMessageStreamWriter } from "ai";
-import { z } from "zod";
 
 import type { DataPart } from "../messages/data-parts";
 import type { SelectionContext } from "@/lib/selection-context";
+import {
+  shortTextValueSchema,
+  longTextValueSchema,
+  numberValueSchema,
+  checkboxValueSchema,
+  dateValueSchema,
+  urlValueSchema,
+  selectValueSchema,
+  multiSelectValueSchema,
+  createSelectValueSchema,
+  createMultiSelectValueSchema,
+} from "@/lib/data-grid-schema";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -37,61 +48,37 @@ type RunDataAgentParams = {
 function buildCellSchema(column: ColumnInfo) {
   switch (column.variant) {
     case "number":
-      return z.object({
-        value: z.number().describe("A numeric value for this cell"),
-      });
+      return numberValueSchema;
 
     case "checkbox":
-      return z.object({
-        value: z.boolean().describe("A boolean value (true or false)"),
-      });
+      return checkboxValueSchema;
 
     case "date":
-      return z.object({
-        value: z
-          .string()
-          .describe("A date in ISO format (YYYY-MM-DD)"),
-      });
+      return dateValueSchema;
 
     case "select": {
       if (column.options?.length) {
-        const values = column.options.map((o) => o.value) as [string, ...string[]];
-        return z.object({
-          value: z.enum(values).describe("One of the valid options"),
-        });
+        return createSelectValueSchema(column.options.map((o) => o.value));
       }
-      return z.object({
-        value: z.string().describe("A single selection value"),
-      });
+      return selectValueSchema;
     }
 
     case "multi-select": {
       if (column.options?.length) {
-        const values = column.options.map((o) => o.value) as [string, ...string[]];
-        return z.object({
-          value: z.array(z.enum(values)).describe("Array of selected options"),
-        });
+        return createMultiSelectValueSchema(column.options.map((o) => o.value));
       }
-      return z.object({
-        value: z.array(z.string()).describe("Array of selected values"),
-      });
+      return multiSelectValueSchema;
     }
 
     case "url":
-      return z.object({
-        value: z.string().url().describe("A valid URL"),
-      });
+      return urlValueSchema;
 
     case "long-text":
-      return z.object({
-        value: z.string().describe("Multi-line text content"),
-      });
+      return longTextValueSchema;
 
     // short-text and default
     default:
-      return z.object({
-        value: z.string().describe("Text content for this cell"),
-      });
+      return shortTextValueSchema;
   }
 }
 
