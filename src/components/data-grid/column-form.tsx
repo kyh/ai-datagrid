@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVerticalIcon, PlusIcon, XIcon } from "lucide-react";
+import { PlusIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ const CELL_VARIANTS: Array<{ value: CellOpts["variant"]; label: string }> = [
   { value: "file", label: "File" },
 ];
 
+const MAX_UNIQUE_VALUE_ATTEMPTS = 1000;
+
 export interface ColumnFormValues {
   label: string;
   variant: CellOpts["variant"];
@@ -44,6 +46,15 @@ interface ColumnFormProps {
   autoFocus?: boolean;
 }
 
+function createDefaultValues(initial?: Partial<ColumnFormValues>): ColumnFormValues {
+  return {
+    label: initial?.label ?? "",
+    variant: initial?.variant ?? "short-text",
+    options: initial?.options ?? [],
+    prompt: initial?.prompt ?? "",
+  };
+}
+
 export function ColumnForm({
   mode,
   initialValues,
@@ -52,70 +63,96 @@ export function ColumnForm({
   submitLabel,
   autoFocus = true,
 }: ColumnFormProps) {
-  const [label, setLabel] = React.useState(initialValues?.label ?? "");
-  const [variant, setVariant] = React.useState<CellOpts["variant"]>(
-    initialValues?.variant ?? "short-text"
+  const [values, setValues] = React.useState<ColumnFormValues>(() =>
+    createDefaultValues(initialValues)
   );
-  const [options, setOptions] = React.useState<CellSelectOption[]>(
-    initialValues?.options ?? []
-  );
-  const [prompt, setPrompt] = React.useState(initialValues?.prompt ?? "");
   const [newOptionLabel, setNewOptionLabel] = React.useState("");
 
-  const columnVariant = getColumnVariant(variant);
-  const isSelectType = variant === "select" || variant === "multi-select";
+  // Keep ref in sync for parent to read on close
+  const valuesRef = React.useRef(values);
+  valuesRef.current = values;
 
-  // Notify parent of changes (for edit mode)
+  // Notify parent only when values change
+  const prevValuesRef = React.useRef(values);
   React.useEffect(() => {
-    onChange?.({ label, variant, options, prompt });
-  }, [label, variant, options, prompt, onChange]);
+    if (prevValuesRef.current !== values) {
+      prevValuesRef.current = values;
+      onChange?.(values);
+    }
+  }, [values, onChange]);
+
+  const columnVariant = getColumnVariant(values.variant);
+  const isSelectType = values.variant === "select" || values.variant === "multi-select";
+
+  const updateValues = React.useCallback(
+    (updates: Partial<ColumnFormValues>) => {
+      setValues((prev) => ({ ...prev, ...updates }));
+    },
+    []
+  );
 
   const handleSubmit = React.useCallback(() => {
-    if (!label.trim()) return;
-    onSubmit?.({ label: label.trim(), variant, options, prompt: prompt.trim() });
-  }, [label, variant, options, prompt, onSubmit]);
+    if (!values.label.trim()) return;
+    onSubmit?.({
+      ...values,
+      label: values.label.trim(),
+      prompt: values.prompt.trim(),
+    });
+  }, [values, onSubmit]);
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey && label.trim()) {
+      if (e.key === "Enter" && !e.shiftKey && values.label.trim()) {
         e.preventDefault();
         handleSubmit();
       }
     },
-    [handleSubmit, label]
+    [handleSubmit, values.label]
   );
 
   const handleAddOption = React.useCallback(() => {
     const trimmedLabel = newOptionLabel.trim();
     if (!trimmedLabel) return;
 
-    const value = trimmedLabel
+    const baseValue = trimmedLabel
       .toLowerCase()
       .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+      .replace(/[^a-z0-9-]/g, "") || "option";
 
-    let uniqueValue = value;
+    let uniqueValue = baseValue;
     let counter = 1;
-    while (options.some((opt) => opt.value === uniqueValue)) {
-      uniqueValue = `${value}-${counter}`;
+    while (
+      values.options.some((opt) => opt.value === uniqueValue) &&
+      counter < MAX_UNIQUE_VALUE_ATTEMPTS
+    ) {
+      uniqueValue = `${baseValue}-${counter}`;
       counter++;
     }
 
-    setOptions((prev) => [...prev, { label: trimmedLabel, value: uniqueValue }]);
+    updateValues({
+      options: [...values.options, { label: trimmedLabel, value: uniqueValue }],
+    });
     setNewOptionLabel("");
-  }, [newOptionLabel, options]);
+  }, [newOptionLabel, values.options, updateValues]);
 
-  const handleRemoveOption = React.useCallback((valueToRemove: string) => {
-    setOptions((prev) => prev.filter((opt) => opt.value !== valueToRemove));
-  }, []);
+  const handleRemoveOption = React.useCallback(
+    (valueToRemove: string) => {
+      updateValues({
+        options: values.options.filter((opt) => opt.value !== valueToRemove),
+      });
+    },
+    [values.options, updateValues]
+  );
 
   const handleUpdateOptionLabel = React.useCallback(
     (value: string, newLabel: string) => {
-      setOptions((prev) =>
-        prev.map((opt) => (opt.value === value ? { ...opt, label: newLabel } : opt))
-      );
+      updateValues({
+        options: values.options.map((opt) =>
+          opt.value === value ? { ...opt, label: newLabel } : opt
+        ),
+      });
     },
-    []
+    [values.options, updateValues]
   );
 
   const handleOptionKeyDown = React.useCallback(
@@ -129,13 +166,26 @@ export function ColumnForm({
     [handleAddOption]
   );
 
+  const handleVariantChange = React.useCallback(
+    (newVariant: string) => {
+      const variant = newVariant as CellOpts["variant"];
+      // Clear options when changing away from select types
+      if (variant !== "select" && variant !== "multi-select") {
+        updateValues({ variant, options: [] });
+      } else {
+        updateValues({ variant });
+      }
+    },
+    [updateValues]
+  );
+
   return (
     <div className="space-y-3 p-3">
       <div className="space-y-1">
         <span className="text-xs text-muted-foreground">Name</span>
         <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
+          value={values.label}
+          onChange={(e) => updateValues({ label: e.target.value })}
           onKeyDown={handleKeyDown}
           placeholder="Column name"
           className="h-8"
@@ -146,22 +196,14 @@ export function ColumnForm({
       <div className="space-y-1">
         <span className="text-xs text-muted-foreground">Data Type</span>
         {mode === "add" ? (
-          <Select
-            value={variant}
-            onValueChange={(v) => {
-              setVariant(v as CellOpts["variant"]);
-              // Clear options when changing away from select types
-              if (v !== "select" && v !== "multi-select") {
-                setOptions([]);
-              }
-            }}
-          >
+          <Select value={values.variant} onValueChange={handleVariantChange}>
             <SelectTrigger className="h-8 w-full">
               <SelectValue>
                 {columnVariant && (
                   <span className="flex items-center gap-2">
                     <columnVariant.icon className="size-4 text-muted-foreground" />
-                    {CELL_VARIANTS.find((v) => v.value === variant)?.label ?? variant}
+                    {CELL_VARIANTS.find((v) => v.value === values.variant)?.label ??
+                      values.variant}
                   </span>
                 )}
               </SelectValue>
@@ -188,7 +230,8 @@ export function ColumnForm({
               <columnVariant.icon className="size-4 text-muted-foreground" />
             )}
             <span>
-              {CELL_VARIANTS.find((v) => v.value === variant)?.label ?? variant}
+              {CELL_VARIANTS.find((v) => v.value === values.variant)?.label ??
+                values.variant}
             </span>
           </div>
         )}
@@ -198,12 +241,12 @@ export function ColumnForm({
         <div className="space-y-2">
           <span className="text-xs text-muted-foreground">Options</span>
           <div className="space-y-1.5">
-            {options.map((option) => (
+            {values.options.map((option) => (
               <div key={option.value} className="flex items-center gap-1">
-                <GripVerticalIcon className="size-3 shrink-0 text-muted-foreground/50" />
                 <Input
                   value={option.label}
                   onChange={(e) => handleUpdateOptionLabel(option.value, e.target.value)}
+                  aria-label={`Option: ${option.label}`}
                   className="h-7 flex-1 text-sm"
                 />
                 <Button
@@ -212,18 +255,19 @@ export function ColumnForm({
                   size="icon"
                   className="size-7 shrink-0"
                   onClick={() => handleRemoveOption(option.value)}
+                  aria-label={`Remove option: ${option.label}`}
                 >
                   <XIcon className="size-3.5" />
                 </Button>
               </div>
             ))}
             <div className="flex items-center gap-1">
-              <div className="w-3 shrink-0" />
               <Input
                 value={newOptionLabel}
                 onChange={(e) => setNewOptionLabel(e.target.value)}
                 onKeyDown={handleOptionKeyDown}
                 placeholder="Add option..."
+                aria-label="New option name"
                 className="h-7 flex-1 text-sm"
               />
               <Button
@@ -233,6 +277,7 @@ export function ColumnForm({
                 className="size-7 shrink-0"
                 onClick={handleAddOption}
                 disabled={!newOptionLabel.trim()}
+                aria-label="Add option"
               >
                 <PlusIcon className="size-3.5" />
               </Button>
@@ -244,8 +289,8 @@ export function ColumnForm({
       <div className="space-y-1">
         <span className="text-xs text-muted-foreground">Prompt</span>
         <Textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          value={values.prompt}
+          onChange={(e) => updateValues({ prompt: e.target.value })}
           placeholder="Instructions for AI enrichment"
           className="min-h-16 resize-none text-sm"
         />
@@ -256,7 +301,7 @@ export function ColumnForm({
           size="sm"
           className="w-full"
           onClick={handleSubmit}
-          disabled={!label.trim()}
+          disabled={!values.label.trim()}
         >
           {submitLabel}
         </Button>
