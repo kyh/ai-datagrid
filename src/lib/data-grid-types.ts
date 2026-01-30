@@ -204,6 +204,7 @@ declare module "@tanstack/react-table" {
         label: string;
         variant: CellOpts["variant"];
         prompt: string;
+        options: CellSelectOption[];
       }>
     ) => void;
     onColumnDelete?: (columnId: string) => void;
@@ -212,6 +213,7 @@ declare module "@tanstack/react-table" {
       label: string;
       variant: CellOpts["variant"];
       prompt: string;
+      options?: CellSelectOption[];
       insertAfterColumnId?: string;
     }) => void;
   }

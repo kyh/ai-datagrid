@@ -43,8 +43,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getColumnVariant } from "@/lib/data-grid";
-import type { CellOpts } from "@/lib/data-grid-types";
+import type { CellOpts, CellSelectOption } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
+import { SelectOptionsEditor } from "@/components/data-grid/select-options-editor";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -84,10 +85,8 @@ export function DataGridColumnHeader<TData, TValue>({
       : column.id;
 
   const currentPrompt = column.columnDef.meta?.prompt ?? "";
-
-  const [popoverOpen, setPopoverOpen] = React.useState(false);
-  const [editedLabel, setEditedLabel] = React.useState(label);
-  const [editedPrompt, setEditedPrompt] = React.useState(currentPrompt);
+  const currentOptions: CellSelectOption[] =
+    (column.columnDef.meta?.cell as { options?: CellSelectOption[] } | undefined)?.options ?? [];
 
   const isAnyColumnResizing =
     table.getState().columnSizingInfo.isResizingColumn;
@@ -98,6 +97,12 @@ export function DataGridColumnHeader<TData, TValue>({
   const currentTypeLabel =
     COLUMN_TYPE_OPTIONS.find((opt) => opt.value === currentType)?.label ??
     "Text";
+  const isSelectType = currentType === "select" || currentType === "multi-select";
+
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+  const [editedLabel, setEditedLabel] = React.useState(label);
+  const [editedPrompt, setEditedPrompt] = React.useState(currentPrompt);
+  const [editedOptions, setEditedOptions] = React.useState<CellSelectOption[]>(currentOptions);
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
@@ -150,9 +155,10 @@ export function DataGridColumnHeader<TData, TValue>({
         // Reset to current values when opening
         setEditedLabel(label);
         setEditedPrompt(currentPrompt);
+        setEditedOptions(currentOptions);
       } else {
         // Save changes on close
-        const updates: { label?: string; prompt?: string } = {};
+        const updates: { label?: string; prompt?: string; options?: CellSelectOption[] } = {};
 
         if (editedLabel !== label) {
           updates.label = editedLabel;
@@ -160,13 +166,26 @@ export function DataGridColumnHeader<TData, TValue>({
         if (editedPrompt !== currentPrompt) {
           updates.prompt = editedPrompt;
         }
+        // Check if options changed (for select types)
+        if (isSelectType) {
+          const optionsChanged =
+            editedOptions.length !== currentOptions.length ||
+            editedOptions.some(
+              (opt, i) =>
+                opt.label !== currentOptions[i]?.label ||
+                opt.value !== currentOptions[i]?.value
+            );
+          if (optionsChanged) {
+            updates.options = editedOptions;
+          }
+        }
         if (Object.keys(updates).length > 0) {
           table.options.meta?.onColumnUpdate?.(column.id, updates);
         }
       }
       setPopoverOpen(open);
     },
-    [editedLabel, editedPrompt, label, currentPrompt, column.id, table.options.meta]
+    [editedLabel, editedPrompt, editedOptions, label, currentPrompt, currentOptions, isSelectType, column.id, table.options.meta]
   );
 
   return (
@@ -224,6 +243,12 @@ export function DataGridColumnHeader<TData, TValue>({
                   <span>{currentTypeLabel}</span>
                 </div>
               </div>
+              {isSelectType && (
+                <SelectOptionsEditor
+                  options={editedOptions}
+                  onChange={setEditedOptions}
+                />
+              )}
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground">Prompt</span>
                 <Textarea

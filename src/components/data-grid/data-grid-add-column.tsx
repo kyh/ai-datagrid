@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getColumnVariant } from "@/lib/data-grid";
-import type { CellOpts } from "@/lib/data-grid-types";
+import type { CellOpts, CellSelectOption } from "@/lib/data-grid-types";
+import { SelectOptionsEditor } from "@/components/data-grid/select-options-editor";
 
 const CELL_VARIANTS: Array<{ value: CellOpts["variant"]; label: string }> = [
   { value: "short-text", label: "Text" },
@@ -46,8 +47,10 @@ function DataGridAddColumnHeader<TData>({
   const [label, setLabel] = React.useState("");
   const [variant, setVariant] = React.useState<CellOpts["variant"]>("short-text");
   const [prompt, setPrompt] = React.useState("");
+  const [options, setOptions] = React.useState<CellSelectOption[]>([]);
 
   const columnVariant = getColumnVariant(variant);
+  const isSelectType = variant === "select" || variant === "multi-select";
 
   // Get the last visible non-system column to insert after
   const getInsertAfterColumnId = React.useCallback(() => {
@@ -69,6 +72,7 @@ function DataGridAddColumnHeader<TData>({
       label: label.trim(),
       variant,
       prompt: prompt.trim(),
+      options: isSelectType ? options : undefined,
       insertAfterColumnId: getInsertAfterColumnId(),
     });
 
@@ -76,8 +80,9 @@ function DataGridAddColumnHeader<TData>({
     setLabel("");
     setVariant("short-text");
     setPrompt("");
+    setOptions([]);
     setOpen(false);
-  }, [onColumnAdd, label, variant, prompt, getInsertAfterColumnId]);
+  }, [onColumnAdd, label, variant, prompt, options, isSelectType, getInsertAfterColumnId]);
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
@@ -156,6 +161,9 @@ function DataGridAddColumnHeader<TData>({
               </SelectContent>
             </Select>
           </div>
+          {isSelectType && (
+            <SelectOptionsEditor options={options} onChange={setOptions} />
+          )}
           <div className="space-y-1">
             <span className="text-xs text-muted-foreground">Prompt</span>
             <Textarea
