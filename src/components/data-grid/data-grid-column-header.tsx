@@ -43,7 +43,7 @@ import {
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellSelectOption } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
-import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
+import { ColumnForm, type ColumnFormRef } from "@/components/data-grid/column-form";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -80,12 +80,7 @@ export function DataGridColumnHeader<TData, TValue>({
   const isSelectType = currentType === "select" || currentType === "multi-select";
 
   const [popoverOpen, setPopoverOpen] = React.useState(false);
-  const formValuesRef = React.useRef<ColumnFormValues>({
-    label,
-    variant: currentType,
-    options: currentOptions,
-    prompt: currentPrompt,
-  });
+  const formRef = React.useRef<ColumnFormRef>(null);
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
@@ -132,23 +127,11 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const handleFormChange = React.useCallback((values: ColumnFormValues) => {
-    formValuesRef.current = values;
-  }, []);
-
   const handlePopoverOpenChange = React.useCallback(
     (open: boolean) => {
-      if (open) {
-        // Reset ref to current values when opening
-        formValuesRef.current = {
-          label,
-          variant: currentType,
-          options: currentOptions,
-          prompt: currentPrompt,
-        };
-      } else {
+      if (!open && formRef.current) {
         // Save changes on close
-        const values = formValuesRef.current;
+        const values = formRef.current.getValues();
         const updates: { label?: string; prompt?: string; options?: CellSelectOption[] } = {};
 
         if (values.label !== label) {
@@ -176,7 +159,7 @@ export function DataGridColumnHeader<TData, TValue>({
       }
       setPopoverOpen(open);
     },
-    [label, currentPrompt, currentOptions, isSelectType, currentType, column.id, table.options.meta]
+    [label, currentPrompt, currentOptions, isSelectType, column.id, table.options.meta]
   );
 
   return (
@@ -218,17 +201,18 @@ export function DataGridColumnHeader<TData, TValue>({
             className="w-64 p-0"
             data-grid-popover
           >
-            <ColumnForm
-              key={popoverOpen ? "open" : "closed"}
-              mode="edit"
-              initialValues={{
-                label,
-                variant: currentType,
-                options: currentOptions,
-                prompt: currentPrompt,
-              }}
-              onChange={handleFormChange}
-            />
+            {popoverOpen && (
+              <ColumnForm
+                ref={formRef}
+                mode="edit"
+                defaultValues={{
+                  label,
+                  variant: currentType,
+                  options: currentOptions,
+                  prompt: currentPrompt,
+                }}
+              />
+            )}
           </PopoverContent>
         </Popover>
 

@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
+import { ColumnForm, type ColumnFormRef, type ColumnFormValues } from "@/components/data-grid/column-form";
 
 interface DataGridAddColumnHeaderProps<TData> {
   table: Table<TData>;
@@ -20,7 +20,7 @@ function DataGridAddColumnHeader<TData>({
 }: DataGridAddColumnHeaderProps<TData>) {
   const onColumnAdd = table.options.meta?.onColumnAdd;
   const [open, setOpen] = React.useState(false);
-  const [key, setKey] = React.useState(0);
+  const formRef = React.useRef<ColumnFormRef>(null);
 
   // Get the last visible non-system column to insert after
   const getInsertAfterColumnId = React.useCallback(() => {
@@ -47,8 +47,7 @@ function DataGridAddColumnHeader<TData>({
         insertAfterColumnId: getInsertAfterColumnId(),
       });
 
-      // Reset form by changing key
-      setKey((k) => k + 1);
+      formRef.current?.reset();
       setOpen(false);
     },
     [onColumnAdd, getInsertAfterColumnId]
@@ -79,12 +78,14 @@ function DataGridAddColumnHeader<TData>({
         className="w-64 p-0"
         data-grid-popover
       >
-        <ColumnForm
-          key={key}
-          mode="add"
-          onSubmit={handleSubmit}
-          submitLabel="Add Column"
-        />
+        {open && (
+          <ColumnForm
+            ref={formRef}
+            mode="add"
+            onSubmit={handleSubmit}
+            submitLabel="Add Column"
+          />
+        )}
       </PopoverContent>
     </Popover>
   );
