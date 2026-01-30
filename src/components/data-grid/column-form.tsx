@@ -224,6 +224,10 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
             <div className="space-y-1.5">
               {fields.map((field, index) => (
                 <div key={field.id} className="flex items-center gap-1">
+                  <input
+                    type="hidden"
+                    {...form.register(`options.${index}.value`)}
+                  />
                   <Input
                     {...form.register(`options.${index}.label`)}
                     aria-label={`Option ${index + 1}`}
