@@ -2,7 +2,7 @@ import { createGateway, generateObject } from "ai";
 import type { UIMessage, UIMessageStreamWriter } from "ai";
 
 import type { DataPart } from "../messages/data-parts";
-import type { SelectionContext } from "@/lib/selection-context";
+import type { SelectionContext, ColumnInfo } from "@/lib/selection-context";
 import {
   shortTextValueSchema,
   longTextValueSchema,
@@ -19,14 +19,6 @@ import {
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
-
-type ColumnInfo = {
-  id: string;
-  label: string;
-  variant: string;
-  prompt?: string;
-  options?: Array<{ label: string; value: string }>;
-};
 
 type CellTask = {
   rowIndex: number;
@@ -234,7 +226,7 @@ export async function runDataAgent({
         tasks.push({
           rowIndex,
           columnId: column.id,
-          column: column as ColumnInfo,
+          column,
         });
       }
     }
@@ -244,15 +236,12 @@ export async function runDataAgent({
     `[DataAgent] Processing ${tasks.length} cells in batches of ${MAX_CONCURRENT_CELLS}`
   );
 
-  // All columns for row context
-  const allColumns = currentColumns as ColumnInfo[];
-
   // Process cells in batches of 5
   await processBatch(tasks, MAX_CONCURRENT_CELLS, (task) => {
     const context: PromptContext = {
       userMessage,
       rowData: rowData?.[task.rowIndex],
-      allColumns,
+      allColumns: currentColumns,
     };
     return generateCellValue(model, task, context, writer);
   });
