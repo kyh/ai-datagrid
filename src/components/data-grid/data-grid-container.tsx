@@ -315,6 +315,15 @@ export function DataGridContainer<T>({
     const rows = Array.from(rowSet).sort((a, b) => a - b);
     const cols = Array.from(colSet);
 
+    // Build row data for context-aware generation
+    const rowData: Record<number, Record<string, unknown>> = {};
+    for (const rowIndex of rows) {
+      const row = data[rowIndex];
+      if (row) {
+        rowData[rowIndex] = row as Record<string, unknown>;
+      }
+    }
+
     return {
       selectedCells,
       bounds: {
@@ -324,14 +333,23 @@ export function DataGridContainer<T>({
       },
       currentColumns: columns
         .filter((col) => col.id && cols.includes(col.id))
-        .map((col) => ({
-          id: col.id ?? "",
-          label: (col.meta as { label?: string } | undefined)?.label ?? col.id ?? "",
-          variant: (col.meta as { cell?: { variant?: string } } | undefined)?.cell?.variant ?? "short-text",
-          prompt: (col.meta as { prompt?: string } | undefined)?.prompt,
-        })),
+        .map((col) => {
+          const meta = col.meta as {
+            label?: string;
+            cell?: { variant?: string; options?: Array<{ label: string; value: string }> };
+            prompt?: string;
+          } | undefined;
+          return {
+            id: col.id ?? "",
+            label: meta?.label ?? col.id ?? "",
+            variant: meta?.cell?.variant ?? "short-text",
+            prompt: meta?.prompt,
+            options: meta?.cell?.options,
+          };
+        }),
+      rowData,
     };
-  }, [tableMeta.selectionState, columns]);
+  }, [tableMeta.selectionState, columns, data]);
 
   return (
     <>

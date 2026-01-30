@@ -86,8 +86,15 @@ function buildCellSchema(column: ColumnInfo) {
 // Prompt Builder
 // -----------------------------------------------------------------------------
 
-function buildCellPrompt(task: CellTask, userMessage: string): string {
+type PromptContext = {
+  userMessage: string;
+  rowData?: Record<string, unknown>;
+  allColumns: ColumnInfo[];
+};
+
+function buildCellPrompt(task: CellTask, context: PromptContext): string {
   const { column, rowIndex } = task;
+  const { userMessage, rowData, allColumns } = context;
 
   let prompt = `Generate a value for a spreadsheet cell.
 
@@ -107,6 +114,23 @@ Cell Details:
     prompt += `- Valid options: ${optionValues}\n`;
   }
 
+  // Add row context from other cells
+  if (rowData && Object.keys(rowData).length > 0) {
+    const otherValues: string[] = [];
+    for (const col of allColumns) {
+      // Skip the current column being generated
+      if (col.id === column.id) continue;
+      const value = rowData[col.id];
+      if (value !== undefined && value !== null && value !== "") {
+        otherValues.push(`${col.label}: ${JSON.stringify(value)}`);
+      }
+    }
+    if (otherValues.length > 0) {
+      prompt += `\nOther values in this row:\n${otherValues.join("\n")}\n`;
+      prompt += `\nUse these values for context to generate coherent, related data.`;
+    }
+  }
+
   prompt += `\nGenerate realistic, varied data appropriate for this cell.`;
 
   return prompt;
@@ -119,10 +143,10 @@ Cell Details:
 async function generateCellValue(
   model: ReturnType<ReturnType<typeof createGateway>>,
   task: CellTask,
-  userMessage: string,
+  context: PromptContext,
   writer: UIMessageStreamWriter<UIMessage<never, DataPart>>,
 ): Promise<void> {
-  const prompt = buildCellPrompt(task, userMessage);
+  const prompt = buildCellPrompt(task, context);
   const schema = buildCellSchema(task.column);
 
   try {
@@ -198,7 +222,7 @@ export async function runDataAgent({
         : gatewayApiKey,
   })("openai/gpt-5.1-instant");
 
-  const { bounds, currentColumns } = selectionContext;
+  const { bounds, currentColumns, rowData } = selectionContext;
 
   // Build list of cell tasks from selected cells
   const tasks: CellTask[] = [];
@@ -220,10 +244,18 @@ export async function runDataAgent({
     `[DataAgent] Processing ${tasks.length} cells in batches of ${MAX_CONCURRENT_CELLS}`
   );
 
+  // All columns for row context
+  const allColumns = currentColumns as ColumnInfo[];
+
   // Process cells in batches of 5
-  await processBatch(tasks, MAX_CONCURRENT_CELLS, (task) =>
-    generateCellValue(model, task, userMessage, writer)
-  );
+  await processBatch(tasks, MAX_CONCURRENT_CELLS, (task) => {
+    const context: PromptContext = {
+      userMessage,
+      rowData: rowData?.[task.rowIndex],
+      allColumns,
+    };
+    return generateCellValue(model, task, context, writer);
+  });
 
   console.log("[DataAgent] Completed all cell updates");
 }

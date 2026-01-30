@@ -14,5 +14,11 @@ export interface SelectionContext {
     label: string;
     variant: string;
     prompt?: string;
+    options?: Array<{ label: string; value: string }>;
   }>;
+  /**
+   * Row data for context-aware generation.
+   * Maps row index to column values (columnId -> value).
+   */
+  rowData?: Record<number, Record<string, unknown>>;
 }
