@@ -43,7 +43,7 @@ import {
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellSelectOption } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
-import { ColumnForm, type ColumnFormRef } from "@/components/data-grid/column-form";
+import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -80,7 +80,6 @@ export function DataGridColumnHeader<TData, TValue>({
   const isSelectType = currentType === "select" || currentType === "multi-select";
 
   const [popoverOpen, setPopoverOpen] = React.useState(false);
-  const formRef = React.useRef<ColumnFormRef>(null);
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
@@ -127,37 +126,33 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const handlePopoverOpenChange = React.useCallback(
-    (open: boolean) => {
-      if (!open && formRef.current) {
-        // Save changes on close
-        const values = formRef.current.getValues();
-        const updates: { label?: string; prompt?: string; options?: CellSelectOption[] } = {};
+  const handleSave = React.useCallback(
+    (values: ColumnFormValues) => {
+      const updates: { label?: string; prompt?: string; options?: CellSelectOption[] } = {};
 
-        if (values.label !== label) {
-          updates.label = values.label;
-        }
-        if (values.prompt !== currentPrompt) {
-          updates.prompt = values.prompt;
-        }
-        // Check if options changed (for select types)
-        if (isSelectType) {
-          const optionsChanged =
-            values.options.length !== currentOptions.length ||
-            values.options.some(
-              (opt, i) =>
-                opt.label !== currentOptions[i]?.label ||
-                opt.value !== currentOptions[i]?.value
-            );
-          if (optionsChanged) {
-            updates.options = values.options;
-          }
-        }
-        if (Object.keys(updates).length > 0) {
-          table.options.meta?.onColumnUpdate?.(column.id, updates);
+      if (values.label !== label) {
+        updates.label = values.label;
+      }
+      if (values.prompt !== currentPrompt) {
+        updates.prompt = values.prompt;
+      }
+      // Check if options changed (for select types)
+      if (isSelectType) {
+        const optionsChanged =
+          values.options.length !== currentOptions.length ||
+          values.options.some(
+            (opt, i) =>
+              opt.label !== currentOptions[i]?.label ||
+              opt.value !== currentOptions[i]?.value
+          );
+        if (optionsChanged) {
+          updates.options = values.options;
         }
       }
-      setPopoverOpen(open);
+      if (Object.keys(updates).length > 0) {
+        table.options.meta?.onColumnUpdate?.(column.id, updates);
+      }
+      setPopoverOpen(false);
     },
     [label, currentPrompt, currentOptions, isSelectType, column.id, table.options.meta]
   );
@@ -173,7 +168,7 @@ export function DataGridColumnHeader<TData, TValue>({
         {...props}
       >
         {/* Popover trigger for name/type editing */}
-        <Popover open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger
             className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2 hover:bg-accent/40 data-[state=open]:bg-accent/40"
             onPointerDown={(e) => {
@@ -203,7 +198,6 @@ export function DataGridColumnHeader<TData, TValue>({
           >
             {popoverOpen && (
               <ColumnForm
-                ref={formRef}
                 mode="edit"
                 defaultValues={{
                   label,
@@ -211,6 +205,8 @@ export function DataGridColumnHeader<TData, TValue>({
                   options: currentOptions,
                   prompt: currentPrompt,
                 }}
+                onSubmit={handleSave}
+                submitLabel="Save"
               />
             )}
           </PopoverContent>

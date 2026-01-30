@@ -65,25 +65,30 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
       },
     });
 
-    const { fields, append, remove, update } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
       control: form.control,
       name: "options",
     });
 
     const [newOptionLabel, setNewOptionLabel] = React.useState("");
+    const newOptionInputRef = React.useRef<HTMLInputElement>(null);
 
     const variant = form.watch("variant");
     const columnVariant = getColumnVariant(variant);
     const isSelectType = variant === "select" || variant === "multi-select";
 
     // Expose methods to parent
-    React.useImperativeHandle(ref, () => ({
-      getValues: () => form.getValues(),
-      reset: () => {
-        form.reset();
-        setNewOptionLabel("");
-      },
-    }), [form]);
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        getValues: () => form.getValues(),
+        reset: () => {
+          form.reset();
+          setNewOptionLabel("");
+        },
+      }),
+      [form]
+    );
 
     const handleSubmit = form.handleSubmit((values) => {
       onSubmit?.({
@@ -126,6 +131,10 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
 
       append({ label: trimmedLabel, value: uniqueValue });
       setNewOptionLabel("");
+      // Refocus the input after adding
+      requestAnimationFrame(() => {
+        newOptionInputRef.current?.focus();
+      });
     }, [newOptionLabel, form, append]);
 
     const handleOptionKeyDown = React.useCallback(
@@ -217,10 +226,7 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
                 <div key={field.id} className="flex items-center gap-1">
                   <Input
                     {...form.register(`options.${index}.label`)}
-                    onChange={(e) => {
-                      update(index, { ...field, label: e.target.value });
-                    }}
-                    aria-label={`Option: ${field.label}`}
+                    aria-label={`Option ${index + 1}`}
                     className="h-7 flex-1 text-sm"
                   />
                   <Button
@@ -229,7 +235,7 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
                     size="icon"
                     className="size-7 shrink-0"
                     onClick={() => remove(index)}
-                    aria-label={`Remove option: ${field.label}`}
+                    aria-label={`Remove option ${index + 1}`}
                   >
                     <XIcon className="size-3.5" />
                   </Button>
@@ -237,6 +243,7 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
               ))}
               <div className="flex items-center gap-1">
                 <Input
+                  ref={newOptionInputRef}
                   value={newOptionLabel}
                   onChange={(e) => setNewOptionLabel(e.target.value)}
                   onKeyDown={handleOptionKeyDown}
