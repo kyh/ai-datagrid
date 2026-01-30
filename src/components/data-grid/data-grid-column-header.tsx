@@ -30,8 +30,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -43,9 +41,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getColumnVariant } from "@/lib/data-grid";
-import type { CellOpts, CellSelectOption } from "@/lib/data-grid-types";
+import type { CellSelectOption } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
-import { SelectOptionsEditor } from "@/components/data-grid/select-options-editor";
+import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -53,21 +51,6 @@ interface DataGridColumnHeaderProps<TData, TValue>
   table: Table<TData>;
   onColumnInsert?: (columnId: string, position: "left" | "right") => void;
 }
-
-const COLUMN_TYPE_OPTIONS: Array<{
-  value: CellOpts["variant"];
-  label: string;
-}> = [
-  { value: "short-text", label: "Text" },
-  { value: "long-text", label: "Long text" },
-  { value: "number", label: "Number" },
-  { value: "url", label: "URL" },
-  { value: "checkbox", label: "Checkbox" },
-  { value: "select", label: "Select" },
-  { value: "multi-select", label: "Multi-select" },
-  { value: "date", label: "Date" },
-  { value: "file", label: "File" },
-];
 
 export function DataGridColumnHeader<TData, TValue>({
   header,
@@ -94,15 +77,15 @@ export function DataGridColumnHeader<TData, TValue>({
   const cellVariant = column.columnDef.meta?.cell;
   const currentType = cellVariant?.variant ?? "short-text";
   const columnVariant = getColumnVariant(currentType);
-  const currentTypeLabel =
-    COLUMN_TYPE_OPTIONS.find((opt) => opt.value === currentType)?.label ??
-    "Text";
   const isSelectType = currentType === "select" || currentType === "multi-select";
 
   const [popoverOpen, setPopoverOpen] = React.useState(false);
-  const [editedLabel, setEditedLabel] = React.useState(label);
-  const [editedPrompt, setEditedPrompt] = React.useState(currentPrompt);
-  const [editedOptions, setEditedOptions] = React.useState<CellSelectOption[]>(currentOptions);
+  const formValuesRef = React.useRef<ColumnFormValues>({
+    label,
+    variant: currentType,
+    options: currentOptions,
+    prompt: currentPrompt,
+  });
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
@@ -149,34 +132,42 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
+  const handleFormChange = React.useCallback((values: ColumnFormValues) => {
+    formValuesRef.current = values;
+  }, []);
+
   const handlePopoverOpenChange = React.useCallback(
     (open: boolean) => {
       if (open) {
-        // Reset to current values when opening
-        setEditedLabel(label);
-        setEditedPrompt(currentPrompt);
-        setEditedOptions(currentOptions);
+        // Reset ref to current values when opening
+        formValuesRef.current = {
+          label,
+          variant: currentType,
+          options: currentOptions,
+          prompt: currentPrompt,
+        };
       } else {
         // Save changes on close
+        const values = formValuesRef.current;
         const updates: { label?: string; prompt?: string; options?: CellSelectOption[] } = {};
 
-        if (editedLabel !== label) {
-          updates.label = editedLabel;
+        if (values.label !== label) {
+          updates.label = values.label;
         }
-        if (editedPrompt !== currentPrompt) {
-          updates.prompt = editedPrompt;
+        if (values.prompt !== currentPrompt) {
+          updates.prompt = values.prompt;
         }
         // Check if options changed (for select types)
         if (isSelectType) {
           const optionsChanged =
-            editedOptions.length !== currentOptions.length ||
-            editedOptions.some(
+            values.options.length !== currentOptions.length ||
+            values.options.some(
               (opt, i) =>
                 opt.label !== currentOptions[i]?.label ||
                 opt.value !== currentOptions[i]?.value
             );
           if (optionsChanged) {
-            updates.options = editedOptions;
+            updates.options = values.options;
           }
         }
         if (Object.keys(updates).length > 0) {
@@ -185,7 +176,7 @@ export function DataGridColumnHeader<TData, TValue>({
       }
       setPopoverOpen(open);
     },
-    [editedLabel, editedPrompt, editedOptions, label, currentPrompt, currentOptions, isSelectType, column.id, table.options.meta]
+    [label, currentPrompt, currentOptions, isSelectType, currentType, column.id, table.options.meta]
   );
 
   return (
@@ -224,41 +215,20 @@ export function DataGridColumnHeader<TData, TValue>({
           <PopoverContent
             align="start"
             sideOffset={0}
-            className="w-60 p-0"
+            className="w-64 p-0"
             data-grid-popover
           >
-            <div className="space-y-3 p-3">
-              <Input
-                value={editedLabel}
-                onChange={(e) => setEditedLabel(e.target.value)}
-                className="h-8"
-                autoFocus
-              />
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Data Type</span>
-                <div className="flex h-8 w-full items-center gap-2 rounded-md border bg-muted/50 px-2 text-sm">
-                  {columnVariant && (
-                    <columnVariant.icon className="size-4 text-muted-foreground" />
-                  )}
-                  <span>{currentTypeLabel}</span>
-                </div>
-              </div>
-              {isSelectType && (
-                <SelectOptionsEditor
-                  options={editedOptions}
-                  onChange={setEditedOptions}
-                />
-              )}
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Prompt</span>
-                <Textarea
-                  value={editedPrompt}
-                  onChange={(e) => setEditedPrompt(e.target.value)}
-                  placeholder="Instructions for AI enrichment, e.g., 'Find the company website'"
-                  className="min-h-16 resize-none text-sm"
-                />
-              </div>
-            </div>
+            <ColumnForm
+              key={popoverOpen ? "open" : "closed"}
+              mode="edit"
+              initialValues={{
+                label,
+                variant: currentType,
+                options: currentOptions,
+                prompt: currentPrompt,
+              }}
+              onChange={handleFormChange}
+            />
           </PopoverContent>
         </Popover>
 
