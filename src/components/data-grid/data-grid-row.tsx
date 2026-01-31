@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  ColumnDef,
   ColumnPinningState,
   Row,
   TableMeta,
@@ -31,6 +32,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   measureElement: (node: Element | null) => void;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
+  columns: ColumnDef<TData>[];
   columnVisibility: VisibilityState;
   columnPinning: ColumnPinningState;
   focusedCell: CellPosition | null;
@@ -150,6 +152,11 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if columns changed (handles column metadata updates like options)
+  if (prev.columns !== next.columns) {
+    return false;
+  }
+
   // Skip re-render - props are equal
   return true;
 }) as typeof DataGridRowImpl;
@@ -161,6 +168,7 @@ function DataGridRowImpl<TData>({
   measureElement,
   rowMapRef,
   rowHeight,
+  columns,
   columnVisibility,
   columnPinning,
   focusedCell,
@@ -200,10 +208,10 @@ function DataGridRowImpl<TData>({
 
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility and columnPinning are used for calculating the visible cells
+  // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility, columnPinning, and columns are used for calculating the visible cells
   const visibleCells = React.useMemo(
     () => row.getVisibleCells(),
-    [row, columnVisibility, columnPinning]
+    [row, columnVisibility, columnPinning, columns]
   );
 
   return (

@@ -30,8 +30,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -43,8 +41,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getColumnVariant } from "@/lib/data-grid";
-import type { CellOpts } from "@/lib/data-grid-types";
+import type { CellSelectOption } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
+import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -52,21 +51,6 @@ interface DataGridColumnHeaderProps<TData, TValue>
   table: Table<TData>;
   onColumnInsert?: (columnId: string, position: "left" | "right") => void;
 }
-
-const COLUMN_TYPE_OPTIONS: Array<{
-  value: CellOpts["variant"];
-  label: string;
-}> = [
-  { value: "short-text", label: "Text" },
-  { value: "long-text", label: "Long text" },
-  { value: "number", label: "Number" },
-  { value: "url", label: "URL" },
-  { value: "checkbox", label: "Checkbox" },
-  { value: "select", label: "Select" },
-  { value: "multi-select", label: "Multi-select" },
-  { value: "date", label: "Date" },
-  { value: "file", label: "File" },
-];
 
 export function DataGridColumnHeader<TData, TValue>({
   header,
@@ -84,10 +68,8 @@ export function DataGridColumnHeader<TData, TValue>({
       : column.id;
 
   const currentPrompt = column.columnDef.meta?.prompt ?? "";
-
-  const [popoverOpen, setPopoverOpen] = React.useState(false);
-  const [editedLabel, setEditedLabel] = React.useState(label);
-  const [editedPrompt, setEditedPrompt] = React.useState(currentPrompt);
+  const currentOptions: CellSelectOption[] =
+    (column.columnDef.meta?.cell as { options?: CellSelectOption[] } | undefined)?.options ?? [];
 
   const isAnyColumnResizing =
     table.getState().columnSizingInfo.isResizingColumn;
@@ -95,9 +77,9 @@ export function DataGridColumnHeader<TData, TValue>({
   const cellVariant = column.columnDef.meta?.cell;
   const currentType = cellVariant?.variant ?? "short-text";
   const columnVariant = getColumnVariant(currentType);
-  const currentTypeLabel =
-    COLUMN_TYPE_OPTIONS.find((opt) => opt.value === currentType)?.label ??
-    "Text";
+  const isSelectType = currentType === "select" || currentType === "multi-select";
+
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
@@ -144,29 +126,18 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const handlePopoverOpenChange = React.useCallback(
-    (open: boolean) => {
-      if (open) {
-        // Reset to current values when opening
-        setEditedLabel(label);
-        setEditedPrompt(currentPrompt);
-      } else {
-        // Save changes on close
-        const updates: { label?: string; prompt?: string } = {};
-
-        if (editedLabel !== label) {
-          updates.label = editedLabel;
-        }
-        if (editedPrompt !== currentPrompt) {
-          updates.prompt = editedPrompt;
-        }
-        if (Object.keys(updates).length > 0) {
-          table.options.meta?.onColumnUpdate?.(column.id, updates);
-        }
-      }
-      setPopoverOpen(open);
+  const handleSave = React.useCallback(
+    (values: ColumnFormValues) => {
+      // Always pass all values for select types to avoid stale closure issues
+      // The onColumnUpdate handler will handle the update appropriately
+      table.options.meta?.onColumnUpdate?.(column.id, {
+        label: values.label,
+        prompt: values.prompt,
+        options: isSelectType ? values.options : undefined,
+      });
+      setPopoverOpen(false);
     },
-    [editedLabel, editedPrompt, label, currentPrompt, column.id, table.options.meta]
+    [isSelectType, column.id, table.options.meta]
   );
 
   return (
@@ -180,7 +151,7 @@ export function DataGridColumnHeader<TData, TValue>({
         {...props}
       >
         {/* Popover trigger for name/type editing */}
-        <Popover open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger
             className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2 hover:bg-accent/40 data-[state=open]:bg-accent/40"
             onPointerDown={(e) => {
@@ -205,35 +176,22 @@ export function DataGridColumnHeader<TData, TValue>({
           <PopoverContent
             align="start"
             sideOffset={0}
-            className="w-60 p-0"
+            className="w-64 p-0"
             data-grid-popover
           >
-            <div className="space-y-3 p-3">
-              <Input
-                value={editedLabel}
-                onChange={(e) => setEditedLabel(e.target.value)}
-                className="h-8"
-                autoFocus
+            {popoverOpen && (
+              <ColumnForm
+                mode="edit"
+                defaultValues={{
+                  label,
+                  variant: currentType,
+                  options: currentOptions,
+                  prompt: currentPrompt,
+                }}
+                onSubmit={handleSave}
+                submitLabel="Save"
               />
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Data Type</span>
-                <div className="flex h-8 w-full items-center gap-2 rounded-md border bg-muted/50 px-2 text-sm">
-                  {columnVariant && (
-                    <columnVariant.icon className="size-4 text-muted-foreground" />
-                  )}
-                  <span>{currentTypeLabel}</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-muted-foreground">Prompt</span>
-                <Textarea
-                  value={editedPrompt}
-                  onChange={(e) => setEditedPrompt(e.target.value)}
-                  placeholder="Instructions for AI enrichment, e.g., 'Find the company website'"
-                  className="min-h-16 resize-none text-sm"
-                />
-              </div>
-            </div>
+            )}
           </PopoverContent>
         </Popover>
 

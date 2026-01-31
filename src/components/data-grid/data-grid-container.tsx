@@ -12,7 +12,7 @@ import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { Chat } from "@/components/chat/chat";
-import type { CellOpts, CellUpdate } from "@/lib/data-grid-types";
+import type { CellOpts, CellSelectOption, CellUpdate } from "@/lib/data-grid-types";
 import type { ColumnUpdate } from "@/ai/messages/data-parts";
 import type { SelectionContext } from "@/lib/selection-context";
 import { parseCellKey } from "@/lib/data-grid";
@@ -70,7 +70,7 @@ export function DataGridContainer<T>({
   const onColumnUpdate = React.useCallback(
     (
       columnId: string,
-      updates: Partial<{ label: string; variant: CellOpts["variant"]; prompt: string }>
+      updates: Partial<{ label: string; variant: CellOpts["variant"]; prompt: string; options: CellSelectOption[] }>
     ) => {
       setColumns((prev) =>
         prev.map((col): ColumnDef<T> => {
@@ -78,10 +78,23 @@ export function DataGridContainer<T>({
 
           const currentMeta = col.meta ?? {};
           const currentCell = currentMeta.cell ?? { variant: "short-text" as const };
-          const newCell =
+
+          // If variant is changing, create new cell config; otherwise keep current
+          let newCell: CellOpts =
             updates.variant && updates.variant !== currentCell.variant
               ? createCellConfig(updates.variant)
               : currentCell;
+
+          // If options are provided and this is a select type, update them
+          if (updates.options !== undefined) {
+            const cellVariant = newCell.variant;
+            if (cellVariant === "select" || cellVariant === "multi-select") {
+              newCell = {
+                ...newCell,
+                options: updates.options,
+              } as CellOpts;
+            }
+          }
 
           return {
             ...col,
@@ -108,16 +121,27 @@ export function DataGridContainer<T>({
       label: string;
       variant: CellOpts["variant"];
       prompt: string;
+      options?: CellSelectOption[];
       insertAfterColumnId?: string;
     }) => {
       const newId = `column_${Date.now()}`;
+
+      // Create cell config with options if provided for select types
+      let cellConfig = createCellConfig(addConfig.variant);
+      if (
+        addConfig.options &&
+        (addConfig.variant === "select" || addConfig.variant === "multi-select")
+      ) {
+        cellConfig = { ...cellConfig, options: addConfig.options } as CellOpts;
+      }
+
       const newColumn: ColumnDef<T> = {
         id: newId,
         accessorKey: newId,
         header: addConfig.label,
         meta: {
           label: addConfig.label,
-          cell: createCellConfig(addConfig.variant),
+          cell: cellConfig,
           prompt: addConfig.prompt || undefined,
         },
       };
@@ -130,6 +154,14 @@ export function DataGridContainer<T>({
         result.splice(idx + 1, 0, newColumn);
         return result;
       });
+
+      // Initialize the new column data in all existing rows
+      setData((prev) =>
+        prev.map((row) => ({
+          ...row,
+          [newId]: "",
+        }))
+      );
     },
     []
   );

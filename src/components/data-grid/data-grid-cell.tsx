@@ -43,6 +43,12 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   // Check cell/row identity
   if (prev.cell.row.id !== next.cell.row.id) return false;
 
+  // Check if column metadata has changed (e.g., options for select columns)
+  // This ensures cells re-render when column options are updated
+  if (prev.cell.column.columnDef.meta?.cell !== next.cell.column.columnDef.meta?.cell) {
+    return false;
+  }
+
   return true;
 }) as typeof DataGridCellImpl;
 

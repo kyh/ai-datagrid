@@ -4,35 +4,12 @@ import type { ColumnDef, Table } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { getColumnVariant } from "@/lib/data-grid";
-import type { CellOpts } from "@/lib/data-grid-types";
-
-const CELL_VARIANTS: Array<{ value: CellOpts["variant"]; label: string }> = [
-  { value: "short-text", label: "Text" },
-  { value: "long-text", label: "Long Text" },
-  { value: "number", label: "Number" },
-  { value: "select", label: "Select" },
-  { value: "multi-select", label: "Multi-select" },
-  { value: "checkbox", label: "Checkbox" },
-  { value: "date", label: "Date" },
-  { value: "url", label: "URL" },
-  { value: "file", label: "File" },
-];
+import { ColumnForm, type ColumnFormRef, type ColumnFormValues } from "@/components/data-grid/column-form";
 
 interface DataGridAddColumnHeaderProps<TData> {
   table: Table<TData>;
@@ -43,16 +20,11 @@ function DataGridAddColumnHeader<TData>({
 }: DataGridAddColumnHeaderProps<TData>) {
   const onColumnAdd = table.options.meta?.onColumnAdd;
   const [open, setOpen] = React.useState(false);
-  const [label, setLabel] = React.useState("");
-  const [variant, setVariant] = React.useState<CellOpts["variant"]>("short-text");
-  const [prompt, setPrompt] = React.useState("");
-
-  const columnVariant = getColumnVariant(variant);
+  const formRef = React.useRef<ColumnFormRef>(null);
 
   // Get the last visible non-system column to insert after
   const getInsertAfterColumnId = React.useCallback(() => {
     const visibleColumns = table.getVisibleLeafColumns();
-    // Find the last column that's not a system column (select, add-column)
     for (let i = visibleColumns.length - 1; i >= 0; i--) {
       const col = visibleColumns[i];
       if (col.id !== "select" && col.id !== "add-column") {
@@ -62,31 +34,23 @@ function DataGridAddColumnHeader<TData>({
     return undefined;
   }, [table]);
 
-  const handleSubmit = React.useCallback(() => {
-    if (!onColumnAdd || !label.trim()) return;
+  const handleSubmit = React.useCallback(
+    (values: ColumnFormValues) => {
+      if (!onColumnAdd) return;
 
-    onColumnAdd({
-      label: label.trim(),
-      variant,
-      prompt: prompt.trim(),
-      insertAfterColumnId: getInsertAfterColumnId(),
-    });
+      const isSelectType = values.variant === "select" || values.variant === "multi-select";
+      onColumnAdd({
+        label: values.label,
+        variant: values.variant,
+        prompt: values.prompt,
+        options: isSelectType ? values.options : undefined,
+        insertAfterColumnId: getInsertAfterColumnId(),
+      });
 
-    // Reset form
-    setLabel("");
-    setVariant("short-text");
-    setPrompt("");
-    setOpen(false);
-  }, [onColumnAdd, label, variant, prompt, getInsertAfterColumnId]);
-
-  const handleKeyDown = React.useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey && label.trim()) {
-        e.preventDefault();
-        handleSubmit();
-      }
+      formRef.current?.reset();
+      setOpen(false);
     },
-    [handleSubmit, label]
+    [onColumnAdd, getInsertAfterColumnId]
   );
 
   if (!onColumnAdd) return null;
@@ -114,66 +78,14 @@ function DataGridAddColumnHeader<TData>({
         className="w-64 p-0"
         data-grid-popover
       >
-        <div className="space-y-3 p-3">
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">Name</span>
-            <Input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Column name"
-              className="h-8"
-              autoFocus
-            />
-          </div>
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">Data Type</span>
-            <Select value={variant} onValueChange={(v) => setVariant(v as CellOpts["variant"])}>
-              <SelectTrigger className="h-8 w-full">
-                <SelectValue>
-                  {columnVariant && (
-                    <span className="flex items-center gap-2">
-                      <columnVariant.icon className="size-4 text-muted-foreground" />
-                      {CELL_VARIANTS.find((v) => v.value === variant)?.label ?? variant}
-                    </span>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {CELL_VARIANTS.map((v) => {
-                  const variantInfo = getColumnVariant(v.value);
-                  return (
-                    <SelectItem key={v.value} value={v.value}>
-                      <span className="flex items-center gap-2">
-                        {variantInfo && (
-                          <variantInfo.icon className="size-4 text-muted-foreground" />
-                        )}
-                        {v.label}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">Prompt</span>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Instructions for AI enrichment"
-              className="min-h-16 resize-none text-sm"
-            />
-          </div>
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={handleSubmit}
-            disabled={!label.trim()}
-          >
-            Add Column
-          </Button>
-        </div>
+        {open && (
+          <ColumnForm
+            ref={formRef}
+            mode="add"
+            onSubmit={handleSubmit}
+            submitLabel="Add Column"
+          />
+        )}
       </PopoverContent>
     </Popover>
   );
