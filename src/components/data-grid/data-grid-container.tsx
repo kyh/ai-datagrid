@@ -154,6 +154,14 @@ export function DataGridContainer<T>({
         result.splice(idx + 1, 0, newColumn);
         return result;
       });
+
+      // Initialize the new column data in all existing rows
+      setData((prev) =>
+        prev.map((row) => ({
+          ...row,
+          [newId]: "",
+        }))
+      );
     },
     []
   );

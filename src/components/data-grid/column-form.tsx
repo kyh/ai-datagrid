@@ -90,9 +90,41 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
       [form]
     );
 
+    // Helper to generate unique option value
+    const generateUniqueValue = React.useCallback(
+      (label: string, existingOptions: CellSelectOption[]) => {
+        const baseValue =
+          label
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "") || "option";
+
+        let uniqueValue = baseValue;
+        let counter = 1;
+        while (
+          existingOptions.some((opt) => opt.value === uniqueValue) &&
+          counter < MAX_UNIQUE_VALUE_ATTEMPTS
+        ) {
+          uniqueValue = `${baseValue}-${counter}`;
+          counter++;
+        }
+        return uniqueValue;
+      },
+      []
+    );
+
     const handleSubmit = form.handleSubmit((values) => {
+      // Add pending option if there's text in the input
+      let finalOptions = values.options;
+      const pendingLabel = newOptionLabel.trim();
+      if (pendingLabel && isSelectType) {
+        const uniqueValue = generateUniqueValue(pendingLabel, values.options);
+        finalOptions = [...values.options, { label: pendingLabel, value: uniqueValue }];
+      }
+
       onSubmit?.({
         ...values,
+        options: finalOptions,
         label: values.label.trim(),
         prompt: values.prompt.trim(),
       });
@@ -112,22 +144,8 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
       const trimmedLabel = newOptionLabel.trim();
       if (!trimmedLabel) return;
 
-      const baseValue =
-        trimmedLabel
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, "") || "option";
-
       const currentOptions = form.getValues("options");
-      let uniqueValue = baseValue;
-      let counter = 1;
-      while (
-        currentOptions.some((opt) => opt.value === uniqueValue) &&
-        counter < MAX_UNIQUE_VALUE_ATTEMPTS
-      ) {
-        uniqueValue = `${baseValue}-${counter}`;
-        counter++;
-      }
+      const uniqueValue = generateUniqueValue(trimmedLabel, currentOptions);
 
       append({ label: trimmedLabel, value: uniqueValue });
       setNewOptionLabel("");
@@ -135,7 +153,7 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
       requestAnimationFrame(() => {
         newOptionInputRef.current?.focus();
       });
-    }, [newOptionLabel, form, append]);
+    }, [newOptionLabel, form, append, generateUniqueValue]);
 
     const handleOptionKeyDown = React.useCallback(
       (e: React.KeyboardEvent) => {
