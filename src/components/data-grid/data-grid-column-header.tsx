@@ -128,33 +128,16 @@ export function DataGridColumnHeader<TData, TValue>({
 
   const handleSave = React.useCallback(
     (values: ColumnFormValues) => {
-      const updates: { label?: string; prompt?: string; options?: CellSelectOption[] } = {};
-
-      if (values.label !== label) {
-        updates.label = values.label;
-      }
-      if (values.prompt !== currentPrompt) {
-        updates.prompt = values.prompt;
-      }
-      // Check if options changed (for select types)
-      if (isSelectType) {
-        const optionsChanged =
-          values.options.length !== currentOptions.length ||
-          values.options.some(
-            (opt, i) =>
-              opt.label !== currentOptions[i]?.label ||
-              opt.value !== currentOptions[i]?.value
-          );
-        if (optionsChanged) {
-          updates.options = values.options;
-        }
-      }
-      if (Object.keys(updates).length > 0) {
-        table.options.meta?.onColumnUpdate?.(column.id, updates);
-      }
+      // Always pass all values for select types to avoid stale closure issues
+      // The onColumnUpdate handler will handle the update appropriately
+      table.options.meta?.onColumnUpdate?.(column.id, {
+        label: values.label,
+        prompt: values.prompt,
+        options: isSelectType ? values.options : undefined,
+      });
       setPopoverOpen(false);
     },
-    [label, currentPrompt, currentOptions, isSelectType, column.id, table.options.meta]
+    [isSelectType, column.id, table.options.meta]
   );
 
   return (
