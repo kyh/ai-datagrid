@@ -225,6 +225,7 @@ export function DataGrid<TData>({
                 virtualItem={virtualItem}
                 measureElement={measureElement}
                 rowHeight={rowHeight}
+                columns={columns}
                 columnVisibility={columnVisibility}
                 columnPinning={columnPinning}
                 focusedCell={focusedCell}
