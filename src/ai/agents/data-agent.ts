@@ -1,194 +1,212 @@
+import { createGateway, generateObject } from "ai";
+import type { UIMessage, UIMessageStreamWriter } from "ai";
+
+import type { DataPart } from "../messages/data-parts";
+import type { SelectionContext, ColumnInfo } from "@/lib/selection-context";
 import {
-  createGateway,
-  stepCountIs,
-  tool,
-  ToolLoopAgent,
-  type UIMessage,
-  type UIMessageStreamWriter,
-} from "ai";
-import { z } from "zod";
-
-import { type DataPart } from "../messages/data-parts";
-import { updateCellSchema } from "@/lib/data-grid-schema";
-import type { SelectionContext } from "@/lib/selection-context";
-
-// -----------------------------------------------------------------------------
-// Tool Description
-// -----------------------------------------------------------------------------
-
-const enrichDataDescription = `Use this tool to populate spreadsheet rows with data. This tool adds or updates cell values in the spreadsheet.
-
-## When to Use This Tool
-
-Use Enrich Data when:
-1. The user wants to add data to the spreadsheet (e.g., "add 10 customers", "populate with sample data")
-2. The user wants to fill in rows with specific information
-3. The user asks to generate data for existing columns
-4. The user wants to update existing cell values
-
-## Cell Update Properties
-
-- **rowIndex**: Zero-based index of the target row (0 = first row, 1 = second row, etc.)
-- **columnId**: The ID of the column to update (must match an existing column ID)
-- **value**: The cell value, typed appropriately based on the column variant:
-  - **short-text/long-text**: String
-  - **number**: Number
-  - **date**: Date string (ISO format) or Date object
-  - **select**: String (must match one of the column's option values)
-  - **multi-select**: Array of strings (each must match column's option values)
-  - **checkbox**: Boolean
-  - **url**: String (valid URL)
-  - **file**: Array of file objects (if applicable)
-
-## Best Practices
-
-- Batch updates efficiently - group all updates for a row together
-- Ensure values match the column variant type
-- For select/multi-select, use exact option values
-- For dates, use ISO format strings (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
-- Generate realistic, varied data when populating multiple rows
-- Respect existing data - don't overwrite unless explicitly requested
-
-## Examples
-
-<example>
-User: Add 5 sample customers
-Assistant: I'll add 5 sample customer records to the spreadsheet.
-*Uses Enrich Data with:*
-- rowIndex: 0, columnId: "name", value: "John Doe"
-- rowIndex: 0, columnId: "email", value: "john@example.com"
-- rowIndex: 0, columnId: "age", value: 32
-- rowIndex: 1, columnId: "name", value: "Jane Smith"
-- rowIndex: 1, columnId: "email", value: "jane@example.com"
-- rowIndex: 1, columnId: "age", value: 28
-... (continues for 5 rows)
-</example>
-
-<example>
-User: Fill in the sales data for last month
-Assistant: I'll populate the sales data with realistic values for last month.
-*Uses Enrich Data with:*
-- rowIndex: 0, columnId: "date", value: "2024-01-15"
-- rowIndex: 0, columnId: "product", value: "Widget A"
-- rowIndex: 0, columnId: "quantity", value: 10
-- rowIndex: 0, columnId: "price", value: 29.99
-- rowIndex: 0, columnId: "status", value: "completed"
-... (continues for multiple rows)
-</example>
-
-## Summary
-
-Use Enrich Data to populate spreadsheet cells with values. Ensure values are properly typed according to each column's variant. Batch updates efficiently for better performance.`;
+  shortTextValueSchema,
+  longTextValueSchema,
+  numberValueSchema,
+  checkboxValueSchema,
+  dateValueSchema,
+  urlValueSchema,
+  selectValueSchema,
+  multiSelectValueSchema,
+  createSelectValueSchema,
+  createMultiSelectValueSchema,
+} from "@/lib/data-grid-schema";
 
 // -----------------------------------------------------------------------------
-// Tool Definition
+// Types
 // -----------------------------------------------------------------------------
 
-type WriterParams = {
-  writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
+type CellTask = {
+  rowIndex: number;
+  columnId: string;
+  column: ColumnInfo;
 };
 
-function createEnrichDataTool({ writer }: WriterParams) {
-  return tool({
-    description: enrichDataDescription,
-    inputSchema: z.object({
-      updates: z.array(updateCellSchema),
-    }),
-    execute: async ({ updates }, { toolCallId }) => {
-      console.log(
-        "[EnrichDataTool] Called with updates:",
-        JSON.stringify(updates, null, 2),
-      );
-
-      writer.write({
-        id: toolCallId,
-        type: "data-enrich-data",
-        data: { updates, status: "done" },
-      });
-
-      const uniqueRows = new Set(updates.map((u) => u.rowIndex)).size;
-      const result = `Successfully updated ${updates.length} cell${
-        updates.length !== 1 ? "s" : ""
-      } across ${uniqueRows} row${uniqueRows !== 1 ? "s" : "s"}.`;
-      console.log("[EnrichDataTool] Result:", result);
-      return result;
-    },
-  });
-}
-
-// -----------------------------------------------------------------------------
-// Agent Factory
-// -----------------------------------------------------------------------------
-
-type CreateDataAgentParams = {
+type RunDataAgentParams = {
   gatewayApiKey: string;
   writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
   selectionContext: SelectionContext;
+  userMessage: string;
 };
 
-/**
- * Builds focused enrich instructions for the data agent.
- * Emphasizes exact column ID usage and includes column prompts.
- */
-function buildDataInstructions(selectionContext: SelectionContext): string {
-  console.log(
-    "[buildDataInstructions] Building instructions for:",
-    JSON.stringify(selectionContext, null, 2),
-  );
-  const { bounds, currentColumns } = selectionContext;
+// -----------------------------------------------------------------------------
+// Schema Builder
+// -----------------------------------------------------------------------------
 
-  const columnDetails = currentColumns
-    .map((c) => {
-      let detail = `- Column ID: "${c.id}" | Label: "${c.label}" | Type: ${c.variant}`;
-      if (c.prompt) {
-        detail += `\n  INSTRUCTIONS: "${c.prompt}"`;
+function buildCellSchema(column: ColumnInfo) {
+  switch (column.variant) {
+    case "number":
+      return numberValueSchema;
+
+    case "checkbox":
+      return checkboxValueSchema;
+
+    case "date":
+      return dateValueSchema;
+
+    case "select": {
+      if (column.options?.length) {
+        return createSelectValueSchema(column.options.map((o) => o.value));
       }
-      return detail;
-    })
-    .join("\n");
+      return selectValueSchema;
+    }
 
-  const exactIds = currentColumns.map((c) => `"${c.id}"`).join(", ");
+    case "multi-select": {
+      if (column.options?.length) {
+        return createMultiSelectValueSchema(column.options.map((o) => o.value));
+      }
+      return multiSelectValueSchema;
+    }
 
-  const instructions = `You are a data enrichment assistant. Your ONLY job is to populate cells with data using the enrichData tool.
+    case "url":
+      return urlValueSchema;
 
-## CRITICAL: Use EXACT Column IDs
-The column IDs below are case-sensitive. You MUST use them EXACTLY as shown.
-DO NOT use column labels as IDs. DO NOT modify or kebab-case the IDs.
+    case "long-text":
+      return longTextValueSchema;
 
-## Selected Region
-- Rows: ${bounds.minRow} to ${bounds.maxRow} (${bounds.maxRow - bounds.minRow + 1} row${bounds.maxRow - bounds.minRow + 1 !== 1 ? "s" : ""})
-- Column IDs to use: [${exactIds}]
-
-## Columns to Populate
-${columnDetails}
-
-## STRICT RULES
-1. Use ONLY these exact column IDs: [${exactIds}]
-2. Update ONLY rows ${bounds.minRow} to ${bounds.maxRow}
-3. Follow column INSTRUCTIONS (if provided) to generate appropriate values
-4. Generate realistic, meaningful data - NEVER return empty strings
-5. Call enrichData tool ONCE PER CELL - each call should update exactly ONE cell
-6. Stop after all cells are updated
-
-## Example Call
-If column ID is "A" (not "name"), you MUST use:
-{ "rowIndex": 0, "columnId": "A", "value": "John Doe" }
-NOT:
-{ "rowIndex": 0, "columnId": "name", "value": "John Doe" }`;
-
-  console.log("[buildDataInstructions] Final instructions:\n", instructions);
-  return instructions;
+    // short-text and default
+    default:
+      return shortTextValueSchema;
+  }
 }
 
+// -----------------------------------------------------------------------------
+// Prompt Builder
+// -----------------------------------------------------------------------------
+
+type PromptContext = {
+  userMessage: string;
+  rowData?: Record<string, unknown>;
+  allColumns: ColumnInfo[];
+};
+
+function buildCellPrompt(task: CellTask, context: PromptContext): string {
+  const { column, rowIndex } = task;
+  const { userMessage, rowData, allColumns } = context;
+
+  let prompt = `Generate a value for a spreadsheet cell.
+
+Context: ${userMessage}
+
+Cell Details:
+- Column: "${column.label}" (type: ${column.variant})
+- Row: ${rowIndex + 1}
+`;
+
+  if (column.prompt) {
+    prompt += `- Instructions: ${column.prompt}\n`;
+  }
+
+  if (column.options && column.options.length > 0) {
+    const optionValues = column.options.map((o) => o.value).join(", ");
+    prompt += `- Valid options: ${optionValues}\n`;
+  }
+
+  // Add row context from other cells
+  if (rowData && Object.keys(rowData).length > 0) {
+    const otherValues: string[] = [];
+    for (const col of allColumns) {
+      // Skip the current column being generated
+      if (col.id === column.id) continue;
+      const value = rowData[col.id];
+      if (value !== undefined && value !== null && value !== "") {
+        otherValues.push(`${col.label}: ${JSON.stringify(value)}`);
+      }
+    }
+    if (otherValues.length > 0) {
+      prompt += `\nOther values in this row:\n${otherValues.join("\n")}\n`;
+      prompt += `\nUse these values for context to generate coherent, related data.`;
+    }
+  }
+
+  prompt += `\nGenerate realistic, varied data appropriate for this cell.`;
+
+  return prompt;
+}
+
+// -----------------------------------------------------------------------------
+// Cell Processor
+// -----------------------------------------------------------------------------
+
+async function generateCellValue(
+  model: ReturnType<ReturnType<typeof createGateway>>,
+  task: CellTask,
+  context: PromptContext,
+  writer: UIMessageStreamWriter<UIMessage<never, DataPart>>,
+): Promise<void> {
+  const prompt = buildCellPrompt(task, context);
+  const schema = buildCellSchema(task.column);
+
+  try {
+    const { object } = await generateObject({
+      model,
+      prompt,
+      schema,
+    });
+
+    // Stream the update for this cell
+    writer.write({
+      id: `cell-${task.rowIndex}-${task.columnId}`,
+      type: "data-enrich-data",
+      data: {
+        updates: [
+          {
+            rowIndex: task.rowIndex,
+            columnId: task.columnId,
+            value: object.value,
+          },
+        ],
+        status: "done",
+      },
+    });
+
+    console.log(
+      `[DataAgent] Generated value for row ${task.rowIndex}, column ${task.columnId}:`,
+      object.value
+    );
+  } catch (error) {
+    console.error(
+      `[DataAgent] Error generating value for row ${task.rowIndex}, column ${task.columnId}:`,
+      error
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Batch Processor
+// -----------------------------------------------------------------------------
+
+async function processBatch<T>(
+  items: T[],
+  batchSize: number,
+  processor: (item: T) => Promise<void>
+): Promise<void> {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    await Promise.all(batch.map(processor));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Main Agent Function
+// -----------------------------------------------------------------------------
+
+const MAX_CONCURRENT_CELLS = 5;
+
 /**
- * Creates a data agent for cell enrichment.
- * Handles: populating cells with data based on selection context.
+ * Runs the data agent to populate cells with AI-generated values.
+ * Processes cells in batches of 5 for optimal concurrency.
  */
-export function createDataAgent({
+export async function runDataAgent({
   gatewayApiKey,
   writer,
   selectionContext,
-}: CreateDataAgentParams) {
+  userMessage,
+}: RunDataAgentParams): Promise<void> {
   const model = createGateway({
     apiKey:
       gatewayApiKey === process.env.SECRET_KEY
@@ -196,19 +214,37 @@ export function createDataAgent({
         : gatewayApiKey,
   })("openai/gpt-5.1-instant");
 
-  const instructions = buildDataInstructions(selectionContext);
+  const { bounds, currentColumns, rowData } = selectionContext;
 
-  // Calculate max steps: one per cell + buffer for completion
-  const { bounds } = selectionContext;
-  const numRows = bounds.maxRow - bounds.minRow + 1;
-  const numCols = bounds.columns.length;
-  const maxSteps = numRows * numCols + 2;
+  // Build list of cell tasks from selected cells
+  const tasks: CellTask[] = [];
 
-  return new ToolLoopAgent({
-    model,
-    instructions,
-    tools: { enrichData: createEnrichDataTool({ writer }) },
-    stopWhen: stepCountIs(maxSteps),
-    toolChoice: "auto",
+  for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex++) {
+    for (const column of currentColumns) {
+      // Only process cells within the selected columns
+      if (bounds.columns.includes(column.id)) {
+        tasks.push({
+          rowIndex,
+          columnId: column.id,
+          column,
+        });
+      }
+    }
+  }
+
+  console.log(
+    `[DataAgent] Processing ${tasks.length} cells in batches of ${MAX_CONCURRENT_CELLS}`
+  );
+
+  // Process cells in batches of 5
+  await processBatch(tasks, MAX_CONCURRENT_CELLS, (task) => {
+    const context: PromptContext = {
+      userMessage,
+      rowData: rowData?.[task.rowIndex],
+      allColumns: currentColumns,
+    };
+    return generateCellValue(model, task, context, writer);
   });
+
+  console.log("[DataAgent] Completed all cell updates");
 }
