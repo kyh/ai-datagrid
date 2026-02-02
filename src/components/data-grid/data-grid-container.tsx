@@ -12,10 +12,11 @@ import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { Chat } from "@/components/chat/chat";
-import type { CellOpts, CellSelectOption, CellUpdate } from "@/lib/data-grid-types";
+import type { CellOpts, CellSelectOption, CellUpdate, FilterValue } from "@/lib/data-grid-types";
 import type { ColumnUpdate } from "@/ai/messages/data-parts";
 import type { SelectionContext } from "@/lib/selection-context";
 import { parseCellKey } from "@/lib/data-grid";
+import { useDataGridStore } from "@/stores/data-grid-store";
 
 /** Creates a CellOpts config for a given variant */
 function createCellConfig(variant: CellOpts["variant"]): CellOpts {
@@ -320,14 +321,92 @@ export function DataGridContainer<T>({
     return columns
       .filter((col) => col.id && col.id !== "select" && col.id !== "index" && col.id !== "add-column")
       .map((col) => {
-        const meta = col.meta as { label?: string; prompt?: string } | undefined;
+        const meta = col.meta as { label?: string; prompt?: string; cell?: { variant: string } } | undefined;
         return {
           id: col.id ?? "",
           label: meta?.label ?? col.id ?? "",
+          variant: meta?.cell?.variant ?? "short-text",
           prompt: meta?.prompt,
         };
       });
   }, [columns]);
+
+  // Filter and sort state from store
+  const { columnFilters, setColumnFilters, sorting, setSorting } = useDataGridStore();
+
+  const getExistingFilters = React.useCallback(() => {
+    return columnFilters.map((f) => {
+      const filterValue = f.value as FilterValue | undefined;
+      return {
+        columnId: f.id,
+        operator: filterValue?.operator ?? "contains",
+        value: filterValue?.value,
+      };
+    });
+  }, [columnFilters]);
+
+  const getExistingSorts = React.useCallback(() => {
+    return sorting.map((s) => ({
+      columnId: s.id,
+      direction: s.desc ? "desc" as const : "asc" as const,
+    }));
+  }, [sorting]);
+
+  const onFiltersAdded = React.useCallback(
+    (filters: Array<{ columnId: string; value: FilterValue }>) => {
+      const newFilters = [...columnFilters];
+      for (const filter of filters) {
+        // Remove any existing filter for this column
+        const idx = newFilters.findIndex((f) => f.id === filter.columnId);
+        if (idx !== -1) {
+          newFilters.splice(idx, 1);
+        }
+        // Add the new filter
+        newFilters.push({ id: filter.columnId, value: filter.value });
+      }
+      setColumnFilters(newFilters);
+    },
+    [columnFilters, setColumnFilters]
+  );
+
+  const onFiltersRemoved = React.useCallback(
+    (columnIds: string[]) => {
+      setColumnFilters(columnFilters.filter((f) => !columnIds.includes(f.id)));
+    },
+    [columnFilters, setColumnFilters]
+  );
+
+  const onFiltersCleared = React.useCallback(() => {
+    setColumnFilters([]);
+  }, [setColumnFilters]);
+
+  const onSortsAdded = React.useCallback(
+    (sorts: Array<{ columnId: string; desc: boolean }>) => {
+      const newSorts = [...sorting];
+      for (const sort of sorts) {
+        // Remove any existing sort for this column
+        const idx = newSorts.findIndex((s) => s.id === sort.columnId);
+        if (idx !== -1) {
+          newSorts.splice(idx, 1);
+        }
+        // Add the new sort
+        newSorts.push({ id: sort.columnId, desc: sort.desc });
+      }
+      setSorting(newSorts);
+    },
+    [sorting, setSorting]
+  );
+
+  const onSortsRemoved = React.useCallback(
+    (columnIds: string[]) => {
+      setSorting(sorting.filter((s) => !columnIds.includes(s.id)));
+    },
+    [sorting, setSorting]
+  );
+
+  const onSortsCleared = React.useCallback(() => {
+    setSorting([]);
+  }, [setSorting]);
 
   const getSelectionContext = React.useCallback((): SelectionContext | null => {
     const selectionState = tableMeta.selectionState;
@@ -406,8 +485,16 @@ export function DataGridContainer<T>({
           onColumnsUpdated={onColumnsUpdated}
           onColumnsDeleted={onColumnsDeleted}
           onDataEnriched={onDataEnriched}
+          onFiltersAdded={onFiltersAdded}
+          onFiltersRemoved={onFiltersRemoved}
+          onFiltersCleared={onFiltersCleared}
+          onSortsAdded={onSortsAdded}
+          onSortsRemoved={onSortsRemoved}
+          onSortsCleared={onSortsCleared}
           getSelectionContext={getSelectionContext}
           getExistingColumns={getExistingColumns}
+          getExistingFilters={getExistingFilters}
+          getExistingSorts={getExistingSorts}
           hasSelection={hasSelection}
           initialInput={initialChatInput}
         />

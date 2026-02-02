@@ -11,14 +11,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
-import type { ColumnUpdate } from "@/ai/messages/data-parts";
-import type { ExistingColumn } from "@/ai/agents/table-agent";
+import type {
+  ColumnUpdate,
+  filterSchema,
+  sortSchema,
+} from "@/ai/messages/data-parts";
+import { columnDefinitionSchema } from "@/ai/messages/data-parts";
+import type {
+  ExistingColumn,
+  ExistingFilter,
+  ExistingSort,
+} from "@/ai/agents/table-agent";
+import type { FilterValue, CellUpdate } from "@/lib/data-grid-types";
+import type { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { CellUpdate } from "@/lib/data-grid-types";
 import type { SelectionContext } from "@/lib/selection-context";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { z } from "zod";
-import { columnDefinitionSchema } from "@/ai/messages/data-parts";
 import { updateCellSchema } from "@/lib/data-grid-schema";
 import { GenerateModeChatUIMessage } from "@/ai/messages/types";
 import { useDataGridStore } from "@/stores/data-grid-store";
@@ -28,8 +36,16 @@ interface ChatProps {
   onColumnsUpdated?: (updates: ColumnUpdate[]) => void;
   onColumnsDeleted?: (columnIds: string[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
+  onFiltersAdded?: (filters: Array<{ columnId: string; value: FilterValue }>) => void;
+  onFiltersRemoved?: (columnIds: string[]) => void;
+  onFiltersCleared?: () => void;
+  onSortsAdded?: (sorts: Array<{ columnId: string; desc: boolean }>) => void;
+  onSortsRemoved?: (columnIds: string[]) => void;
+  onSortsCleared?: () => void;
   getSelectionContext?: () => SelectionContext | null;
   getExistingColumns?: () => ExistingColumn[];
+  getExistingFilters?: () => ExistingFilter[];
+  getExistingSorts?: () => ExistingSort[];
   hasSelection?: boolean;
   initialInput?: string;
 }
@@ -39,8 +55,16 @@ export const Chat = ({
   onColumnsUpdated,
   onColumnsDeleted,
   onDataEnriched,
+  onFiltersAdded,
+  onFiltersRemoved,
+  onFiltersCleared,
+  onSortsAdded,
+  onSortsRemoved,
+  onSortsCleared,
   getSelectionContext,
   getExistingColumns,
+  getExistingFilters,
+  getExistingSorts,
   hasSelection = false,
   initialInput = "",
 }: ChatProps = {}) => {
@@ -236,6 +260,78 @@ export const Chat = ({
               );
             }
           }
+
+          // Handle add-filters data part
+          if (dataPart.type === "data-add-filters") {
+            const { filters } = dataPart.data;
+            if (filters && filters.length > 0 && onFiltersAdded) {
+              const filterValues = filters.map((f: z.infer<typeof filterSchema>) => ({
+                columnId: f.columnId,
+                value: {
+                  operator: f.operator,
+                  value: f.value,
+                  endValue: f.endValue,
+                } as FilterValue,
+              }));
+              onFiltersAdded(filterValues);
+              toast.success(
+                `Added ${filters.length} filter${filters.length !== 1 ? "s" : ""}`,
+              );
+            }
+          }
+
+          // Handle remove-filters data part
+          if (dataPart.type === "data-remove-filters") {
+            const { columnIds } = dataPart.data;
+            if (columnIds && columnIds.length > 0 && onFiltersRemoved) {
+              onFiltersRemoved(columnIds);
+              toast.success(
+                `Removed ${columnIds.length} filter${columnIds.length !== 1 ? "s" : ""}`,
+              );
+            }
+          }
+
+          // Handle clear-filters data part
+          if (dataPart.type === "data-clear-filters") {
+            if (onFiltersCleared) {
+              onFiltersCleared();
+              toast.success("Cleared all filters");
+            }
+          }
+
+          // Handle add-sorts data part
+          if (dataPart.type === "data-add-sorts") {
+            const { sorts } = dataPart.data;
+            if (sorts && sorts.length > 0 && onSortsAdded) {
+              const sortValues = sorts.map((s: z.infer<typeof sortSchema>) => ({
+                columnId: s.columnId,
+                desc: s.direction === "desc",
+              }));
+              onSortsAdded(sortValues);
+              toast.success(
+                `Added ${sorts.length} sort${sorts.length !== 1 ? "s" : ""}`,
+              );
+            }
+          }
+
+          // Handle remove-sorts data part
+          if (dataPart.type === "data-remove-sorts") {
+            const { columnIds } = dataPart.data;
+            if (columnIds && columnIds.length > 0 && onSortsRemoved) {
+              onSortsRemoved(columnIds);
+              toast.success(
+                `Removed sorting from ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`,
+              );
+            }
+          }
+
+          // Handle clear-sorts data part
+          if (dataPart.type === "data-clear-sorts") {
+            if (onSortsCleared) {
+              onSortsCleared();
+              toast.success("Cleared all sorting");
+            }
+          }
         } catch (err) {
           toast.error(
             err instanceof Error ? err.message : "Failed to process data part",
@@ -287,11 +383,19 @@ export const Chat = ({
 
       const buildRequestBody = () => {
         const existingColumns = getExistingColumns?.();
+        const existingFilters = getExistingFilters?.();
+        const existingSorts = getExistingSorts?.();
         return {
           ...(apiKey ? { gatewayApiKey: apiKey } : {}),
           ...(selectionContext ? { selectionContext } : {}),
           ...(existingColumns && existingColumns.length > 0
             ? { existingColumns }
+            : {}),
+          ...(existingFilters && existingFilters.length > 0
+            ? { existingFilters }
+            : {}),
+          ...(existingSorts && existingSorts.length > 0
+            ? { existingSorts }
             : {}),
         };
       };
@@ -321,6 +425,9 @@ export const Chat = ({
       sendMessage,
       setInput,
       getSelectionContext,
+      getExistingColumns,
+      getExistingFilters,
+      getExistingSorts,
       setGeneratingCells,
       setMessages,
     ],

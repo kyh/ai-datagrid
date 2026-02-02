@@ -6,7 +6,12 @@ import {
 
 import type { GenerateModeChatUIMessage } from "../messages/types";
 import type { SelectionContext } from "@/lib/selection-context";
-import { createTableAgent, type ExistingColumn } from "../agents/table-agent";
+import {
+  createTableAgent,
+  type ExistingColumn,
+  type ExistingFilter,
+  type ExistingSort,
+} from "../agents/table-agent";
 import { runDataAgent } from "../agents/data-agent";
 
 /**
@@ -25,6 +30,8 @@ export const streamChatResponse = async (
   gatewayApiKey: string,
   selectionContext: SelectionContext | null,
   existingColumns?: ExistingColumn[],
+  existingFilters?: ExistingFilter[],
+  existingSorts?: ExistingSort[],
 ) => {
   console.log(
     "[streamChatResponse] Called with selectionContext:",
@@ -56,11 +63,13 @@ export const streamChatResponse = async (
             userMessage: userMessageText,
           });
         } else {
-          // Use the table agent for column management
+          // Use the table agent for column management, filtering, and sorting
           const agent = createTableAgent({
             gatewayApiKey,
             writer,
             existingColumns,
+            existingFilters,
+            existingSorts,
           });
 
           console.log("[streamChatResponse] Starting table agent stream");

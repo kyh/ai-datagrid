@@ -51,6 +51,86 @@ const columnDeleteSchema = z.object({
   columnIds: z.array(z.string()),
 });
 
+// Filter operator schemas by variant type
+const textFilterOperatorSchema = z.enum([
+  "contains",
+  "notContains",
+  "equals",
+  "notEquals",
+  "startsWith",
+  "endsWith",
+  "isEmpty",
+  "isNotEmpty",
+]);
+
+const numberFilterOperatorSchema = z.enum([
+  "equals",
+  "notEquals",
+  "lessThan",
+  "lessThanOrEqual",
+  "greaterThan",
+  "greaterThanOrEqual",
+  "isBetween",
+  "isEmpty",
+  "isNotEmpty",
+]);
+
+const dateFilterOperatorSchema = z.enum([
+  "equals",
+  "notEquals",
+  "before",
+  "after",
+  "onOrBefore",
+  "onOrAfter",
+  "isBetween",
+  "isEmpty",
+  "isNotEmpty",
+]);
+
+const selectFilterOperatorSchema = z.enum([
+  "is",
+  "isNot",
+  "isAnyOf",
+  "isNoneOf",
+  "isEmpty",
+  "isNotEmpty",
+]);
+
+const booleanFilterOperatorSchema = z.enum(["isTrue", "isFalse"]);
+
+// Combined filter operator schema
+const filterOperatorSchema = z.union([
+  textFilterOperatorSchema,
+  numberFilterOperatorSchema,
+  dateFilterOperatorSchema,
+  selectFilterOperatorSchema,
+  booleanFilterOperatorSchema,
+]);
+
+// Schema for a filter definition
+const filterSchema = z.object({
+  columnId: z.string(),
+  operator: filterOperatorSchema,
+  value: z.union([z.string(), z.number(), z.array(z.string())]).optional(),
+  endValue: z.union([z.string(), z.number()]).optional(),
+});
+
+// Schema for removing filters
+const removeFiltersSchema = z.object({
+  columnIds: z.array(z.string()),
+});
+
+// Schema for a sort definition
+const sortSchema = z.object({
+  columnId: z.string(),
+  direction: z.enum(["asc", "desc"]),
+});
+
+// Schema for removing sorts
+const removeSortsSchema = z.object({
+  columnIds: z.array(z.string()),
+});
+
 // Type for column update
 export type ColumnUpdate = z.infer<typeof columnUpdateSchema>;
 
@@ -74,7 +154,39 @@ export type DataPart = {
     updates: z.infer<typeof updateCellSchema>[];
     status: "done";
   };
+  "add-filters": {
+    filters: z.infer<typeof filterSchema>[];
+    status: "done";
+  };
+  "remove-filters": {
+    columnIds: string[];
+    status: "done";
+  };
+  "clear-filters": {
+    status: "done";
+  };
+  "add-sorts": {
+    sorts: z.infer<typeof sortSchema>[];
+    status: "done";
+  };
+  "remove-sorts": {
+    columnIds: string[];
+    status: "done";
+  };
+  "clear-sorts": {
+    status: "done";
+  };
 };
 
 // Export schemas for use in tools
-export { columnDefinitionSchema, columnUpdateSchema, columnDeleteSchema, cellVariantSchema };
+export {
+  columnDefinitionSchema,
+  columnUpdateSchema,
+  columnDeleteSchema,
+  cellVariantSchema,
+  filterSchema,
+  filterOperatorSchema,
+  removeFiltersSchema,
+  sortSchema,
+  removeSortsSchema,
+};
