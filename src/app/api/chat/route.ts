@@ -2,19 +2,31 @@ import { streamChatResponse } from "@/ai/response/stream-chat-response";
 
 import type { GenerateModeChatUIMessage } from "@/ai/messages/types";
 import type { SelectionContext } from "@/lib/selection-context";
-import type { ExistingColumn } from "@/ai/agents/table-agent";
+import type {
+  ExistingColumn,
+  ExistingFilter,
+  ExistingSort,
+} from "@/ai/agents/table-agent";
 
 type BodyData = {
   messages: GenerateModeChatUIMessage[];
   gatewayApiKey?: string;
   selectionContext?: SelectionContext;
   existingColumns?: ExistingColumn[];
+  existingFilters?: ExistingFilter[];
+  existingSorts?: ExistingSort[];
 };
 
 export async function POST(request: Request) {
   const bodyData = (await request.json()) as BodyData;
-  const { messages, gatewayApiKey, selectionContext, existingColumns } =
-    bodyData;
+  const {
+    messages,
+    gatewayApiKey,
+    selectionContext,
+    existingColumns,
+    existingFilters,
+    existingSorts,
+  } = bodyData;
 
   // Local dev: always use env key. Production: use client key
   const apiKey =
@@ -31,5 +43,7 @@ export async function POST(request: Request) {
     apiKey,
     selectionContext ?? null,
     existingColumns,
+    existingFilters,
+    existingSorts,
   );
 }
