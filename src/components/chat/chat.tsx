@@ -1,4 +1,5 @@
 import { KeyIcon, SparklesIcon } from "lucide-react";
+import { Shimmer } from "../ui/shimmer";
 import {
   InputGroup,
   InputGroupAddon,
@@ -48,9 +49,10 @@ export const Chat = ({
   const filterFn = getFilterFn();
   // AI Prompt state
   const [input, setInput] = useState(initialInput);
-  const [enrichProgress, setEnrichProgress] = useState<{
-    total: number;
-    completed: number;
+  const [progress, setProgress] = useState<{
+    message: string;
+    total?: number;
+    completed?: number;
   } | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, , removeApiKey] = useLocalStorage<string>(
@@ -62,6 +64,7 @@ export const Chat = ({
     useChat<GenerateModeChatUIMessage>({
       id: apiKey,
       onError: (error) => {
+        setProgress(null);
         const errorMessage = error.message?.toLowerCase() || "";
         const isAuthError =
           errorMessage.includes("unauthorized") ||
@@ -93,6 +96,7 @@ export const Chat = ({
 
           // Handle generate-columns data part
           if (dataPart.type === "data-generate-columns") {
+            setProgress(null);
             if (dataPart.data.columns && onColumnsGenerated) {
               // Convert column definitions to ColumnDef format
               type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
@@ -176,6 +180,7 @@ export const Chat = ({
 
           // Handle update-columns data part
           if (dataPart.type === "data-update-columns") {
+            setProgress(null);
             const { updates } = dataPart.data;
             if (updates && updates.length > 0 && onColumnsUpdated) {
               onColumnsUpdated(updates);
@@ -187,6 +192,7 @@ export const Chat = ({
 
           // Handle delete-columns data part
           if (dataPart.type === "data-delete-columns") {
+            setProgress(null);
             const { columnIds } = dataPart.data;
             if (columnIds && columnIds.length > 0 && onColumnsDeleted) {
               onColumnsDeleted(columnIds);
@@ -215,8 +221,8 @@ export const Chat = ({
               }
 
               // Update progress
-              setEnrichProgress((prev) => {
-                if (!prev) return null;
+              setProgress((prev) => {
+                if (!prev || prev.total === undefined || prev.completed === undefined) return null;
                 const newCompleted = prev.completed + updates.length;
                 // Clear progress when done
                 if (newCompleted >= prev.total) {
@@ -274,7 +280,9 @@ export const Chat = ({
         );
         console.log("[Chat] Setting generating cells:", [...cellKeys]);
         setGeneratingCells(cellKeys);
-        setEnrichProgress({ total: cellKeys.size, completed: 0 });
+        setProgress({ message: "Enriching...", total: cellKeys.size, completed: 0 });
+      } else {
+        setProgress({ message: "Processing..." });
       }
 
       const buildRequestBody = () => {
@@ -333,19 +341,23 @@ export const Chat = ({
         className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 w-full max-w-lg"
         data-grid-chat
       >
-        {enrichProgress && (
+        {progress && (
           <div className="mb-2 px-4">
-            <div className="text-xs text-muted-foreground mb-1">
-              {enrichProgress.completed}/{enrichProgress.total} cells
-            </div>
-            <div className="h-1 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{
-                  width: `${(enrichProgress.completed / enrichProgress.total) * 100}%`,
-                }}
-              />
-            </div>
+            <Shimmer className="text-xs">
+              {progress.total !== undefined
+                ? `${progress.completed}/${progress.total} cells`
+                : progress.message}
+            </Shimmer>
+            {progress.total !== undefined && (
+              <div className="h-1 bg-muted rounded-full overflow-hidden mt-1">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width: `${((progress.completed ?? 0) / progress.total) * 100}%`,
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
         <form onSubmit={handleSubmit}>
