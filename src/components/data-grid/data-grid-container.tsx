@@ -363,8 +363,9 @@ export function DataGridContainer<T>({
         maxRow: rows[rows.length - 1] ?? 0,
         columns: cols,
       },
+      // Include ALL columns for context, not just selected ones
       currentColumns: columns
-        .filter((col) => col.id && cols.includes(col.id))
+        .filter((col) => col.id)
         .map((col) => {
           const meta = col.meta as {
             label?: string;
