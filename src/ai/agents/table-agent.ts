@@ -502,6 +502,7 @@ export type ExistingColumn = {
   label: string;
   variant: string;
   prompt?: string;
+  options?: Array<{ label: string; value: string }>;
 };
 
 export type ExistingFilter = {
@@ -516,7 +517,7 @@ export type ExistingSort = {
 };
 
 type CreateTableAgentParams = {
-  gatewayApiKey: string;
+  apiKey: string;
   writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
   existingColumns?: ExistingColumn[];
   existingFilters?: ExistingFilter[];
@@ -537,6 +538,10 @@ function buildTableInstructions(
     const columnList = existingColumns
       .map((c) => {
         let line = `- "${c.id}" (${c.label}, type: ${c.variant})`;
+        if (c.options && c.options.length > 0) {
+          const optionValues = c.options.map((o) => o.value).join(", ");
+          line += `\n  Options: ${optionValues}`;
+        }
         if (c.prompt) {
           line += `\n  Prompt: "${c.prompt}"`;
         }
@@ -549,7 +554,8 @@ function buildTableInstructions(
 The spreadsheet has these columns:
 ${columnList}
 
-When filtering, sorting, updating, or deleting columns, use the exact column IDs shown above.`);
+When filtering, sorting, updating, or deleting columns, use the exact column IDs shown above.
+When filtering select columns, use the exact option values shown above.`);
   }
 
   if (existingFilters && existingFilters.length > 0) {
@@ -592,18 +598,13 @@ Use removeSorts or clearSorts to modify active sorting.`);
  * Handles: generate, update, delete columns; add, remove, clear filters/sorts.
  */
 export function createTableAgent({
-  gatewayApiKey,
+  apiKey,
   writer,
   existingColumns,
   existingFilters,
   existingSorts,
 }: CreateTableAgentParams) {
-  const model = createGateway({
-    apiKey:
-      gatewayApiKey === process.env.SECRET_KEY
-        ? process.env.AI_GATEWAY_API_KEY
-        : gatewayApiKey,
-  })("openai/gpt-5.1-instant");
+  const model = createGateway({ apiKey })("openai/gpt-5.1-instant");
 
   const instructions = buildTableInstructions(
     existingColumns,

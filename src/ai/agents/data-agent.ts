@@ -27,7 +27,7 @@ type CellTask = {
 };
 
 type RunDataAgentParams = {
-  gatewayApiKey: string;
+  apiKey: string;
   writer: UIMessageStreamWriter<UIMessage<never, DataPart>>;
   selectionContext: SelectionContext;
   userMessage: string;
@@ -202,17 +202,12 @@ const MAX_CONCURRENT_CELLS = 5;
  * Processes cells in batches of 5 for optimal concurrency.
  */
 export async function runDataAgent({
-  gatewayApiKey,
+  apiKey,
   writer,
   selectionContext,
   userMessage,
 }: RunDataAgentParams): Promise<void> {
-  const model = createGateway({
-    apiKey:
-      gatewayApiKey === process.env.SECRET_KEY
-        ? process.env.AI_GATEWAY_API_KEY
-        : gatewayApiKey,
-  })("openai/gpt-5.1-instant");
+  const model = createGateway({ apiKey })("openai/gpt-5.1-instant");
 
   const { bounds, currentColumns, rowData } = selectionContext;
 

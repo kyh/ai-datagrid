@@ -28,11 +28,13 @@ export async function POST(request: Request) {
     existingSorts,
   } = bodyData;
 
-  // Local dev: always use env key. Production: use client key
+  // Resolve API key: dev uses env key, prod checks for secret key or uses client key
   const apiKey =
     process.env.NODE_ENV === "development"
       ? process.env.AI_GATEWAY_API_KEY
-      : gatewayApiKey;
+      : gatewayApiKey === process.env.SECRET_KEY
+        ? process.env.AI_GATEWAY_API_KEY
+        : gatewayApiKey;
 
   if (!apiKey) {
     return new Response("Gateway API key is required", { status: 400 });

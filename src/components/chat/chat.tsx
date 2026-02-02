@@ -263,14 +263,23 @@ export const Chat = ({
 
           // Handle add-filters data part
           if (dataPart.type === "data-add-filters") {
+            setProgress(null);
             const { filters } = dataPart.data;
             if (filters && filters.length > 0 && onFiltersAdded) {
+              // Clean up malformed values from LLM (e.g., "Engineering},{" -> "Engineering")
+              const cleanValue = (val: unknown): unknown => {
+                if (typeof val === "string") {
+                  // Remove any trailing JSON artifacts
+                  return val.replace(/[,{}[\]]+$/, "").trim();
+                }
+                return val;
+              };
               const filterValues = filters.map((f: z.infer<typeof filterSchema>) => ({
                 columnId: f.columnId,
                 value: {
                   operator: f.operator,
-                  value: f.value,
-                  endValue: f.endValue,
+                  value: cleanValue(f.value),
+                  endValue: cleanValue(f.endValue),
                 } as FilterValue,
               }));
               onFiltersAdded(filterValues);
@@ -282,6 +291,7 @@ export const Chat = ({
 
           // Handle remove-filters data part
           if (dataPart.type === "data-remove-filters") {
+            setProgress(null);
             const { columnIds } = dataPart.data;
             if (columnIds && columnIds.length > 0 && onFiltersRemoved) {
               onFiltersRemoved(columnIds);
@@ -293,6 +303,7 @@ export const Chat = ({
 
           // Handle clear-filters data part
           if (dataPart.type === "data-clear-filters") {
+            setProgress(null);
             if (onFiltersCleared) {
               onFiltersCleared();
               toast.success("Cleared all filters");
@@ -301,6 +312,7 @@ export const Chat = ({
 
           // Handle add-sorts data part
           if (dataPart.type === "data-add-sorts") {
+            setProgress(null);
             const { sorts } = dataPart.data;
             if (sorts && sorts.length > 0 && onSortsAdded) {
               const sortValues = sorts.map((s: z.infer<typeof sortSchema>) => ({
@@ -316,6 +328,7 @@ export const Chat = ({
 
           // Handle remove-sorts data part
           if (dataPart.type === "data-remove-sorts") {
+            setProgress(null);
             const { columnIds } = dataPart.data;
             if (columnIds && columnIds.length > 0 && onSortsRemoved) {
               onSortsRemoved(columnIds);
@@ -327,6 +340,7 @@ export const Chat = ({
 
           // Handle clear-sorts data part
           if (dataPart.type === "data-clear-sorts") {
+            setProgress(null);
             if (onSortsCleared) {
               onSortsCleared();
               toast.success("Cleared all sorting");

@@ -245,34 +245,46 @@ export function getFilterFn<TData>(): FilterFn<TData> {
 
     if (operator === "is") {
       if (Array.isArray(cellValue)) {
-        return cellValue.some((v) => String(v) === String(value));
+        return cellValue.some(
+          (v) => String(v).toLowerCase() === String(value).toLowerCase()
+        );
       }
-      return String(cellValue) === String(value);
+      return String(cellValue).toLowerCase() === String(value).toLowerCase();
     }
 
     if (operator === "isNot") {
       if (Array.isArray(cellValue)) {
-        return !cellValue.some((v) => String(v) === String(value));
+        return !cellValue.some(
+          (v) => String(v).toLowerCase() === String(value).toLowerCase()
+        );
       }
-      return String(cellValue) !== String(value);
+      return String(cellValue).toLowerCase() !== String(value).toLowerCase();
     }
 
     if (operator === "isAnyOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return cellValue.some((v) =>
-          value.some((fv) => String(v) === String(fv))
+          value.some(
+            (fv) => String(v).toLowerCase() === String(fv).toLowerCase()
+          )
         );
       }
-      return value.some((fv) => String(cellValue) === String(fv));
+      return value.some(
+        (fv) => String(cellValue).toLowerCase() === String(fv).toLowerCase()
+      );
     }
 
     if (operator === "isNoneOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return !cellValue.some((v) =>
-          value.some((fv) => String(v) === String(fv))
+          value.some(
+            (fv) => String(v).toLowerCase() === String(fv).toLowerCase()
+          )
         );
       }
-      return !value.some((fv) => String(cellValue) === String(fv));
+      return !value.some(
+        (fv) => String(cellValue).toLowerCase() === String(fv).toLowerCase()
+      );
     }
 
     return true;

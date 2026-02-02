@@ -27,7 +27,7 @@ import { runDataAgent } from "../agents/data-agent";
  */
 export const streamChatResponse = async (
   messages: GenerateModeChatUIMessage[],
-  gatewayApiKey: string,
+  apiKey: string,
   selectionContext: SelectionContext | null,
   existingColumns?: ExistingColumn[],
   existingFilters?: ExistingFilter[],
@@ -57,7 +57,7 @@ export const streamChatResponse = async (
         if (selectionContext) {
           // Use the new cell-by-cell data agent with batched concurrency
           await runDataAgent({
-            gatewayApiKey,
+            apiKey,
             writer,
             selectionContext,
             userMessage: userMessageText,
@@ -65,7 +65,7 @@ export const streamChatResponse = async (
         } else {
           // Use the table agent for column management, filtering, and sorting
           const agent = createTableAgent({
-            gatewayApiKey,
+            apiKey,
             writer,
             existingColumns,
             existingFilters,

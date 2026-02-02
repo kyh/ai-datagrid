@@ -321,12 +321,17 @@ export function DataGridContainer<T>({
     return columns
       .filter((col) => col.id && col.id !== "select" && col.id !== "index" && col.id !== "add-column")
       .map((col) => {
-        const meta = col.meta as { label?: string; prompt?: string; cell?: { variant: string } } | undefined;
+        const meta = col.meta as {
+          label?: string;
+          prompt?: string;
+          cell?: { variant: string; options?: Array<{ label: string; value: string }> };
+        } | undefined;
         return {
           id: col.id ?? "",
           label: meta?.label ?? col.id ?? "",
           variant: meta?.cell?.variant ?? "short-text",
           prompt: meta?.prompt,
+          options: meta?.cell?.options,
         };
       });
   }, [columns]);

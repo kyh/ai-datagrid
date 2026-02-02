@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BuildingIcon,
   FileSpreadsheetIcon,
+  FilterIcon,
   GithubIcon,
   MenuIcon,
   NewspaperIcon,
@@ -31,6 +32,7 @@ const dataItems = [
 const aiItems = [
   { label: "Generate Demo", path: "/generate-demo", icon: WandIcon },
   { label: "Enrich Demo", path: "/enrich-demo", icon: SparklesIcon },
+  { label: "Filter/Sort Demo", path: "/filter-sort-demo", icon: FilterIcon },
 ] as const;
 
 export function Nav() {
