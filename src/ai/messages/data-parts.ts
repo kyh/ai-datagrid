@@ -107,12 +107,22 @@ const filterOperatorSchema = z.union([
   booleanFilterOperatorSchema,
 ]);
 
+// Helper to clean malformed string values from LLM (e.g., "Engineering},{" -> "Engineering")
+const cleanStringValue = z.string().transform((val) => val.replace(/[,{}[\]]+$/, "").trim());
+
+// Schema for filter value that cleans up malformed strings
+const filterValueSchema = z.union([
+  cleanStringValue,
+  z.number(),
+  z.array(cleanStringValue),
+]);
+
 // Schema for a filter definition
 const filterSchema = z.object({
   columnId: z.string(),
   operator: filterOperatorSchema,
-  value: z.union([z.string(), z.number(), z.array(z.string())]).optional(),
-  endValue: z.union([z.string(), z.number()]).optional(),
+  value: filterValueSchema.optional(),
+  endValue: z.union([cleanStringValue, z.number()]).optional(),
 });
 
 // Schema for removing filters

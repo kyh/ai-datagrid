@@ -11,19 +11,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
-import type {
-  ColumnUpdate,
+import type { ColumnUpdate } from "@/ai/messages/data-parts";
+import {
+  columnDefinitionSchema,
   filterSchema,
   sortSchema,
 } from "@/ai/messages/data-parts";
-import { columnDefinitionSchema } from "@/ai/messages/data-parts";
 import type {
   ExistingColumn,
   ExistingFilter,
   ExistingSort,
 } from "@/ai/agents/table-agent";
 import type { FilterValue, CellUpdate } from "@/lib/data-grid-types";
-import type { z } from "zod";
+import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { SelectionContext } from "@/lib/selection-context";
 import { getFilterFn } from "@/lib/data-grid-filters";
@@ -264,22 +264,17 @@ export const Chat = ({
           // Handle add-filters data part
           if (dataPart.type === "data-add-filters") {
             setProgress(null);
-            const { filters } = dataPart.data;
-            if (filters && filters.length > 0 && onFiltersAdded) {
-              // Clean up malformed values from LLM (e.g., "Engineering},{" -> "Engineering")
-              const cleanValue = (val: unknown): unknown => {
-                if (typeof val === "string") {
-                  // Remove any trailing JSON artifacts
-                  return val.replace(/[,{}[\]]+$/, "").trim();
-                }
-                return val;
-              };
+            const { filters: rawFilters } = dataPart.data;
+            if (rawFilters && rawFilters.length > 0 && onFiltersAdded) {
+              // Parse through schema to apply transforms (cleans malformed values)
+              const parsed = z.array(filterSchema).safeParse(rawFilters);
+              const filters = parsed.success ? parsed.data : rawFilters;
               const filterValues = filters.map((f: z.infer<typeof filterSchema>) => ({
                 columnId: f.columnId,
                 value: {
                   operator: f.operator,
-                  value: cleanValue(f.value),
-                  endValue: cleanValue(f.endValue),
+                  value: f.value,
+                  endValue: f.endValue,
                 } as FilterValue,
               }));
               onFiltersAdded(filterValues);
