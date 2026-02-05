@@ -1,6 +1,6 @@
 # AI Datagrid
 
-<img width="2400" height="1260" alt="AI Datagrid" src="https://github.com/user-attachments/assets/TODO" />
+<img width="3024" height="1522" alt="Preview" src="https://github.com/user-attachments/assets/1531ddbe-ae24-4e18-84b2-6b6ce28f55a7" />
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fkyh%2Fai-datagrid)
 
