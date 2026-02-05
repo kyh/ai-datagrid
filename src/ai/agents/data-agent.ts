@@ -163,16 +163,8 @@ async function generateCellValue(
         status: "done",
       },
     });
-
-    console.log(
-      `[DataAgent] Generated value for row ${task.rowIndex}, column ${task.columnId}:`,
-      object.value
-    );
-  } catch (error) {
-    console.error(
-      `[DataAgent] Error generating value for row ${task.rowIndex}, column ${task.columnId}:`,
-      error
-    );
+  } catch {
+    // Silently fail individual cells - other cells continue processing
   }
 }
 
@@ -227,10 +219,6 @@ export async function runDataAgent({
     }
   }
 
-  console.log(
-    `[DataAgent] Processing ${tasks.length} cells in batches of ${MAX_CONCURRENT_CELLS}`
-  );
-
   // Process cells in batches of 5
   await processBatch(tasks, MAX_CONCURRENT_CELLS, (task) => {
     const context: PromptContext = {
@@ -240,6 +228,4 @@ export async function runDataAgent({
     };
     return generateCellValue(model, task, context, writer);
   });
-
-  console.log("[DataAgent] Completed all cell updates");
 }

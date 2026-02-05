@@ -49,6 +49,7 @@ Use Generate Columns when:
   - **file**: File attachments (documents, images, files)
 - **options**: Array of {label, value} objects for select and multi-select variants
 - **min, max, step**: Optional constraints for number variant
+- **prompt**: Instructions for AI when enriching/generating values for this column (e.g., "Generate a professional email address", "Create a compelling product description")
 
 ## Intelligent Column Type Inference
 
@@ -64,6 +65,7 @@ When generating columns, intelligently infer the appropriate variant based on:
 - For select/multi-select, provide meaningful options
 - Use kebab-case for IDs, Title Case for labels
 - Consider the user's intent when inferring column types
+- Add prompts for columns that benefit from specific AI generation instructions (descriptions, emails, summaries, etc.)
 
 ## Examples
 
@@ -84,8 +86,8 @@ Assistant: I'll create a sales tracker with columns for tracking sales data.
 User: Add columns for a project management sheet
 Assistant: I'll add project management columns to track tasks and progress.
 *Uses Generate Columns with:*
-- id: "task-name", label: "Task Name", variant: "short-text"
-- id: "description", label: "Description", variant: "long-text"
+- id: "task-name", label: "Task Name", variant: "short-text", prompt: "Generate a clear, actionable task name"
+- id: "description", label: "Description", variant: "long-text", prompt: "Write a detailed task description with acceptance criteria"
 - id: "assignee", label: "Assignee", variant: "short-text"
 - id: "priority", label: "Priority", variant: "select", options: [{label: "High", value: "high"}, {label: "Medium", value: "medium"}, {label: "Low", value: "low"}]
 - id: "due-date", label: "Due Date", variant: "date"

@@ -108,13 +108,8 @@ export const Chat = ({
         }
       },
       onData: (dataPart) => {
-        console.log(
-          "[Chat] onData received:",
-          JSON.stringify(dataPart, null, 2),
-        );
         try {
           if (!dataPart.data) {
-            console.log("[Chat] No data in dataPart");
             return;
           }
 
@@ -235,7 +230,6 @@ export const Chat = ({
                 columnId: update.columnId,
                 value: update.value,
               }));
-              console.log("[Chat] Calling onDataEnriched with:", updates);
               onDataEnriched(updates);
 
               // Remove completed cells from generating set
@@ -383,7 +377,6 @@ export const Chat = ({
             (c) => `${c.rowIndex}:${c.columnId}`,
           ),
         );
-        console.log("[Chat] Setting generating cells:", [...cellKeys]);
         setGeneratingCells(cellKeys);
         setProgress({ message: "Enriching...", total: cellKeys.size, completed: 0 });
       } else {

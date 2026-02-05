@@ -984,6 +984,163 @@ export function getRecipesColumns(
 export const recipeDemoPrompt =
   "Add columns for cuisine type, difficulty level, prep time (minutes), cooking time (minutes), and calories";
 
+// Tweet data
+export interface Tweet {
+  id: string;
+  url?: string;
+  author?: string;
+  banger?: boolean;
+  createdAt?: string;
+}
+
+const tweetAuthors = [
+  "@elonmusk",
+  "@kikiswanson",
+  "@naval",
+  "@paulg",
+  "@levelsio",
+  "@dhh",
+  "@raikitten",
+  "@tsaborov",
+  "@sama",
+  "@patrickc",
+] as const;
+
+function generateTweet(id: number): Tweet {
+  const author = faker.helpers.arrayElement(tweetAuthors);
+  const tweetId = faker.string.numeric(19);
+  return {
+    id: faker.string.nanoid(8),
+    url: `https://x.com/${author.slice(1)}/status/${tweetId}`,
+    author,
+    banger: faker.datatype.boolean({ probability: 0.3 }),
+    createdAt: faker.date
+      .between({ from: "2023-01-01", to: "2025-01-01" })
+      .toISOString()
+      .split("T")[0],
+  };
+}
+
+export function getTweetsData(): Tweet[] {
+  // Ensure @levelsio has 3 bangers
+  const levelsioBangers: Tweet[] = [
+    {
+      id: "lvls-001",
+      url: "https://x.com/levelsio/status/1234567890123456789",
+      author: "@levelsio",
+      banger: true,
+      createdAt: "2024-03-15",
+    },
+    {
+      id: "lvls-002",
+      url: "https://x.com/levelsio/status/1234567890123456790",
+      author: "@levelsio",
+      banger: true,
+      createdAt: "2024-06-22",
+    },
+    {
+      id: "lvls-003",
+      url: "https://x.com/levelsio/status/1234567890123456791",
+      author: "@levelsio",
+      banger: true,
+      createdAt: "2024-09-10",
+    },
+  ];
+  const randomTweets = Array.from({ length: 47 }, (_, i) => generateTweet(i + 1));
+  return faker.helpers.shuffle([...levelsioBangers, ...randomTweets]);
+}
+
+export function getTweetsColumns(filterFn: FilterFn<Tweet>): ColumnDef<Tweet>[] {
+  return [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          aria-label="Select all"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      ),
+      cell: ({ row, table }) => (
+        <Checkbox
+          aria-label="Select row"
+          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => {
+            const onRowSelect = table.options.meta?.onRowSelect;
+            if (onRowSelect) {
+              onRowSelect(row.index, !!value, false);
+            } else {
+              row.toggleSelected(!!value);
+            }
+          }}
+          onClick={(event: React.MouseEvent) => {
+            if (event.shiftKey) {
+              event.preventDefault();
+              const onRowSelect = table.options.meta?.onRowSelect;
+              if (onRowSelect) {
+                onRowSelect(row.index, !row.getIsSelected(), true);
+              }
+            }
+          }}
+        />
+      ),
+      size: 40,
+      enableSorting: false,
+      enableHiding: false,
+      enableResizing: false,
+    },
+    {
+      id: "url",
+      accessorKey: "url",
+      header: "URL",
+      minSize: 300,
+      filterFn,
+      meta: {
+        label: "URL",
+        cell: { variant: "url" },
+      },
+    },
+    {
+      id: "author",
+      accessorKey: "author",
+      header: "Author",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Author",
+        cell: { variant: "short-text" },
+      },
+    },
+    {
+      id: "banger",
+      accessorKey: "banger",
+      header: "Banger",
+      minSize: 100,
+      filterFn,
+      meta: {
+        label: "Banger",
+        cell: { variant: "checkbox" },
+      },
+    },
+    {
+      id: "createdAt",
+      accessorKey: "createdAt",
+      header: "Created At",
+      minSize: 150,
+      filterFn,
+      meta: {
+        label: "Created At",
+        cell: { variant: "date" },
+      },
+    },
+  ];
+}
+
 // Email Demo - Enrich cells demo
 export interface EmailContact {
   id: string;

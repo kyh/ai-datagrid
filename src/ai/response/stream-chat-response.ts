@@ -33,11 +33,6 @@ export const streamChatResponse = async (
   existingFilters?: ExistingFilter[],
   existingSorts?: ExistingSort[],
 ) => {
-  console.log(
-    "[streamChatResponse] Called with selectionContext:",
-    JSON.stringify(selectionContext, null, 2),
-  );
-
   // Extract the last user message for the data agent
   const lastUserMessage = messages.findLast((m) => m.role === "user");
   const userMessageText = lastUserMessage?.parts
@@ -49,11 +44,6 @@ export const streamChatResponse = async (
     stream: createUIMessageStream({
       originalMessages: messages,
       execute: async ({ writer }) => {
-        console.log(
-          "[streamChatResponse] Processing request, hasSelectionContext:",
-          !!selectionContext,
-        );
-
         if (selectionContext) {
           // Use the new cell-by-cell data agent with batched concurrency
           await runDataAgent({
@@ -72,7 +62,6 @@ export const streamChatResponse = async (
             existingSorts,
           });
 
-          console.log("[streamChatResponse] Starting table agent stream");
           const result = await agent.stream({
             messages: await convertToModelMessages(messages),
           });

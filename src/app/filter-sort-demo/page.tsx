@@ -3,32 +3,32 @@
 import { faker } from "@faker-js/faker";
 import { DataGridContainer } from "@/components/data-grid/data-grid-container";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getPeopleColumns, getPeopleData, type Person } from "@/data/seed";
+import { getTweetsColumns, getTweetsData, type Tweet } from "@/data/seed";
 
-function createPerson(): Person {
+function createTweet(): Tweet {
   return { id: faker.string.nanoid(8) };
 }
 
-function createPeople(count: number): Person[] {
+function createTweets(count: number): Tweet[] {
   return Array.from({ length: count }, () => ({
     id: faker.string.nanoid(8),
   }));
 }
 
 export default function FilterSortDemoPage() {
-  const data = getPeopleData();
-  const columns = getPeopleColumns(getFilterFn());
+  const data = getTweetsData();
+  const columns = getTweetsColumns(getFilterFn());
 
   return (
-    <DataGridContainer<Person>
+    <DataGridContainer<Tweet>
       initialData={data}
       initialColumns={columns}
       getRowId={(row) => row.id}
-      createNewRow={createPerson}
-      createNewRows={createPeople}
+      createNewRow={createTweet}
+      createNewRows={createTweets}
       pinnedColumns={["select"]}
-      defaultColumnId="name"
-      initialChatInput="Show Engineering employees with salary over $80,000, sorted by salary descending"
+      defaultColumnId="url"
+      initialChatInput="Show only bangers from @levelsio, sorted by date descending"
     />
   );
 }
