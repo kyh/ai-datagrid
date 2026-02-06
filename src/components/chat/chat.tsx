@@ -447,7 +447,7 @@ export const Chat = ({
   return (
     <>
       <div
-        className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 w-full max-w-lg"
+        className="fixed bottom-3 left-1/2 z-50 -translate-x-1/2 w-full max-w-lg px-3"
         data-grid-chat
       >
         {progress && (
