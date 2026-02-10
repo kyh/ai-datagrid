@@ -51,8 +51,17 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
         <DialogHeader>
           <DialogTitle>Enter Vercel Gateway API Key</DialogTitle>
           <DialogDescription>
-            Please enter your Vercel Gateway API key to use AI features. Your
-            key will be stored locally in your browser.
+            Enter your{" "}
+            <a
+              className="underline"
+              href="https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%2Fapi-keys%3Futm_source%3Ddatagrid.kyh.io&title=Get+an+API+Key"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Vercel Gateway API key
+            </a>{" "}
+            to use AI features. Your key will be stored locally in your
+            browser.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 flex flex-col gap-2">
@@ -68,17 +77,6 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
             }}
             autoFocus
           />
-          <div className="text-sm text-muted-foreground">
-            <button
-              className="underline"
-              onClick={() => {
-                setApiKeyInput("demo");
-              }}
-            >
-              Use a demo key
-            </button>
-            &nbsp;(generations will always be the same)
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
