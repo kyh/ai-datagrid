@@ -1,8 +1,6 @@
 "use client";
 
-import { Direction as RadixDirection } from "radix-ui";
-
-const useDirection = RadixDirection.useDirection;
+import { useDirection } from "@base-ui/react/direction-provider";
 import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
 import {
   ArrowDownUp,
@@ -175,27 +173,29 @@ export function DataGridSortMenu<TData>({
       getItemValue={(item) => item.id}
     >
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            dir={dir}
-            variant="outline"
-            size="sm"
-            className="font-normal"
-            onKeyDown={onTriggerKeyDown}
-            disabled={disabled}
-          >
-            <ArrowDownUp className="text-muted-foreground" />
-            Sort
-            {sorting.length > 0 && (
-              <Badge
-                variant="secondary"
-                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
-              >
-                {sorting.length}
-              </Badge>
-            )}
-          </Button>
-        </PopoverTrigger>
+        <PopoverTrigger
+          render={
+            <Button
+              dir={dir}
+              variant="outline"
+              size="sm"
+              className="font-normal"
+              onKeyDown={onTriggerKeyDown}
+              disabled={disabled}
+            >
+              <ArrowDownUp className="text-muted-foreground" />
+              Sort
+              {sorting.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
+                >
+                  {sorting.length}
+                </Badge>
+              )}
+            </Button>
+          }
+        />
         <PopoverContent
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
@@ -333,18 +333,20 @@ function DataTableSortItem({
         onKeyDown={onItemKeyDown}
       >
         <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-          <PopoverTrigger asChild>
-            <Button
-              id={fieldTriggerId}
-              aria-controls={fieldListboxId}
-              variant="outline"
-              size="sm"
-              className="w-44 justify-between rounded font-normal"
-            >
-              <span className="truncate">{columnLabels.get(sort.id)}</span>
-              <ChevronsUpDown className="opacity-50" />
-            </Button>
-          </PopoverTrigger>
+          <PopoverTrigger
+            render={
+              <Button
+                id={fieldTriggerId}
+                aria-controls={fieldListboxId}
+                variant="outline"
+                size="sm"
+                className="w-44 justify-between rounded font-normal"
+              >
+                <span className="truncate">{columnLabels.get(sort.id)}</span>
+                <ChevronsUpDown className="opacity-50" />
+              </Button>
+            }
+          />
           <PopoverContent
             id={fieldListboxId}
             dir={dir}
@@ -373,9 +375,10 @@ function DataTableSortItem({
           open={showDirectionSelector}
           onOpenChange={setShowDirectionSelector}
           value={sort.desc ? "desc" : "asc"}
-          onValueChange={(value: SortDirection) =>
-            onSortUpdate(sort.id, { desc: value === "desc" })
-          }
+          onValueChange={(value) => {
+            if (value === null) return;
+            onSortUpdate(sort.id, { desc: (value as SortDirection) === "desc" });
+          }}
         >
           <SelectTrigger
             aria-controls={directionListboxId}

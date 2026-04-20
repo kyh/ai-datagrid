@@ -167,7 +167,8 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(
     );
 
     const handleVariantChange = React.useCallback(
-      (newVariant: string) => {
+      (newVariant: string | null) => {
+        if (newVariant === null) return;
         const v = newVariant as CellOpts["variant"];
         form.setValue("variant", v);
         // Clear options when changing away from select types

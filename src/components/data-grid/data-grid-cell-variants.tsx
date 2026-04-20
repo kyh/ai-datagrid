@@ -270,16 +270,11 @@ export function LongTextCell<TData>({
     [tableMeta, value, initialValue, rowIndex, columnId, readOnly]
   );
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
-    event.preventDefault();
+  const onInitialFocus = React.useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
-      // Insert pending character using execCommand so it's part of undo history
-      // Use requestAnimationFrame to ensure focus has fully settled
       if (pendingCharRef.current) {
         const char = pendingCharRef.current;
         pendingCharRef.current = null;
@@ -360,32 +355,34 @@ export function LongTextCell<TData>({
 
   return (
     <Popover open={isEditing} onOpenChange={onOpenChange}>
-      <PopoverAnchor asChild>
-        <DataGridCellWrapper<TData>
-          ref={containerRef}
-          cell={cell}
-          tableMeta={tableMeta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          rowHeight={rowHeight}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          isSearchMatch={isSearchMatch}
-          isActiveSearchMatch={isActiveSearchMatch}
-          readOnly={readOnly}
-          onKeyDown={onWrapperKeyDown}
-        >
-          <span data-slot="grid-cell-content">{value}</span>
-        </DataGridCellWrapper>
-      </PopoverAnchor>
+      <PopoverAnchor
+        render={
+          <DataGridCellWrapper<TData>
+            ref={containerRef}
+            cell={cell}
+            tableMeta={tableMeta}
+            rowIndex={rowIndex}
+            columnId={columnId}
+            rowHeight={rowHeight}
+            isEditing={isEditing}
+            isFocused={isFocused}
+            isSelected={isSelected}
+            isSearchMatch={isSearchMatch}
+            isActiveSearchMatch={isActiveSearchMatch}
+            readOnly={readOnly}
+            onKeyDown={onWrapperKeyDown}
+          >
+            <span data-slot="grid-cell-content">{value}</span>
+          </DataGridCellWrapper>
+        }
+      />
       <PopoverContent
         data-grid-cell-editor=""
         align="start"
         side="bottom"
         sideOffset={sideOffset}
         className="w-[400px] rounded-none p-0"
-        onOpenAutoFocus={onOpenAutoFocus}
+        initialFocus={onInitialFocus}
       >
         <Textarea
           placeholder="Enter text..."
@@ -816,14 +813,14 @@ export function CheckboxCell<TData>({
   }, []);
 
   const onCheckboxMouseDown = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent) => {
       event.stopPropagation();
     },
     []
   );
 
   const onCheckboxDoubleClick = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent) => {
       event.stopPropagation();
     },
     []
@@ -945,7 +942,9 @@ export function SelectCell<TData>({
       {isEditing ? (
         <Select
           value={value}
-          onValueChange={onValueChange}
+          onValueChange={(v) => {
+            if (v !== null) onValueChange(v);
+          }}
           open={isEditing}
           onOpenChange={onOpenChange}
         >
@@ -1082,10 +1081,7 @@ export function MultiSelectCell<TData>({
     [tableMeta, rowIndex, columnId, readOnly]
   );
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
-    event.preventDefault();
+  const onInitialFocus = React.useCallback(() => {
     inputRef.current?.focus();
   }, []);
 
@@ -1162,15 +1158,13 @@ export function MultiSelectCell<TData>({
     >
       {isEditing ? (
         <Popover open={isEditing} onOpenChange={onOpenChange}>
-          <PopoverAnchor asChild>
-            <div className="absolute inset-0" />
-          </PopoverAnchor>
+          <PopoverAnchor render={<div className="absolute inset-0" />} />
           <PopoverContent
             data-grid-cell-editor=""
             align="start"
             sideOffset={sideOffset}
             className="w-[300px] rounded-none p-0"
-            onOpenAutoFocus={onOpenAutoFocus}
+            initialFocus={onInitialFocus}
           >
             <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
@@ -1361,11 +1355,13 @@ export function DateCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
-        <PopoverAnchor asChild>
-          <span data-slot="grid-cell-content">
-            {formatDateForDisplay(value)}
-          </span>
-        </PopoverAnchor>
+        <PopoverAnchor
+          render={
+            <span data-slot="grid-cell-content">
+              {formatDateForDisplay(value)}
+            </span>
+          }
+        />
         {isEditing && (
           <PopoverContent
             data-grid-cell-editor=""
@@ -1831,18 +1827,14 @@ export function FileCell<TData>({
     [tableMeta, rowIndex, columnId, readOnly]
   );
 
-  const onEscapeKeyDown: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onEscapeKeyDown"]
-  > = React.useCallback((event) => {
-    // Prevent the escape key from propagating to the data grid's keyboard handler
-    // which would call blurCell() and remove focus from the cell
-    event.stopPropagation();
-  }, []);
+  const onContentKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Escape") event.stopPropagation();
+    },
+    [],
+  );
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
-    event.preventDefault();
+  const onInitialFocus = React.useCallback(() => {
     queueMicrotask(() => {
       dropzoneRef.current?.focus();
     });
@@ -1934,16 +1926,14 @@ export function FileCell<TData>({
     >
       {isEditing ? (
         <Popover open={isEditing} onOpenChange={onOpenChange}>
-          <PopoverAnchor asChild>
-            <div className="absolute inset-0" />
-          </PopoverAnchor>
+          <PopoverAnchor render={<div className="absolute inset-0" />} />
           <PopoverContent
             data-grid-cell-editor=""
             align="start"
             sideOffset={sideOffset}
             className="w-[400px] rounded-none p-0"
-            onEscapeKeyDown={onEscapeKeyDown}
-            onOpenAutoFocus={onOpenAutoFocus}
+            onKeyDown={onContentKeyDown}
+            initialFocus={onInitialFocus}
           >
             <div className="flex flex-col gap-2 p-3">
               <span id={labelId} className="sr-only">

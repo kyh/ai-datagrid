@@ -128,7 +128,7 @@ export function DataGridColumnConfig<TData>({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverTrigger render={children as React.ReactElement} />
       <PopoverContent align="start" className="w-72 space-y-4">
         {/* Column Name */}
         <div className="space-y-1.5">

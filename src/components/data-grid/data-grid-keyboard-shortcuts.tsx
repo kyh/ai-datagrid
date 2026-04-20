@@ -1,8 +1,6 @@
 "use client";
 
-import { Direction as RadixDirection } from "radix-ui";
-
-const useDirection = RadixDirection.useDirection;
+import { useDirection } from "@base-ui/react/direction-provider";
 import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -75,8 +73,7 @@ function DataGridKeyboardShortcutsImpl({
     }
   }, []);
 
-  const onOpenAutoFocus = React.useCallback((event: Event) => {
-    event.preventDefault();
+  const onInitialFocus = React.useCallback(() => {
     inputRef.current?.focus();
   }, []);
 
@@ -383,14 +380,17 @@ function DataGridKeyboardShortcutsImpl({
       <DialogContent
         dir={dir}
         className="max-w-2xl px-0"
-        onOpenAutoFocus={onOpenAutoFocus}
+        initialFocus={onInitialFocus}
         showCloseButton={false}
       >
-        <DialogClose className="absolute end-6 top-6" asChild>
-          <Button variant="ghost" size="icon" className="size-6">
-            <XIcon />
-          </Button>
-        </DialogClose>
+        <DialogClose
+          className="absolute end-6 top-6"
+          render={
+            <Button variant="ghost" size="icon" className="size-6">
+              <XIcon />
+            </Button>
+          }
+        />
         <DialogHeader className="px-6">
           <DialogTitle>Keyboard shortcuts</DialogTitle>
           <DialogDescription className="sr-only">

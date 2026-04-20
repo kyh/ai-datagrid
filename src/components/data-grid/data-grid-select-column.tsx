@@ -133,10 +133,8 @@ function DataGridSelectHeader<TData>({
   return (
     <DataGridSelectCheckbox
       aria-label="Select all"
-      checked={
-        table.getIsAllPageRowsSelected() ||
-        (table.getIsSomePageRowsSelected() && "indeterminate")
-      }
+      checked={table.getIsAllPageRowsSelected()}
+      indeterminate={table.getIsSomePageRowsSelected()}
       onCheckedChange={onCheckedChange}
       hitboxSize={hitboxSize}
       debug={debug}

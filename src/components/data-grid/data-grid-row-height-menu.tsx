@@ -66,7 +66,9 @@ export function DataGridRowHeightMenu<TData>({
   return (
     <Select
       value={rowHeight}
-      onValueChange={onRowHeightChange}
+      onValueChange={(value) => {
+        if (value !== null) onRowHeightChange?.(value);
+      }}
       disabled={disabled}
     >
       <SelectTrigger size="sm" className="[&_svg:nth-child(2)]:hidden">

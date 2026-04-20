@@ -1,8 +1,6 @@
 "use client";
 
-import { Direction as RadixDirection } from "radix-ui";
-
-const useDirection = RadixDirection.useDirection;
+import { useDirection } from "@base-ui/react/direction-provider";
 import type { Column, ColumnFilter, Table } from "@tanstack/react-table";
 import {
   CalendarIcon,
@@ -196,27 +194,29 @@ export function DataGridFilterMenu<TData>({
       getItemValue={(item) => item.id}
     >
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            dir={dir}
-            variant="outline"
-            size="sm"
-            className="font-normal"
-            onKeyDown={onTriggerKeyDown}
-            disabled={disabled}
-          >
-            <ListFilter className="text-muted-foreground" />
-            Filter
-            {columnFilters.length > 0 && (
-              <Badge
-                variant="secondary"
-                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
-              >
-                {columnFilters.length}
-              </Badge>
-            )}
-          </Button>
-        </PopoverTrigger>
+        <PopoverTrigger
+          render={
+            <Button
+              dir={dir}
+              variant="outline"
+              size="sm"
+              className="font-normal"
+              onKeyDown={onTriggerKeyDown}
+              disabled={disabled}
+            >
+              <ListFilter className="text-muted-foreground" />
+              Filter
+              {columnFilters.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
+                >
+                  {columnFilters.length}
+                </Badge>
+              )}
+            </Button>
+          }
+        />
         <PopoverContent
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
@@ -423,19 +423,21 @@ function DataGridFilterItem<TData>({
           )}
         </div>
         <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-          <PopoverTrigger asChild>
-            <Button
-              id={fieldTriggerId}
-              aria-controls={fieldListboxId}
-              dir={dir}
-              variant="outline"
-              size="sm"
-              className="w-32 justify-between rounded font-normal"
-            >
-              <span className="truncate">{columnLabels.get(filter.id)}</span>
-              <ChevronsUpDown className="opacity-50" />
-            </Button>
-          </PopoverTrigger>
+          <PopoverTrigger
+            render={
+              <Button
+                id={fieldTriggerId}
+                aria-controls={fieldListboxId}
+                dir={dir}
+                variant="outline"
+                size="sm"
+                className="w-32 justify-between rounded font-normal"
+              >
+                <span className="truncate">{columnLabels.get(filter.id)}</span>
+                <ChevronsUpDown className="opacity-50" />
+              </Button>
+            }
+          />
           <PopoverContent
             id={fieldListboxId}
             dir={dir}
@@ -490,7 +492,9 @@ function DataGridFilterItem<TData>({
           open={showOperatorSelector}
           onOpenChange={setShowOperatorSelector}
           value={operator}
-          onValueChange={onOperatorChange}
+          onValueChange={(value) => {
+            if (value !== null) onOperatorChange(value as FilterOperator);
+          }}
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
@@ -690,22 +694,24 @@ function DataGridFilterInput<TData>({
 
       return (
         <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
-          <PopoverTrigger asChild>
-            <Button
-              id={inputId}
-              aria-controls={inputListboxId}
-              dir={dir}
-              variant="outline"
-              size="sm"
-              className={cn(
-                "h-8 w-full justify-start rounded font-normal",
-                !startDate && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon />
-              <span className="truncate">{displayValue}</span>
-            </Button>
-          </PopoverTrigger>
+          <PopoverTrigger
+            render={
+              <Button
+                id={inputId}
+                aria-controls={inputListboxId}
+                dir={dir}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 w-full justify-start rounded font-normal",
+                  !startDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon />
+                <span className="truncate">{displayValue}</span>
+              </Button>
+            }
+          />
           <PopoverContent
             id={inputListboxId}
             dir={dir}
@@ -746,26 +752,28 @@ function DataGridFilterInput<TData>({
 
     return (
       <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
-        <PopoverTrigger asChild>
-          <Button
-            id={inputId}
-            aria-controls={inputListboxId}
-            dir={dir}
-            variant="outline"
-            size="sm"
-            className={cn(
-              "h-8 w-full justify-start rounded font-normal",
-              !dateValue && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon />
-            <span className="truncate">
-              {dateValue
-                ? formatDate(dateValue, { month: "short" })
-                : "Pick a date"}
-            </span>
-          </Button>
-        </PopoverTrigger>
+        <PopoverTrigger
+          render={
+            <Button
+              id={inputId}
+              aria-controls={inputListboxId}
+              dir={dir}
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-8 w-full justify-start rounded font-normal",
+                !dateValue && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon />
+              <span className="truncate">
+                {dateValue
+                  ? formatDate(dateValue, { month: "short" })
+                  : "Pick a date"}
+              </span>
+            </Button>
+          }
+        />
         <PopoverContent
           id={inputListboxId}
           dir={dir}
@@ -808,43 +816,45 @@ function DataGridFilterInput<TData>({
 
       return (
         <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
-          <PopoverTrigger asChild>
-            <Button
-              id={inputId}
-              aria-controls={inputListboxId}
-              dir={dir}
-              variant="outline"
-              size="sm"
-              className="h-8 w-full justify-start rounded font-normal"
-            >
-              {selectedOptions.length === 0 ? (
-                <span className="text-muted-foreground">{placeholder}</span>
-              ) : (
-                <>
-                  {selectedOptionsWithIcons.length > 0 && (
-                    <div className="flex items-center -space-x-2 rtl:space-x-reverse">
-                      {selectedOptionsWithIcons.map(
-                        (selectedOption) =>
-                          selectedOption.icon && (
-                            <div
-                              key={selectedOption.value}
-                              className="rounded-full border bg-background p-0.5"
-                            >
-                              <selectedOption.icon className="size-3.5" />
-                            </div>
-                          )
-                      )}
-                    </div>
-                  )}
-                  <span className="truncate">
-                    {selectedOptions.length > 1
-                      ? `${selectedOptions.length} selected`
-                      : selectedOptions[0]?.label}
-                  </span>
-                </>
-              )}
-            </Button>
-          </PopoverTrigger>
+          <PopoverTrigger
+            render={
+              <Button
+                id={inputId}
+                aria-controls={inputListboxId}
+                dir={dir}
+                variant="outline"
+                size="sm"
+                className="h-8 w-full justify-start rounded font-normal"
+              >
+                {selectedOptions.length === 0 ? (
+                  <span className="text-muted-foreground">{placeholder}</span>
+                ) : (
+                  <>
+                    {selectedOptionsWithIcons.length > 0 && (
+                      <div className="flex items-center -space-x-2 rtl:space-x-reverse">
+                        {selectedOptionsWithIcons.map(
+                          (selectedOption) =>
+                            selectedOption.icon && (
+                              <div
+                                key={selectedOption.value}
+                                className="rounded-full border bg-background p-0.5"
+                              >
+                                <selectedOption.icon className="size-3.5" />
+                              </div>
+                            )
+                        )}
+                      </div>
+                    )}
+                    <span className="truncate">
+                      {selectedOptions.length > 1
+                        ? `${selectedOptions.length} selected`
+                        : selectedOptions[0]?.label}
+                    </span>
+                  </>
+                )}
+              </Button>
+            }
+          />
           <PopoverContent
             id={inputListboxId}
             dir={dir}
@@ -901,25 +911,27 @@ function DataGridFilterInput<TData>({
 
     return (
       <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
-        <PopoverTrigger asChild>
-          <Button
-            id={inputId}
-            aria-controls={inputListboxId}
-            dir={dir}
-            variant="outline"
-            size="sm"
-            className="h-8 w-full justify-start rounded font-normal"
-          >
-            {selectedOption ? (
-              <>
-                {selectedOption.icon && <selectedOption.icon />}
-                <span className="truncate">{selectedOption.label}</span>
-              </>
-            ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
-            )}
-          </Button>
-        </PopoverTrigger>
+        <PopoverTrigger
+          render={
+            <Button
+              id={inputId}
+              aria-controls={inputListboxId}
+              dir={dir}
+              variant="outline"
+              size="sm"
+              className="h-8 w-full justify-start rounded font-normal"
+            >
+              {selectedOption ? (
+                <>
+                  {selectedOption.icon && <selectedOption.icon />}
+                  <span className="truncate">{selectedOption.label}</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground">{placeholder}</span>
+              )}
+            </Button>
+          }
+        />
         <PopoverContent
           id={inputListboxId}
           dir={dir}

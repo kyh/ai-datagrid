@@ -57,21 +57,24 @@ function DataGridAddColumnHeader<TData>({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div
-          role="button"
-          tabIndex={0}
-          className="flex size-full cursor-pointer items-center justify-center transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setOpen(true);
-            }
-          }}
-        >
-          <Plus className="size-4 text-muted-foreground" />
-        </div>
-      </PopoverTrigger>
+      <PopoverTrigger
+        nativeButton={false}
+        render={
+          <div
+            role="button"
+            tabIndex={0}
+            className="flex size-full cursor-pointer items-center justify-center transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setOpen(true);
+              }
+            }}
+          >
+            <Plus className="size-4 text-muted-foreground" />
+          </div>
+        }
+      />
       <PopoverContent
         align="end"
         sideOffset={0}

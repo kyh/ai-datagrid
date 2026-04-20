@@ -38,6 +38,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { getColumnVariant } from "@/lib/data-grid";
@@ -162,14 +163,18 @@ export function DataGridColumnHeader<TData, TValue>({
             }}
           >
             {columnVariant && (
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{columnVariant.label}</p>
-                </TooltipContent>
-              </Tooltip>
+              <TooltipProvider delay={100}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
+                    }
+                  />
+                  <TooltipContent side="top">
+                    <p>{columnVariant.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             <span className="truncate">{label}</span>
           </PopoverTrigger>

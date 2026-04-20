@@ -56,46 +56,56 @@ export function Nav() {
   return (
     <header className="flex items-center gap-2 p-2 [grid-area:nav]">
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm">
-            <MenuIcon />
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="icon-sm">
+              <MenuIcon />
+            </Button>
+          }
+        />
         <DropdownMenuContent align="start">
           {dataItems.map((item) => (
-            <DropdownMenuItem key={item.path} asChild>
-              <Link
-                href={item.path}
-                className={pathname === item.path ? "bg-accent" : ""}
-              >
-                <item.icon className="size-4" />
-                {item.label}
-              </Link>
-            </DropdownMenuItem>
+            <DropdownMenuItem
+              key={item.path}
+              render={
+                <Link
+                  href={item.path}
+                  className={pathname === item.path ? "bg-accent" : ""}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Link>
+              }
+            />
           ))}
           <DropdownMenuSeparator />
           {aiItems.map((item) => (
-            <DropdownMenuItem key={item.path} asChild>
-              <Link
-                href={item.path}
-                className={pathname === item.path ? "bg-accent" : ""}
-              >
-                <item.icon className="size-4" />
-                {item.label}
-              </Link>
-            </DropdownMenuItem>
+            <DropdownMenuItem
+              key={item.path}
+              render={
+                <Link
+                  href={item.path}
+                  className={pathname === item.path ? "bg-accent" : ""}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Link>
+              }
+            />
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <a
-              href="https://github.com/kyh/ai-datagrid"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <GithubIcon className="size-4" />
-              GitHub
-            </a>
-          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={
+              <a
+                href="https://github.com/kyh/ai-datagrid"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <GithubIcon className="size-4" />
+                GitHub
+              </a>
+            }
+          />
         </DropdownMenuContent>
       </DropdownMenu>
       <h1>{title}</h1>

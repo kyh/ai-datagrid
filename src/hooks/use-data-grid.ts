@@ -1,8 +1,6 @@
 "use client";
 
-import { Direction as RadixDirection } from "radix-ui";
-
-const useDirection = RadixDirection.useDirection;
+import { useDirection } from "@base-ui/react/direction-provider";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -130,7 +128,8 @@ function useDataGrid<TData>({
   initialState,
   ...props
 }: UseDataGridProps<TData>) {
-  const dir = useDirection(dirProp);
+  const contextDir = useDirection();
+  const dir = dirProp ?? contextDir;
 
   const isFirefox = React.useSyncExternalStore(
     React.useCallback(() => () => {}, []),
