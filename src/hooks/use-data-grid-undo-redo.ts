@@ -1,5 +1,5 @@
 import * as React from "react";
-import { toast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
