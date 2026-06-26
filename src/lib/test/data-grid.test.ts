@@ -121,6 +121,27 @@ describe("parseTsv", () => {
     });
   });
 
+  describe("ragged rows (incomplete rows preserved, not dropped)", () => {
+    it("should keep a short final row with fewer columns", () => {
+      expect(parseTsv("Alice\tKickflip\t95\nBob", 3)).toEqual([
+        ["Alice", "Kickflip", "95"],
+        ["Bob"],
+      ]);
+    });
+
+    it("should keep an incomplete buffer interrupted by a full-width row", () => {
+      const text = "Bob\nAlice\tKickflip\t95";
+      expect(parseTsv(text, 3)).toEqual([["Bob"], ["Alice", "Kickflip", "95"]]);
+    });
+
+    it("should keep a short final row with some but not all tabs", () => {
+      expect(parseTsv("Alice\tKickflip\t95\nBob\tOllie", 3)).toEqual([
+        ["Alice", "Kickflip", "95"],
+        ["Bob", "Ollie"],
+      ]);
+    });
+  });
+
   describe("edge cases", () => {
     it("should return empty array for empty string", () => {
       expect(parseTsv("", 0)).toEqual([]);

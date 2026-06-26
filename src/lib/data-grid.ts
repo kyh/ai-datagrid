@@ -358,7 +358,10 @@ export function parseTsv(
     const tc = countTabs(line);
 
     if (tc === expectedTabCount) {
-      if (buf && bufTabCount === expectedTabCount) rows.push(buf.split("\t"));
+      // Flush any leftover continuation buffer before the full-width row. The
+      // buffer is incomplete here (a complete one is flushed and reset in the
+      // else branch), so emit it best-effort rather than dropping a ragged row.
+      if (buf) rows.push(buf.split("\t"));
       buf = "";
       bufTabCount = 0;
       rows.push(line.split("\t"));
@@ -373,7 +376,9 @@ export function parseTsv(
     }
   }
 
-  if (buf && bufTabCount === expectedTabCount) rows.push(buf.split("\t"));
+  // Emit any trailing buffer, including a short/ragged final row that never
+  // reached the expected column count, so paste never silently drops it.
+  if (buf) rows.push(buf.split("\t"));
 
   return rows.length > 0
     ? rows
