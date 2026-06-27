@@ -25,6 +25,15 @@ describe("parseTsv", () => {
       ]);
     });
 
+    it("should split a tab-less vertical list into one row per line regardless of grid width", () => {
+      // fallbackColumnCount (grid width) must not cause the lines to merge.
+      expect(parseTsv("Alice\nBob\nCharlie", 3)).toEqual([
+        ["Alice"],
+        ["Bob"],
+        ["Charlie"],
+      ]);
+    });
+
     it("should skip empty rows", () => {
       expect(parseTsv("Alice\tKickflip\t95\n\nBob\tOllie\t88", 3)).toEqual([
         ["Alice", "Kickflip", "95"],

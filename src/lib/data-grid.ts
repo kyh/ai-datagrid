@@ -349,6 +349,15 @@ export function parseTsv(
   const columnCount = maxTabCount > 0 ? maxTabCount + 1 : fallbackColumnCount;
   if (columnCount <= 0) return [];
 
+  // No tabs anywhere: the clipboard has no column delimiters, so this is a
+  // single-column paste (e.g. a vertical list). Treat each non-empty line as
+  // its own one-cell row. Without this, the tab-count merging below keys off
+  // the grid width (fallbackColumnCount) and would glue the lines into one
+  // multiline cell on any grid wider than a single column.
+  if (maxTabCount === 0) {
+    return lines.filter((l) => l.length > 0).map((l) => [l]);
+  }
+
   const expectedTabCount = columnCount - 1;
   const rows: string[][] = [];
   let buf = "";
