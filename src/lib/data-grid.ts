@@ -256,29 +256,22 @@ export function scrollCellIntoView<TData>(params: {
   container.scrollLeft += scrollDelta;
 }
 
-function countTabs(s: string): number {
-  let n = 0;
-  for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
-  return n;
-}
-
 /**
  * Parse clipboard TSV into a 2D string array.
  *
- * Handles three shapes of spreadsheet clipboard data:
- * - Standard quoted TSV (Excel/Sheets), where fields containing tabs or
- *   newlines are wrapped in double quotes and `""` escapes a literal quote.
- * - Unquoted multiline content, reconstructed by counting tabs per line and
- *   merging continuation lines until a row has the expected number of columns.
- * - Plain single/multi-column TSV with no embedded newlines.
+ * Two shapes are handled:
+ * - Standard quoted TSV (Excel/Google Sheets), where a field containing a tab
+ *   or newline is wrapped in double quotes and `""` escapes a literal quote.
+ *   This is the only unambiguous way to represent multiline cell content, and
+ *   it is what spreadsheet apps emit — so it round-trips exactly.
+ * - Plain unquoted TSV: one row per line, one cell per tab.
  *
- * `fallbackColumnCount` is used when no tabs are present (e.g. a single-column
- * paste) so we know how many columns the grid expects.
+ * Unquoted embedded newlines are inherently ambiguous — nothing marks a
+ * newline as cell data rather than a row break — so we don't try to
+ * reconstruct them: each physical line becomes its own row. Copy from a real
+ * spreadsheet (which quotes such fields) for multiline cells to survive.
  */
-export function parseTsv(
-  text: string,
-  fallbackColumnCount: number,
-): string[][] {
+export function parseTsv(text: string): string[][] {
   if (text.startsWith('"') || text.includes('\t"')) {
     const rows: string[][] = [];
     let currentRow: string[] = [];
@@ -340,58 +333,11 @@ export function parseTsv(
     return rows;
   }
 
-  const lines = text.split("\n").map((l) => l.replace(/\r$/, ""));
-  let maxTabCount = 0;
-  for (const line of lines) {
-    const n = countTabs(line);
-    if (n > maxTabCount) maxTabCount = n;
-  }
-  const columnCount = maxTabCount > 0 ? maxTabCount + 1 : fallbackColumnCount;
-  if (columnCount <= 0) return [];
-
-  // No tabs anywhere: the clipboard has no column delimiters, so this is a
-  // single-column paste (e.g. a vertical list). Treat each non-empty line as
-  // its own one-cell row. Without this, the tab-count merging below keys off
-  // the grid width (fallbackColumnCount) and would glue the lines into one
-  // multiline cell on any grid wider than a single column.
-  if (maxTabCount === 0) {
-    return lines.filter((l) => l.length > 0).map((l) => [l]);
-  }
-
-  const expectedTabCount = columnCount - 1;
-  const rows: string[][] = [];
-  let buf = "";
-  let bufTabCount = 0;
-
-  for (const line of lines) {
-    const tc = countTabs(line);
-
-    if (tc === expectedTabCount) {
-      // Flush any leftover continuation buffer before the full-width row. The
-      // buffer is incomplete here (a complete one is flushed and reset in the
-      // else branch), so emit it best-effort rather than dropping a ragged row.
-      if (buf) rows.push(buf.split("\t"));
-      buf = "";
-      bufTabCount = 0;
-      rows.push(line.split("\t"));
-    } else {
-      buf = buf ? `${buf}\n${line}` : line;
-      bufTabCount += tc;
-      if (bufTabCount === expectedTabCount) {
-        rows.push(buf.split("\t"));
-        buf = "";
-        bufTabCount = 0;
-      }
-    }
-  }
-
-  // Emit any trailing buffer, including a short/ragged final row that never
-  // reached the expected column count, so paste never silently drops it.
-  if (buf) rows.push(buf.split("\t"));
-
-  return rows.length > 0
-    ? rows
-    : lines.filter((l) => l.length > 0).map((l) => l.split("\t"));
+  return text
+    .split("\n")
+    .map((line) => line.replace(/\r$/, ""))
+    .filter((line) => line.length > 0)
+    .map((line) => line.split("\t"));
 }
 
 export function getIsInPopover(element: unknown): boolean {

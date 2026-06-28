@@ -745,7 +745,7 @@ function useDataGrid<TData>({
           if (!clipboardText) return;
         }
 
-        const pastedData = parseTsv(clipboardText, navigableColumnIds.length);
+        const pastedData = parseTsv(clipboardText);
 
         const startRowIndex = currentState.focusedCell.rowIndex;
         const startColIndex = navigableColumnIds.indexOf(
