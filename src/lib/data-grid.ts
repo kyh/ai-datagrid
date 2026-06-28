@@ -272,7 +272,14 @@ export function scrollCellIntoView<TData>(params: {
  * spreadsheet (which quotes such fields) for multiline cells to survive.
  */
 export function parseTsv(text: string): string[][] {
-  if (text.startsWith('"') || text.includes('\t"')) {
+  // Route to the quoted parser when a field starts with a double quote — at the
+  // start of the text, after a tab, or after a newline (a quoted field leading
+  // a later row, which Excel emits with no `\t"` anywhere).
+  if (
+    text.startsWith('"') ||
+    text.includes('\t"') ||
+    text.includes('\n"')
+  ) {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentField = "";

@@ -64,6 +64,15 @@ describe("parseTsv", () => {
       const text = 'plain\t"quoted\nfield"\t123';
       expect(parseTsv(text)).toEqual([["plain", "quoted\nfield", "123"]]);
     });
+
+    it("should detect a quoted field that leads a later row after a newline", () => {
+      // No `\t"` anywhere — the quote follows a newline (Excel-style).
+      const text = 'Alice\tKickflip\n"Line 1\nLine 2"\t98';
+      expect(parseTsv(text)).toEqual([
+        ["Alice", "Kickflip"],
+        ["Line 1\nLine 2", "98"],
+      ]);
+    });
   });
 
   describe("unquoted text (plain split, no newline reconstruction)", () => {
