@@ -1,29 +1,36 @@
+import { z } from "zod";
+
 /**
  * Column info for AI operations.
  */
-export interface ColumnInfo {
-  id: string;
-  label: string;
-  variant: string;
-  prompt?: string;
-  options?: Array<{ label: string; value: string }>;
-}
+export const columnInfoSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  variant: z.string(),
+  prompt: z.string().optional(),
+  options: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+});
+
+export type ColumnInfo = z.infer<typeof columnInfoSchema>;
 
 /**
  * Selection context passed to AI for cell-aware operations.
  * When user has cells selected, AI should only populate those cells.
+ * Zod schema doubles as the request-body validator in the chat route.
  */
-export interface SelectionContext {
-  selectedCells: Array<{ rowIndex: number; columnId: string }>;
-  bounds: {
-    minRow: number;
-    maxRow: number;
-    columns: string[];
-  };
-  currentColumns: ColumnInfo[];
+export const selectionContextSchema = z.object({
+  selectedCells: z.array(z.object({ rowIndex: z.number(), columnId: z.string() })),
+  bounds: z.object({
+    minRow: z.number(),
+    maxRow: z.number(),
+    columns: z.array(z.string()),
+  }),
+  currentColumns: z.array(columnInfoSchema),
   /**
    * Row data for context-aware generation.
    * Maps row index to column values (columnId -> value).
    */
-  rowData?: Record<number, Record<string, unknown>>;
-}
+  rowData: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
+});
+
+export type SelectionContext = z.infer<typeof selectionContextSchema>;

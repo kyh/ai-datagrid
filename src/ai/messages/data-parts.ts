@@ -1,12 +1,5 @@
 import { z } from "zod";
-import {
-  cellSchema,
-  cellSelectOptionSchema,
-  numberCellSchema,
-  selectCellSchema,
-  multiSelectCellSchema,
-  updateCellSchema,
-} from "@/lib/data-grid-schema";
+import { cellSelectOptionSchema, updateCellSchema } from "@/lib/data-grid-schema";
 
 // Reusable cell variant enum
 const cellVariantSchema = z.enum([
@@ -111,11 +104,7 @@ const filterOperatorSchema = z.union([
 const cleanStringValue = z.string().transform((val) => val.replace(/[,{}[\]]+$/, "").trim());
 
 // Schema for filter value that cleans up malformed strings
-const filterValueSchema = z.union([
-  cleanStringValue,
-  z.number(),
-  z.array(cleanStringValue),
-]);
+const filterValueSchema = z.union([cleanStringValue, z.number(), z.array(cleanStringValue)]);
 
 // Schema for a filter definition
 const filterSchema = z.object({
@@ -144,48 +133,68 @@ const removeSortsSchema = z.object({
 // Type for column update
 export type ColumnUpdate = z.infer<typeof columnUpdateSchema>;
 
-// DataPart maps data type names to their value types
-// Used as the generic parameter for UIMessageStreamWriter and useChat
-// The AI SDK uses this to provide proper type narrowing in onData callback
+// Schema for a single failed enrichment cell
+const enrichFailureSchema = z.object({
+  rowIndex: z.number(),
+  columnId: z.string(),
+});
+
+/**
+ * Zod schemas for every data part streamed from server to client.
+ * The wire type carries a "data-" prefix (e.g. "data-generate-columns");
+ * these map keys do not. The client's `onData` parses each payload with the
+ * matching schema before mutating state — no casts.
+ */
+export const dataPartSchemas = {
+  "generate-columns": z.object({
+    columns: z.array(columnDefinitionSchema),
+    status: z.literal("done"),
+  }),
+  "update-columns": z.object({
+    updates: z.array(columnUpdateSchema),
+    status: z.literal("done"),
+  }),
+  "delete-columns": z.object({
+    columnIds: z.array(z.string()),
+    status: z.literal("done"),
+  }),
+  "enrich-data": z.object({
+    updates: z.array(updateCellSchema),
+    status: z.literal("done"),
+  }),
+  "enrich-errors": z.object({
+    failures: z.array(enrichFailureSchema),
+    status: z.literal("done"),
+  }),
+  "add-filters": z.object({
+    filters: z.array(filterSchema),
+    status: z.literal("done"),
+  }),
+  "remove-filters": z.object({
+    columnIds: z.array(z.string()),
+    status: z.literal("done"),
+  }),
+  "clear-filters": z.object({
+    status: z.literal("done"),
+  }),
+  "add-sorts": z.object({
+    sorts: z.array(sortSchema),
+    status: z.literal("done"),
+  }),
+  "remove-sorts": z.object({
+    columnIds: z.array(z.string()),
+    status: z.literal("done"),
+  }),
+  "clear-sorts": z.object({
+    status: z.literal("done"),
+  }),
+};
+
+// DataPart maps data type names to their value types, derived from the schemas.
+// Used as the generic parameter for UIMessageStreamWriter and useChat.
+// The AI SDK uses this to provide proper type narrowing in onData callback.
 export type DataPart = {
-  "generate-columns": {
-    columns: z.infer<typeof columnDefinitionSchema>[];
-    status: "done";
-  };
-  "update-columns": {
-    updates: ColumnUpdate[];
-    status: "done";
-  };
-  "delete-columns": {
-    columnIds: string[];
-    status: "done";
-  };
-  "enrich-data": {
-    updates: z.infer<typeof updateCellSchema>[];
-    status: "done";
-  };
-  "add-filters": {
-    filters: z.infer<typeof filterSchema>[];
-    status: "done";
-  };
-  "remove-filters": {
-    columnIds: string[];
-    status: "done";
-  };
-  "clear-filters": {
-    status: "done";
-  };
-  "add-sorts": {
-    sorts: z.infer<typeof sortSchema>[];
-    status: "done";
-  };
-  "remove-sorts": {
-    columnIds: string[];
-    status: "done";
-  };
-  "clear-sorts": {
-    status: "done";
-  };
+  [K in keyof typeof dataPartSchemas]: z.infer<(typeof dataPartSchemas)[K]>;
 };
 
 // Export schemas for use in tools

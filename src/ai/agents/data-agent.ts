@@ -1,6 +1,7 @@
-import { createGateway, generateObject } from "ai";
+import { generateObject } from "ai";
 import type { UIMessage, UIMessageStreamWriter } from "ai";
 
+import { createModel } from "../gateway";
 import type { DataPart } from "../messages/data-parts";
 import type { SelectionContext, ColumnInfo } from "@/lib/selection-context";
 import {
@@ -132,11 +133,17 @@ Cell Details:
 // Cell Processor
 // -----------------------------------------------------------------------------
 
+type CellFailure = {
+  rowIndex: number;
+  columnId: string;
+};
+
 async function generateCellValue(
-  model: ReturnType<ReturnType<typeof createGateway>>,
+  model: ReturnType<typeof createModel>,
   task: CellTask,
   context: PromptContext,
   writer: UIMessageStreamWriter<UIMessage<never, DataPart>>,
+  failures: CellFailure[],
 ): Promise<void> {
   const prompt = buildCellPrompt(task, context);
   const schema = buildCellSchema(task.column);
@@ -164,7 +171,9 @@ async function generateCellValue(
       },
     });
   } catch {
-    // Silently fail individual cells - other cells continue processing
+    // Record the failure so it can be surfaced to the client;
+    // other cells continue processing.
+    failures.push({ rowIndex: task.rowIndex, columnId: task.columnId });
   }
 }
 
@@ -175,7 +184,7 @@ async function generateCellValue(
 async function processBatch<T>(
   items: T[],
   batchSize: number,
-  processor: (item: T) => Promise<void>
+  processor: (item: T) => Promise<void>,
 ): Promise<void> {
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
@@ -199,7 +208,7 @@ export async function runDataAgent({
   selectionContext,
   userMessage,
 }: RunDataAgentParams): Promise<void> {
-  const model = createGateway({ apiKey })("openai/gpt-5.1-instant");
+  const model = createModel(apiKey);
 
   const { bounds, currentColumns, rowData } = selectionContext;
 
@@ -219,13 +228,24 @@ export async function runDataAgent({
     }
   }
 
-  // Process cells in batches of 5
+  // Process cells in batches of 5, collecting per-cell failures
+  const failures: CellFailure[] = [];
+
   await processBatch(tasks, MAX_CONCURRENT_CELLS, (task) => {
     const context: PromptContext = {
       userMessage,
       rowData: rowData?.[task.rowIndex],
       allColumns: currentColumns,
     };
-    return generateCellValue(model, task, context, writer);
+    return generateCellValue(model, task, context, writer, failures);
   });
+
+  // Surface failed cells so the client can clear their generating state
+  if (failures.length > 0) {
+    writer.write({
+      id: "enrich-errors",
+      type: "data-enrich-errors",
+      data: { failures, status: "done" },
+    });
+  }
 }

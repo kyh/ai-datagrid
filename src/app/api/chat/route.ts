@@ -1,40 +1,55 @@
-import { streamChatResponse } from "@/ai/response/stream-chat-response";
+import { validateUIMessages } from "ai";
+import { z } from "zod";
 
-import type { GenerateModeChatUIMessage } from "@/ai/messages/types";
-import type { SelectionContext } from "@/lib/selection-context";
-import type {
-  ExistingColumn,
-  ExistingFilter,
-  ExistingSort,
+import {
+  existingColumnSchema,
+  existingFilterSchema,
+  existingSortSchema,
 } from "@/ai/agents/table-agent";
+import { dataPartSchemas } from "@/ai/messages/data-parts";
+import type { GenerateModeChatUIMessage } from "@/ai/messages/types";
+import { streamChatResponse } from "@/ai/response/stream-chat-response";
+import { selectionContextSchema } from "@/lib/selection-context";
 
-type BodyData = {
-  messages: GenerateModeChatUIMessage[];
-  gatewayApiKey?: string;
-  selectionContext?: SelectionContext;
-  existingColumns?: ExistingColumn[];
-  existingFilters?: ExistingFilter[];
-  existingSorts?: ExistingSort[];
-};
+const bodySchema = z.object({
+  messages: z.array(z.unknown()),
+  gatewayApiKey: z.string().optional(),
+  selectionContext: selectionContextSchema.optional(),
+  existingColumns: z.array(existingColumnSchema).optional(),
+  existingFilters: z.array(existingFilterSchema).optional(),
+  existingSorts: z.array(existingSortSchema).optional(),
+});
 
 export async function POST(request: Request) {
-  const bodyData = (await request.json()) as BodyData;
+  const parsedBody = bodySchema.safeParse(await request.json());
+
+  if (!parsedBody.success) {
+    return new Response("Invalid request body", { status: 400 });
+  }
+
   const {
-    messages,
+    messages: rawMessages,
     gatewayApiKey,
     selectionContext,
     existingColumns,
     existingFilters,
     existingSorts,
-  } = bodyData;
+  } = parsedBody.data;
+
+  let messages: GenerateModeChatUIMessage[];
+  try {
+    messages = await validateUIMessages<GenerateModeChatUIMessage>({
+      messages: rawMessages,
+      dataSchemas: dataPartSchemas,
+    });
+  } catch {
+    return new Response("Invalid messages", { status: 400 });
+  }
 
   // Resolve API key: dev uses env key, prod checks for secret key or uses client key
-  const apiKey =
-    process.env.NODE_ENV === "development"
-      ? process.env.AI_GATEWAY_API_KEY
-      : gatewayApiKey === process.env.SECRET_KEY
-        ? process.env.AI_GATEWAY_API_KEY
-        : gatewayApiKey;
+  const isLocal = process.env.NODE_ENV === "development";
+  const isSecretKey = !!process.env.SECRET_KEY && gatewayApiKey === process.env.SECRET_KEY;
+  const apiKey = isSecretKey || isLocal ? process.env.AI_GATEWAY_API_KEY : gatewayApiKey;
 
   if (!apiKey) {
     return new Response("Gateway API key is required", { status: 400 });

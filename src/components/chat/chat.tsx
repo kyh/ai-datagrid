@@ -12,22 +12,14 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
 import type { ColumnUpdate } from "@/ai/messages/data-parts";
-import {
-  columnDefinitionSchema,
-  filterSchema,
-  sortSchema,
-} from "@/ai/messages/data-parts";
-import type {
-  ExistingColumn,
-  ExistingFilter,
-  ExistingSort,
-} from "@/ai/agents/table-agent";
+import { columnDefinitionSchema, dataPartSchemas } from "@/ai/messages/data-parts";
+import { demoTransport } from "./demo-transport";
+import type { ExistingColumn, ExistingFilter, ExistingSort } from "@/ai/agents/table-agent";
 import type { FilterValue, CellUpdate } from "@/lib/data-grid-types";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { SelectionContext } from "@/lib/selection-context";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { updateCellSchema } from "@/lib/data-grid-schema";
 import { GenerateModeChatUIMessage } from "@/ai/messages/types";
 import { useDataGridStore } from "@/stores/data-grid-store";
 
@@ -79,269 +71,278 @@ export const Chat = ({
     completed?: number;
   } | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [apiKey, , removeApiKey] = useLocalStorage<string>(
-    GATEWAY_API_KEY_STORAGE_KEY,
-    "",
-  );
+  const [apiKey, , removeApiKey] = useLocalStorage<string>(GATEWAY_API_KEY_STORAGE_KEY, "");
 
-  const { sendMessage, status, setMessages } =
-    useChat<GenerateModeChatUIMessage>({
-      id: apiKey,
-      onError: (error) => {
-        setProgress(null);
-        const errorMessage = error.message?.toLowerCase() || "";
-        const isAuthError =
-          errorMessage.includes("unauthorized") ||
-          errorMessage.includes("authentication") ||
-          errorMessage.includes("invalid api key") ||
-          errorMessage.includes("401") ||
-          errorMessage.includes("403");
+  const { sendMessage, status, setMessages } = useChat<GenerateModeChatUIMessage>({
+    id: apiKey,
+    transport: apiKey === "demo" ? demoTransport : undefined,
+    onError: (error) => {
+      setProgress(null);
+      const errorMessage = error.message?.toLowerCase() || "";
+      const isAuthError =
+        errorMessage.includes("unauthorized") ||
+        errorMessage.includes("authentication") ||
+        errorMessage.includes("invalid api key") ||
+        errorMessage.includes("401") ||
+        errorMessage.includes("403");
 
-        if (isAuthError) {
-          removeApiKey();
-          toast.error(
-            "Invalid API key. Please enter a valid Vercel Gateway API key.",
-          );
-          setShowApiKeyModal(true);
-        } else {
-          toast.error(error.message || "Failed to generate block");
+      if (isAuthError) {
+        removeApiKey();
+        toast.error("Invalid API key. Please enter a valid Vercel Gateway API key.");
+        setShowApiKeyModal(true);
+      } else {
+        toast.error(error.message || "Failed to generate block");
+      }
+    },
+    onData: (dataPart) => {
+      try {
+        if (!dataPart.data) {
+          return;
         }
-      },
-      onData: (dataPart) => {
-        try {
-          if (!dataPart.data) {
-            return;
-          }
 
-          // Handle generate-columns data part
-          if (dataPart.type === "data-generate-columns") {
-            setProgress(null);
-            if (dataPart.data.columns && onColumnsGenerated) {
-              // Convert column definitions to ColumnDef format
-              type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
-              const columns: ColumnDef<unknown>[] = dataPart.data.columns.map(
-                (col: ColumnDefinition): ColumnDef<unknown> => {
-                  const baseMeta = {
-                    label: col.label,
-                  };
+        // Handle generate-columns data part
+        if (dataPart.type === "data-generate-columns") {
+          setProgress(null);
+          const parsed = dataPartSchemas["generate-columns"].safeParse(dataPart.data);
+          if (parsed.success && onColumnsGenerated) {
+            // Convert column definitions to ColumnDef format
+            type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
+            const columns: ColumnDef<unknown>[] = parsed.data.columns.map(
+              (col: ColumnDefinition): ColumnDef<unknown> => {
+                const baseMeta = {
+                  label: col.label,
+                };
 
-                  // Build cell config based on variant
-                  let cellConfig:
-                    | { variant: "short-text" }
-                    | { variant: "long-text" }
-                    | {
-                        variant: "number";
-                        min?: number;
-                        max?: number;
-                        step?: number;
-                      }
-                    | {
-                        variant: "select";
-                        options: Array<{ label: string; value: string }>;
-                      }
-                    | {
-                        variant: "multi-select";
-                        options: Array<{ label: string; value: string }>;
-                      }
-                    | { variant: "checkbox" }
-                    | { variant: "date" }
-                    | { variant: "url" }
-                    | { variant: "file" };
+                // Build cell config based on variant
+                let cellConfig:
+                  | { variant: "short-text" }
+                  | { variant: "long-text" }
+                  | {
+                      variant: "number";
+                      min?: number;
+                      max?: number;
+                      step?: number;
+                    }
+                  | {
+                      variant: "select";
+                      options: Array<{ label: string; value: string }>;
+                    }
+                  | {
+                      variant: "multi-select";
+                      options: Array<{ label: string; value: string }>;
+                    }
+                  | { variant: "checkbox" }
+                  | { variant: "date" }
+                  | { variant: "url" }
+                  | { variant: "file" };
 
-                  switch (col.variant) {
-                    case "number":
-                      cellConfig = {
-                        variant: "number",
-                        ...(col.min !== undefined && { min: col.min }),
-                        ...(col.max !== undefined && { max: col.max }),
-                        ...(col.step !== undefined && { step: col.step }),
-                      };
-                      break;
-                    case "select":
-                    case "multi-select":
-                      cellConfig = {
-                        variant: col.variant,
-                        options: col.options || [],
-                      };
-                      break;
-                    case "short-text":
-                    case "long-text":
-                    case "checkbox":
-                    case "date":
-                    case "url":
-                    case "file":
-                      cellConfig = { variant: col.variant };
-                      break;
-                  }
-
-                  return {
-                    id: col.id,
-                    accessorKey: col.id,
-                    header: col.label,
-                    minSize: 180,
-                    filterFn,
-                    meta: {
-                      ...baseMeta,
-                      cell: cellConfig,
-                      ...(col.prompt && { prompt: col.prompt }),
-                    },
-                  };
-                },
-              );
-              onColumnsGenerated(columns);
-              toast.success(
-                `Generated ${columns.length} column${
-                  columns.length !== 1 ? "s" : ""
-                }`,
-              );
-            }
-          }
-
-          // Handle update-columns data part
-          if (dataPart.type === "data-update-columns") {
-            setProgress(null);
-            const { updates } = dataPart.data;
-            if (updates && updates.length > 0 && onColumnsUpdated) {
-              onColumnsUpdated(updates);
-              toast.success(
-                `Updated ${updates.length} column${updates.length !== 1 ? "s" : ""}`,
-              );
-            }
-          }
-
-          // Handle delete-columns data part
-          if (dataPart.type === "data-delete-columns") {
-            setProgress(null);
-            const { columnIds } = dataPart.data;
-            if (columnIds && columnIds.length > 0 && onColumnsDeleted) {
-              onColumnsDeleted(columnIds);
-              toast.success(
-                `Deleted ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`,
-              );
-            }
-          }
-
-          // Handle enrich-data data part
-          if (dataPart.type === "data-enrich-data") {
-            const { updates: enrichUpdates } = dataPart.data;
-            if (enrichUpdates && enrichUpdates.length > 0 && onDataEnriched) {
-              const updates: CellUpdate[] = enrichUpdates.map((update) => ({
-                rowIndex: update.rowIndex,
-                columnId: update.columnId,
-                value: update.value,
-              }));
-              onDataEnriched(updates);
-
-              // Remove completed cells from generating set
-              for (const update of updates) {
-                const cellKey = `${update.rowIndex}:${update.columnId}`;
-                removeGeneratingCell(cellKey);
-              }
-
-              // Update progress
-              setProgress((prev) => {
-                if (!prev || prev.total === undefined || prev.completed === undefined) return null;
-                const newCompleted = prev.completed + updates.length;
-                // Clear progress when done
-                if (newCompleted >= prev.total) {
-                  return null;
+                switch (col.variant) {
+                  case "number":
+                    cellConfig = {
+                      variant: "number",
+                      ...(col.min !== undefined && { min: col.min }),
+                      ...(col.max !== undefined && { max: col.max }),
+                      ...(col.step !== undefined && { step: col.step }),
+                    };
+                    break;
+                  case "select":
+                  case "multi-select":
+                    cellConfig = {
+                      variant: col.variant,
+                      options: col.options || [],
+                    };
+                    break;
+                  case "short-text":
+                  case "long-text":
+                  case "checkbox":
+                  case "date":
+                  case "url":
+                  case "file":
+                    cellConfig = { variant: col.variant };
+                    break;
                 }
-                return { ...prev, completed: newCompleted };
-              });
 
-              toast.success(
-                `Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`,
-              );
-            }
+                return {
+                  id: col.id,
+                  accessorKey: col.id,
+                  header: col.label,
+                  minSize: 180,
+                  filterFn,
+                  meta: {
+                    ...baseMeta,
+                    cell: cellConfig,
+                    ...(col.prompt && { prompt: col.prompt }),
+                  },
+                };
+              },
+            );
+            onColumnsGenerated(columns);
+            toast.success(`Generated ${columns.length} column${columns.length !== 1 ? "s" : ""}`);
           }
-
-          // Handle add-filters data part
-          if (dataPart.type === "data-add-filters") {
-            setProgress(null);
-            const { filters: rawFilters } = dataPart.data;
-            if (rawFilters && rawFilters.length > 0 && onFiltersAdded) {
-              // Parse through schema to apply transforms (cleans malformed values)
-              const parsed = z.array(filterSchema).safeParse(rawFilters);
-              const filters = parsed.success ? parsed.data : rawFilters;
-              const filterValues = filters.map((f: z.infer<typeof filterSchema>) => ({
-                columnId: f.columnId,
-                value: {
-                  operator: f.operator,
-                  value: f.value,
-                  endValue: f.endValue,
-                } as FilterValue,
-              }));
-              onFiltersAdded(filterValues);
-              toast.success(
-                `Added ${filters.length} filter${filters.length !== 1 ? "s" : ""}`,
-              );
-            }
-          }
-
-          // Handle remove-filters data part
-          if (dataPart.type === "data-remove-filters") {
-            setProgress(null);
-            const { columnIds } = dataPart.data;
-            if (columnIds && columnIds.length > 0 && onFiltersRemoved) {
-              onFiltersRemoved(columnIds);
-              toast.success(
-                `Removed ${columnIds.length} filter${columnIds.length !== 1 ? "s" : ""}`,
-              );
-            }
-          }
-
-          // Handle clear-filters data part
-          if (dataPart.type === "data-clear-filters") {
-            setProgress(null);
-            if (onFiltersCleared) {
-              onFiltersCleared();
-              toast.success("Cleared all filters");
-            }
-          }
-
-          // Handle add-sorts data part
-          if (dataPart.type === "data-add-sorts") {
-            setProgress(null);
-            const { sorts } = dataPart.data;
-            if (sorts && sorts.length > 0 && onSortsAdded) {
-              const sortValues = sorts.map((s: z.infer<typeof sortSchema>) => ({
-                columnId: s.columnId,
-                desc: s.direction === "desc",
-              }));
-              onSortsAdded(sortValues);
-              toast.success(
-                `Added ${sorts.length} sort${sorts.length !== 1 ? "s" : ""}`,
-              );
-            }
-          }
-
-          // Handle remove-sorts data part
-          if (dataPart.type === "data-remove-sorts") {
-            setProgress(null);
-            const { columnIds } = dataPart.data;
-            if (columnIds && columnIds.length > 0 && onSortsRemoved) {
-              onSortsRemoved(columnIds);
-              toast.success(
-                `Removed sorting from ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`,
-              );
-            }
-          }
-
-          // Handle clear-sorts data part
-          if (dataPart.type === "data-clear-sorts") {
-            setProgress(null);
-            if (onSortsCleared) {
-              onSortsCleared();
-              toast.success("Cleared all sorting");
-            }
-          }
-        } catch (err) {
-          toast.error(
-            err instanceof Error ? err.message : "Failed to process data part",
-          );
         }
-      },
-    });
+
+        // Handle update-columns data part
+        if (dataPart.type === "data-update-columns") {
+          setProgress(null);
+          const parsed = dataPartSchemas["update-columns"].safeParse(dataPart.data);
+          const updates = parsed.success ? parsed.data.updates : [];
+          if (updates.length > 0 && onColumnsUpdated) {
+            onColumnsUpdated(updates);
+            toast.success(`Updated ${updates.length} column${updates.length !== 1 ? "s" : ""}`);
+          }
+        }
+
+        // Handle delete-columns data part
+        if (dataPart.type === "data-delete-columns") {
+          setProgress(null);
+          const parsed = dataPartSchemas["delete-columns"].safeParse(dataPart.data);
+          const columnIds = parsed.success ? parsed.data.columnIds : [];
+          if (columnIds.length > 0 && onColumnsDeleted) {
+            onColumnsDeleted(columnIds);
+            toast.success(`Deleted ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`);
+          }
+        }
+
+        // Handle enrich-data data part
+        if (dataPart.type === "data-enrich-data") {
+          const parsed = dataPartSchemas["enrich-data"].safeParse(dataPart.data);
+          const enrichUpdates = parsed.success ? parsed.data.updates : [];
+          if (enrichUpdates.length > 0 && onDataEnriched) {
+            const updates: CellUpdate[] = enrichUpdates.map((update) => ({
+              rowIndex: update.rowIndex,
+              columnId: update.columnId,
+              value: update.value,
+            }));
+            onDataEnriched(updates);
+
+            // Remove completed cells from generating set
+            for (const update of updates) {
+              const cellKey = `${update.rowIndex}:${update.columnId}`;
+              removeGeneratingCell(cellKey);
+            }
+
+            // Update progress
+            setProgress((prev) => {
+              if (!prev || prev.total === undefined || prev.completed === undefined) return null;
+              const newCompleted = prev.completed + updates.length;
+              // Clear progress when done
+              if (newCompleted >= prev.total) {
+                return null;
+              }
+              return { ...prev, completed: newCompleted };
+            });
+
+            toast.success(`Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`);
+          }
+        }
+
+        // Handle enrich-errors data part (cells the data agent failed to fill)
+        if (dataPart.type === "data-enrich-errors") {
+          const parsed = dataPartSchemas["enrich-errors"].safeParse(dataPart.data);
+          const failures = parsed.success ? parsed.data.failures : [];
+          if (failures.length > 0) {
+            // Clear generating state for failed cells
+            for (const failure of failures) {
+              removeGeneratingCell(`${failure.rowIndex}:${failure.columnId}`);
+            }
+
+            // Count failures toward progress so the bar completes
+            setProgress((prev) => {
+              if (!prev || prev.total === undefined || prev.completed === undefined) return null;
+              const newCompleted = prev.completed + failures.length;
+              if (newCompleted >= prev.total) {
+                return null;
+              }
+              return { ...prev, completed: newCompleted };
+            });
+
+            toast.error(
+              `Failed to enrich ${failures.length} cell${failures.length !== 1 ? "s" : ""}`,
+            );
+          }
+        }
+
+        // Handle add-filters data part
+        if (dataPart.type === "data-add-filters") {
+          setProgress(null);
+          // Parse through schema to apply transforms (cleans malformed values)
+          const parsed = dataPartSchemas["add-filters"].safeParse(dataPart.data);
+          const filters = parsed.success ? parsed.data.filters : [];
+          if (filters.length > 0 && onFiltersAdded) {
+            const filterValues = filters.map((f) => ({
+              columnId: f.columnId,
+              value: {
+                operator: f.operator,
+                value: f.value,
+                endValue: f.endValue,
+              },
+            }));
+            onFiltersAdded(filterValues);
+            toast.success(`Added ${filters.length} filter${filters.length !== 1 ? "s" : ""}`);
+          }
+        }
+
+        // Handle remove-filters data part
+        if (dataPart.type === "data-remove-filters") {
+          setProgress(null);
+          const parsed = dataPartSchemas["remove-filters"].safeParse(dataPart.data);
+          const columnIds = parsed.success ? parsed.data.columnIds : [];
+          if (columnIds.length > 0 && onFiltersRemoved) {
+            onFiltersRemoved(columnIds);
+            toast.success(`Removed ${columnIds.length} filter${columnIds.length !== 1 ? "s" : ""}`);
+          }
+        }
+
+        // Handle clear-filters data part
+        if (dataPart.type === "data-clear-filters") {
+          setProgress(null);
+          if (onFiltersCleared) {
+            onFiltersCleared();
+            toast.success("Cleared all filters");
+          }
+        }
+
+        // Handle add-sorts data part
+        if (dataPart.type === "data-add-sorts") {
+          setProgress(null);
+          const parsed = dataPartSchemas["add-sorts"].safeParse(dataPart.data);
+          const sorts = parsed.success ? parsed.data.sorts : [];
+          if (sorts.length > 0 && onSortsAdded) {
+            const sortValues = sorts.map((s) => ({
+              columnId: s.columnId,
+              desc: s.direction === "desc",
+            }));
+            onSortsAdded(sortValues);
+            toast.success(`Added ${sorts.length} sort${sorts.length !== 1 ? "s" : ""}`);
+          }
+        }
+
+        // Handle remove-sorts data part
+        if (dataPart.type === "data-remove-sorts") {
+          setProgress(null);
+          const parsed = dataPartSchemas["remove-sorts"].safeParse(dataPart.data);
+          const columnIds = parsed.success ? parsed.data.columnIds : [];
+          if (columnIds.length > 0 && onSortsRemoved) {
+            onSortsRemoved(columnIds);
+            toast.success(
+              `Removed sorting from ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`,
+            );
+          }
+        }
+
+        // Handle clear-sorts data part
+        if (dataPart.type === "data-clear-sorts") {
+          setProgress(null);
+          if (onSortsCleared) {
+            onSortsCleared();
+            toast.success("Cleared all sorting");
+          }
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to process data part");
+      }
+    },
+  });
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -373,9 +374,7 @@ export const Chat = ({
       // Set generating cells before sending
       if (selectionContext) {
         const cellKeys = new Set(
-          selectionContext.selectedCells.map(
-            (c) => `${c.rowIndex}:${c.columnId}`,
-          ),
+          selectionContext.selectedCells.map((c) => `${c.rowIndex}:${c.columnId}`),
         );
         setGeneratingCells(cellKeys);
         setProgress({ message: "Enriching...", total: cellKeys.size, completed: 0 });
@@ -390,15 +389,9 @@ export const Chat = ({
         return {
           ...(apiKey ? { gatewayApiKey: apiKey } : {}),
           ...(selectionContext ? { selectionContext } : {}),
-          ...(existingColumns && existingColumns.length > 0
-            ? { existingColumns }
-            : {}),
-          ...(existingFilters && existingFilters.length > 0
-            ? { existingFilters }
-            : {}),
-          ...(existingSorts && existingSorts.length > 0
-            ? { existingSorts }
-            : {}),
+          ...(existingColumns && existingColumns.length > 0 ? { existingColumns } : {}),
+          ...(existingFilters && existingFilters.length > 0 ? { existingFilters } : {}),
+          ...(existingSorts && existingSorts.length > 0 ? { existingSorts } : {}),
         };
       };
 
@@ -406,16 +399,10 @@ export const Chat = ({
       setMessages([]);
 
       try {
-        sendMessage(
-          { text: input || "Enrich selected cells" },
-          { body: buildRequestBody() },
-        );
+        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
         setInput("");
       } catch {
-        sendMessage(
-          { text: input || "Enrich selected cells" },
-          { body: buildRequestBody() },
-        );
+        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
         setInput("");
       }
     },

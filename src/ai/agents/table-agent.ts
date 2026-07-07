@@ -1,12 +1,7 @@
-import {
-  createGateway,
-  stepCountIs,
-  tool,
-  ToolLoopAgent,
-  type UIMessage,
-  type UIMessageStreamWriter,
-} from "ai";
+import { stepCountIs, tool, ToolLoopAgent, type UIMessage, type UIMessageStreamWriter } from "ai";
 import { z } from "zod";
+
+import { createModel } from "../gateway";
 
 import {
   columnDefinitionSchema,
@@ -342,9 +337,7 @@ function createGenerateColumnsTool({ writer }: WriterParams) {
         data: { columns, status: "done" },
       });
 
-      return `Successfully generated ${columns.length} column${
-        columns.length !== 1 ? "s" : ""
-      }.`;
+      return `Successfully generated ${columns.length} column${columns.length !== 1 ? "s" : ""}.`;
     },
   });
 }
@@ -362,9 +355,7 @@ function createUpdateColumnsTool({ writer }: WriterParams) {
         data: { updates, status: "done" },
       });
 
-      return `Successfully updated ${updates.length} column${
-        updates.length !== 1 ? "s" : ""
-      }.`;
+      return `Successfully updated ${updates.length} column${updates.length !== 1 ? "s" : ""}.`;
     },
   });
 }
@@ -380,9 +371,7 @@ function createDeleteColumnsTool({ writer }: WriterParams) {
         data: { columnIds, status: "done" },
       });
 
-      return `Successfully deleted ${columnIds.length} column${
-        columnIds.length !== 1 ? "s" : ""
-      }.`;
+      return `Successfully deleted ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}.`;
     },
   });
 }
@@ -400,9 +389,7 @@ function createAddFiltersTool({ writer }: WriterParams) {
         data: { filters, status: "done" },
       });
 
-      return `Successfully added ${filters.length} filter${
-        filters.length !== 1 ? "s" : ""
-      }.`;
+      return `Successfully added ${filters.length} filter${filters.length !== 1 ? "s" : ""}.`;
     },
   });
 }
@@ -454,9 +441,7 @@ function createAddSortsTool({ writer }: WriterParams) {
         data: { sorts, status: "done" },
       });
 
-      return `Successfully added ${sorts.length} sort${
-        sorts.length !== 1 ? "s" : ""
-      }.`;
+      return `Successfully added ${sorts.length} sort${sorts.length !== 1 ? "s" : ""}.`;
     },
   });
 }
@@ -499,24 +484,28 @@ function createClearSortsTool({ writer }: WriterParams) {
 // Agent Factory
 // -----------------------------------------------------------------------------
 
-export type ExistingColumn = {
-  id: string;
-  label: string;
-  variant: string;
-  prompt?: string;
-  options?: Array<{ label: string; value: string }>;
-};
+export const existingColumnSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  variant: z.string(),
+  prompt: z.string().optional(),
+  options: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+});
 
-export type ExistingFilter = {
-  columnId: string;
-  operator: string;
-  value?: string | number | string[];
-};
+export const existingFilterSchema = z.object({
+  columnId: z.string(),
+  operator: z.string(),
+  value: z.union([z.string(), z.number(), z.array(z.string())]).optional(),
+});
 
-export type ExistingSort = {
-  columnId: string;
-  direction: "asc" | "desc";
-};
+export const existingSortSchema = z.object({
+  columnId: z.string(),
+  direction: z.enum(["asc", "desc"]),
+});
+
+export type ExistingColumn = z.infer<typeof existingColumnSchema>;
+export type ExistingFilter = z.infer<typeof existingFilterSchema>;
+export type ExistingSort = z.infer<typeof existingSortSchema>;
 
 type CreateTableAgentParams = {
   apiKey: string;
@@ -532,7 +521,7 @@ type CreateTableAgentParams = {
 function buildTableInstructions(
   existingColumns?: ExistingColumn[],
   existingFilters?: ExistingFilter[],
-  existingSorts?: ExistingSort[]
+  existingSorts?: ExistingSort[],
 ): string {
   const sections: string[] = [generatePrompt];
 
@@ -606,13 +595,9 @@ export function createTableAgent({
   existingFilters,
   existingSorts,
 }: CreateTableAgentParams) {
-  const model = createGateway({ apiKey })("openai/gpt-5.1-instant");
+  const model = createModel(apiKey);
 
-  const instructions = buildTableInstructions(
-    existingColumns,
-    existingFilters,
-    existingSorts
-  );
+  const instructions = buildTableInstructions(existingColumns, existingFilters, existingSorts);
 
   return new ToolLoopAgent({
     model,

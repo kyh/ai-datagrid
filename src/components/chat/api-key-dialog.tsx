@@ -24,7 +24,7 @@ interface ApiKeyDialogProps {
 export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
   const [apiKey, setApiKey, removeApiKey] = useLocalStorage<string>(
     GATEWAY_API_KEY_STORAGE_KEY,
-    ""
+    "",
   );
   const [apiKeyInput, setApiKeyInput] = React.useState(apiKey);
 
@@ -60,8 +60,7 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
             >
               Vercel Gateway API key
             </a>{" "}
-            to use AI features. Your key will be stored locally in your
-            browser.
+            to use AI features. Your key will be stored locally in your browser.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 flex flex-col gap-2">
@@ -77,6 +76,18 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
             }}
             autoFocus
           />
+          <div className="text-sm text-muted-foreground">
+            <button
+              type="button"
+              className="underline"
+              onClick={() => {
+                setApiKeyInput("demo");
+              }}
+            >
+              Use a demo key
+            </button>
+            &nbsp;(generations will always be the same)
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

@@ -15,7 +15,7 @@ import { Chat } from "@/components/chat/chat";
 import type { CellOpts, CellSelectOption, CellUpdate, FilterValue } from "@/lib/data-grid-types";
 import type { ColumnUpdate } from "@/ai/messages/data-parts";
 import type { SelectionContext } from "@/lib/selection-context";
-import { parseCellKey } from "@/lib/data-grid";
+import { getCellKey, parseCellKey } from "@/lib/data-grid";
 import { useDataGridStore } from "@/stores/data-grid-store";
 
 /** Creates a CellOpts config for a given variant */
@@ -71,7 +71,12 @@ export function DataGridContainer<T>({
   const onColumnUpdate = React.useCallback(
     (
       columnId: string,
-      updates: Partial<{ label: string; variant: CellOpts["variant"]; prompt: string; options: CellSelectOption[] }>
+      updates: Partial<{
+        label: string;
+        variant: CellOpts["variant"];
+        prompt: string;
+        options: CellSelectOption[];
+      }>,
     ) => {
       setColumns((prev) =>
         prev.map((col): ColumnDef<T> => {
@@ -107,10 +112,10 @@ export function DataGridContainer<T>({
               prompt: updates.prompt ?? currentMeta.prompt,
             },
           } as ColumnDef<T>;
-        })
+        }),
       );
     },
-    []
+    [],
   );
 
   const onColumnDelete = React.useCallback((columnId: string) => {
@@ -161,16 +166,30 @@ export function DataGridContainer<T>({
         prev.map((row) => ({
           ...row,
           [newId]: "",
-        }))
+        })),
       );
     },
-    []
+    [],
   );
 
-  const effectiveColumns = React.useMemo(
-    () => [...columns, getDataGridAddColumn<T>()],
-    [columns]
+  const setSelectionState = useDataGridStore((state) => state.setSelectionState);
+
+  const onEnrichColumn = React.useCallback(
+    (columnId: string, prompt: string) => {
+      // Persist the prompt so the enrich agent reads it from column meta,
+      // then select the whole column so the chat's Enrich action targets it.
+      onColumnUpdate(columnId, { prompt });
+      const selectedCells = new Set(data.map((_, rowIndex) => getCellKey(rowIndex, columnId)));
+      setSelectionState({
+        selectedCells,
+        selectionRange: null,
+        isSelecting: false,
+      });
+    },
+    [data, onColumnUpdate, setSelectionState],
   );
+
+  const effectiveColumns = React.useMemo(() => [...columns, getDataGridAddColumn<T>()], [columns]);
 
   const { table, tableMeta, hasSelection, ...dataGridProps } = useDataGrid<T>({
     data,
@@ -197,15 +216,13 @@ export function DataGridContainer<T>({
         url: URL.createObjectURL(file),
       }));
     },
-    onFilesDelete: async () => {
-      // TODO: implement actual file deletion
-    },
+    // No onFilesDelete: files live in memory as blob URLs; the file cell
+    // revokes them and updates the row itself. Wire this up when uploads
+    // persist to real storage.
     onColumnUpdate,
     onColumnDelete,
     onColumnAdd,
-    onEnrichColumn: () => {
-      // TODO: implement column enrichment
-    },
+    onEnrichColumn,
     initialState: {
       columnPinning: {
         left: pinnedColumns,
@@ -222,7 +239,7 @@ export function DataGridContainer<T>({
       const existingIds = new Set(
         columns
           .filter((col) => col.id !== "select" && col.id !== "index" && col.id !== "add-column")
-          .map((col) => col.id)
+          .map((col) => col.id),
       );
 
       // Filter out new columns that would duplicate existing ones
@@ -243,11 +260,11 @@ export function DataGridContainer<T>({
               }
             }
             return Object.keys(updates).length > 0 ? { ...row, ...updates } : row;
-          })
+          }),
         );
       }
     },
-    [columns]
+    [columns],
   );
 
   const onDataEnriched = React.useCallback(
@@ -269,7 +286,7 @@ export function DataGridContainer<T>({
         return newData;
       });
     },
-    [columns]
+    [columns],
   );
 
   const onColumnsUpdated = React.useCallback(
@@ -286,8 +303,13 @@ export function DataGridContainer<T>({
             prev.map((col): ColumnDef<T> => {
               if (col.id !== update.columnId) return col;
               const currentMeta = col.meta ?? {};
-              const currentCell = currentMeta.cell as { variant: string; options?: Array<{ label: string; value: string }> } | undefined;
-              if (currentCell && (currentCell.variant === "select" || currentCell.variant === "multi-select")) {
+              const currentCell = currentMeta.cell as
+                | { variant: string; options?: Array<{ label: string; value: string }> }
+                | undefined;
+              if (
+                currentCell &&
+                (currentCell.variant === "select" || currentCell.variant === "multi-select")
+              ) {
                 return {
                   ...col,
                   meta: {
@@ -300,12 +322,12 @@ export function DataGridContainer<T>({
                 } as ColumnDef<T>;
               }
               return col;
-            })
+            }),
           );
         }
       }
     },
-    [onColumnUpdate]
+    [onColumnUpdate],
   );
 
   const onColumnsDeleted = React.useCallback(
@@ -314,18 +336,22 @@ export function DataGridContainer<T>({
         onColumnDelete(columnId);
       }
     },
-    [onColumnDelete]
+    [onColumnDelete],
   );
 
   const getExistingColumns = React.useCallback(() => {
     return columns
-      .filter((col) => col.id && col.id !== "select" && col.id !== "index" && col.id !== "add-column")
+      .filter(
+        (col) => col.id && col.id !== "select" && col.id !== "index" && col.id !== "add-column",
+      )
       .map((col) => {
-        const meta = col.meta as {
-          label?: string;
-          prompt?: string;
-          cell?: { variant: string; options?: Array<{ label: string; value: string }> };
-        } | undefined;
+        const meta = col.meta as
+          | {
+              label?: string;
+              prompt?: string;
+              cell?: { variant: string; options?: Array<{ label: string; value: string }> };
+            }
+          | undefined;
         return {
           id: col.id ?? "",
           label: meta?.label ?? col.id ?? "",
@@ -353,7 +379,7 @@ export function DataGridContainer<T>({
   const getExistingSorts = React.useCallback(() => {
     return sorting.map((s) => ({
       columnId: s.id,
-      direction: s.desc ? "desc" as const : "asc" as const,
+      direction: s.desc ? ("desc" as const) : ("asc" as const),
     }));
   }, [sorting]);
 
@@ -371,14 +397,14 @@ export function DataGridContainer<T>({
       }
       setColumnFilters(newFilters);
     },
-    [columnFilters, setColumnFilters]
+    [columnFilters, setColumnFilters],
   );
 
   const onFiltersRemoved = React.useCallback(
     (columnIds: string[]) => {
       setColumnFilters(columnFilters.filter((f) => !columnIds.includes(f.id)));
     },
-    [columnFilters, setColumnFilters]
+    [columnFilters, setColumnFilters],
   );
 
   const onFiltersCleared = React.useCallback(() => {
@@ -399,14 +425,14 @@ export function DataGridContainer<T>({
       }
       setSorting(newSorts);
     },
-    [sorting, setSorting]
+    [sorting, setSorting],
   );
 
   const onSortsRemoved = React.useCallback(
     (columnIds: string[]) => {
       setSorting(sorting.filter((s) => !columnIds.includes(s.id)));
     },
-    [sorting, setSorting]
+    [sorting, setSorting],
   );
 
   const onSortsCleared = React.useCallback(() => {
@@ -432,7 +458,7 @@ export function DataGridContainer<T>({
     const cols = Array.from(colSet);
 
     // Build row data for context-aware generation
-    const rowData: Record<number, Record<string, unknown>> = {};
+    const rowData: Record<string, Record<string, unknown>> = {};
     for (const rowIndex of rows) {
       const row = data[rowIndex];
       if (row) {
@@ -451,11 +477,13 @@ export function DataGridContainer<T>({
       currentColumns: columns
         .filter((col) => col.id)
         .map((col) => {
-          const meta = col.meta as {
-            label?: string;
-            cell?: { variant?: string; options?: Array<{ label: string; value: string }> };
-            prompt?: string;
-          } | undefined;
+          const meta = col.meta as
+            | {
+                label?: string;
+                cell?: { variant?: string; options?: Array<{ label: string; value: string }> };
+                prompt?: string;
+              }
+            | undefined;
           return {
             id: col.id ?? "",
             label: meta?.label ?? col.id ?? "",
@@ -470,7 +498,11 @@ export function DataGridContainer<T>({
 
   return (
     <>
-      <div role="toolbar" aria-orientation="horizontal" className="flex items-center gap-2 justify-self-end p-2 [grid-area:toolbar]">
+      <div
+        role="toolbar"
+        aria-orientation="horizontal"
+        className="flex items-center gap-2 justify-self-end p-2 [grid-area:toolbar]"
+      >
         <DataGridFilterMenu table={table} align="end" />
         <DataGridSortMenu table={table} align="end" />
         <DataGridRowHeightMenu table={table} align="end" />

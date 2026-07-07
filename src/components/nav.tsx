@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   BuildingIcon,
   FileSpreadsheetIcon,
   FilterIcon,
   MenuIcon,
+  MoonIcon,
   NewspaperIcon,
   SparklesIcon,
+  SunIcon,
   UsersIcon,
   WandIcon,
 } from "lucide-react";
@@ -49,9 +52,9 @@ const aiItems = [
 
 export function Nav() {
   const pathname = usePathname();
+  const { resolvedTheme, setTheme } = useTheme();
   const allNavItems = [...dataItems, ...aiItems];
-  const title =
-    allNavItems.find((item) => item.path === pathname)?.label ?? "AI Datagrid";
+  const title = allNavItems.find((item) => item.path === pathname)?.label ?? "AI Datagrid";
 
   return (
     <header className="flex items-center gap-2 p-2 [grid-area:nav]">
@@ -68,10 +71,7 @@ export function Nav() {
             <DropdownMenuItem
               key={item.path}
               render={
-                <Link
-                  href={item.path}
-                  className={pathname === item.path ? "bg-accent" : ""}
-                >
+                <Link href={item.path} className={pathname === item.path ? "bg-accent" : ""}>
                   <item.icon className="size-4" />
                   {item.label}
                 </Link>
@@ -83,10 +83,7 @@ export function Nav() {
             <DropdownMenuItem
               key={item.path}
               render={
-                <Link
-                  href={item.path}
-                  className={pathname === item.path ? "bg-accent" : ""}
-                >
+                <Link href={item.path} className={pathname === item.path ? "bg-accent" : ""}>
                   <item.icon className="size-4" />
                   {item.label}
                 </Link>
@@ -109,6 +106,15 @@ export function Nav() {
         </DropdownMenuContent>
       </DropdownMenu>
       <h1>{title}</h1>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+        aria-label="Toggle theme"
+      >
+        <SunIcon className="size-4 dark:hidden" />
+        <MoonIcon className="hidden size-4 dark:block" />
+      </Button>
     </header>
   );
 }

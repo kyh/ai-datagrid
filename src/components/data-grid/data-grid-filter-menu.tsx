@@ -24,11 +24,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -44,10 +40,7 @@ import {
   SortableOverlay,
 } from "@/components/ui/sortable";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import {
-  getDefaultOperator,
-  getOperatorsForVariant,
-} from "@/lib/data-grid-filters";
+import { getDefaultOperator, getOperatorsForVariant } from "@/lib/data-grid-filters";
 import { formatDate } from "@/components/ui/utils";
 import { cn } from "@/components/ui/utils";
 import type { FilterOperator, FilterValue } from "@/lib/data-grid-types";
@@ -57,8 +50,7 @@ const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 const FILTER_DEBOUNCE_MS = 300;
 const OPERATORS_WITHOUT_VALUE = ["isEmpty", "isNotEmpty", "isTrue", "isFalse"];
 
-interface DataGridFilterMenuProps<TData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataGridFilterMenuProps<TData> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
   disabled?: boolean;
 }
@@ -129,20 +121,18 @@ export function DataGridFilterMenu<TData>({
       table.setColumnFilters((prevFilters) => {
         if (!prevFilters) return prevFilters;
         return prevFilters.map((filter) =>
-          filter.id === filterId ? { ...filter, ...updates } : filter
+          filter.id === filterId ? { ...filter, ...updates } : filter,
         );
       });
     },
-    [table]
+    [table],
   );
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      table.setColumnFilters((prevFilters) =>
-        prevFilters.filter((item) => item.id !== filterId)
-      );
+      table.setColumnFilters((prevFilters) => prevFilters.filter((item) => item.id !== filterId));
     },
-    [table]
+    [table],
   );
 
   const onFiltersReset = React.useCallback(() => {
@@ -154,8 +144,7 @@ export function DataGridFilterMenu<TData>({
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
-        (event.target instanceof HTMLElement &&
-          event.target.contentEditable === "true")
+        (event.target instanceof HTMLElement && event.target.contentEditable === "true")
       ) {
         return;
       }
@@ -176,15 +165,12 @@ export function DataGridFilterMenu<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (
-        REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) &&
-        columnFilters.length > 0
-      ) {
+      if (REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) && columnFilters.length > 0) {
         event.preventDefault();
         onFiltersReset();
       }
     },
-    [columnFilters.length, onFiltersReset]
+    [columnFilters.length, onFiltersReset],
   );
 
   return (
@@ -222,8 +208,8 @@ export function DataGridFilterMenu<TData>({
           aria-describedby={descriptionId}
           dir={dir}
           className={cn(
-            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[480px]",
-            className
+            "flex w-full max-w-(--available-width) flex-col gap-3.5 p-4 sm:min-w-[480px]",
+            className,
           )}
           {...props}
         >
@@ -233,10 +219,7 @@ export function DataGridFilterMenu<TData>({
             </h4>
             <p
               id={descriptionId}
-              className={cn(
-                "text-muted-foreground text-sm",
-                columnFilters.length > 0 && "sr-only"
-              )}
+              className={cn("text-muted-foreground text-sm", columnFilters.length > 0 && "sr-only")}
             >
               {columnFilters.length > 0
                 ? "Modify filters to narrow down your data."
@@ -244,27 +227,29 @@ export function DataGridFilterMenu<TData>({
             </p>
           </div>
           {columnFilters.length > 0 && (
-            <SortableContent asChild>
-              <div
-                role="list"
-                className="flex max-h-[400px] flex-col gap-2 overflow-y-auto p-1"
-              >
-                {columnFilters.map((filter, index) => (
-                  <DataGridFilterItem
-                    key={filter.id}
-                    filter={filter}
-                    index={index}
-                    filterItemId={`${id}-filter-${filter.id}`}
-                    dir={dir}
-                    columns={columns}
-                    columnLabels={columnLabels}
-                    columnVariants={columnVariants}
-                    table={table}
-                    onFilterUpdate={onFilterUpdate}
-                    onFilterRemove={onFilterRemove}
-                  />
-                ))}
-              </div>
+            <SortableContent
+              render={
+                <div
+                  role="list"
+                  className="flex max-h-[400px] flex-col gap-2 overflow-y-auto p-1"
+                />
+              }
+            >
+              {columnFilters.map((filter, index) => (
+                <DataGridFilterItem
+                  key={filter.id}
+                  filter={filter}
+                  index={index}
+                  filterItemId={`${id}-filter-${filter.id}`}
+                  dir={dir}
+                  columns={columns}
+                  columnLabels={columnLabels}
+                  columnVariants={columnVariants}
+                  table={table}
+                  onFilterUpdate={onFilterUpdate}
+                  onFilterRemove={onFilterRemove}
+                />
+              ))}
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
@@ -278,12 +263,7 @@ export function DataGridFilterMenu<TData>({
               Add filter
             </Button>
             {columnFilters.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded"
-                onClick={onFiltersReset}
-              >
+              <Button variant="outline" size="sm" className="rounded" onClick={onFiltersReset}>
                 Reset filters
               </Button>
             )}
@@ -348,10 +328,7 @@ function DataGridFilterItem<TData>({
 
   const onItemKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
@@ -364,7 +341,7 @@ function DataGridFilterItem<TData>({
         onFilterRemove(filter.id);
       }
     },
-    [filter.id, showFieldSelector, showOperatorSelector, onFilterRemove]
+    [filter.id, showFieldSelector, showOperatorSelector, onFilterRemove],
   );
 
   const onOperatorChange = React.useCallback(
@@ -377,7 +354,7 @@ function DataGridFilterItem<TData>({
         },
       });
     },
-    [filter.id, filterValue?.value, filterValue?.endValue, onFilterUpdate]
+    [filter.id, filterValue?.value, filterValue?.endValue, onFilterUpdate],
   );
 
   const onValueChange = React.useCallback(
@@ -390,7 +367,7 @@ function DataGridFilterItem<TData>({
         },
       });
     },
-    [filter.id, operator, filterValue?.endValue, onFilterUpdate]
+    [filter.id, operator, filterValue?.endValue, onFilterUpdate],
   );
 
   const onEndValueChange = React.useCallback(
@@ -403,155 +380,148 @@ function DataGridFilterItem<TData>({
         },
       });
     },
-    [filter.id, operator, filterValue?.value, onFilterUpdate]
+    [filter.id, operator, filterValue?.value, onFilterUpdate],
   );
 
   return (
-    <SortableItem value={filter.id} asChild>
-      <div
-        role="listitem"
-        id={filterItemId}
-        tabIndex={-1}
-        className="flex items-center gap-2"
-        onKeyDown={onItemKeyDown}
-      >
-        <div className="min-w-[72px] text-center">
-          {index === 0 ? (
-            <span className="text-muted-foreground text-sm">Where</span>
-          ) : (
-            <span className="text-muted-foreground text-sm">And</span>
-          )}
-        </div>
-        <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-          <PopoverTrigger
-            render={
-              <Button
-                id={fieldTriggerId}
-                aria-controls={fieldListboxId}
-                dir={dir}
-                variant="outline"
-                size="sm"
-                className="w-32 justify-between rounded font-normal"
-              >
-                <span className="truncate">{columnLabels.get(filter.id)}</span>
-                <ChevronsUpDown className="opacity-50" />
-              </Button>
-            }
-          />
-          <PopoverContent
-            id={fieldListboxId}
-            dir={dir}
-            align="start"
-            className="w-40 p-0"
-          >
-            <Command>
-              <CommandInput placeholder="Search fields..." />
-              <CommandList>
-                <CommandEmpty>No fields found.</CommandEmpty>
-                <CommandGroup>
-                  {columns.map((column) => (
-                    <CommandItem
-                      key={column.id}
-                      value={column.id}
-                      onSelect={(value) => {
-                        const newVariant =
-                          columnVariants.get(value) ?? "short-text";
-                        const newOperator = getDefaultOperator(newVariant);
-
-                        table.setColumnFilters((prevFilters) =>
-                          prevFilters.map((f) =>
-                            f.id === filter.id
-                              ? {
-                                  id: value,
-                                  value: {
-                                    operator: newOperator,
-                                    value: "",
-                                  },
-                                }
-                              : f
-                          )
-                        );
-                        setShowFieldSelector(false);
-                      }}
-                    >
-                      <span className="truncate">{column.label}</span>
-                      <Check
-                        className={cn(
-                          "ms-auto",
-                          column.id === filter.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        <Select
-          open={showOperatorSelector}
-          onOpenChange={setShowOperatorSelector}
-          value={operator}
-          onValueChange={(value) => {
-            if (value !== null) onOperatorChange(value as FilterOperator);
-          }}
-        >
-          <SelectTrigger
-            aria-controls={operatorListboxId}
-            size="sm"
-            className="w-32 rounded lowercase"
-          >
-            <div className="truncate">
-              <SelectValue />
-            </div>
-          </SelectTrigger>
-          <SelectContent id={operatorListboxId}>
-            {operators.map((op) => (
-              <SelectItem key={op.value} value={op.value} className="lowercase">
-                {op.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="min-w-36 max-w-60 flex-1">
-          {needsValue && column ? (
-            <DataGridFilterInput
-              key={filter.id}
-              variant={variant}
-              operator={operator}
-              column={column}
-              inputId={inputId}
-              dir={dir}
-              value={filterValue?.value}
-              endValue={filterValue?.endValue}
-              onValueChange={onValueChange}
-              onEndValueChange={onEndValueChange}
-            />
-          ) : (
-            <div
-              id={inputId}
-              role="status"
-              aria-label={`${columnLabels.get(filter.id)} filter is empty`}
-              aria-live="polite"
-              className="h-8 w-full rounded border bg-transparent dark:bg-input/30"
-            />
-          )}
-        </div>
-        <Button
-          aria-controls={filterItemId}
-          variant="outline"
-          size="icon"
-          className="size-8 rounded"
-          onClick={() => onFilterRemove(filter.id)}
-        >
-          <Trash2 />
-        </Button>
-        <SortableItemHandle asChild>
-          <Button variant="outline" size="icon" className="size-8 rounded">
-            <GripVertical />
-          </Button>
-        </SortableItemHandle>
+    <SortableItem
+      value={filter.id}
+      role="listitem"
+      id={filterItemId}
+      tabIndex={-1}
+      className="flex items-center gap-2"
+      onKeyDown={onItemKeyDown}
+    >
+      <div className="min-w-[72px] text-center">
+        {index === 0 ? (
+          <span className="text-muted-foreground text-sm">Where</span>
+        ) : (
+          <span className="text-muted-foreground text-sm">And</span>
+        )}
       </div>
+      <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
+        <PopoverTrigger
+          render={
+            <Button
+              id={fieldTriggerId}
+              aria-controls={fieldListboxId}
+              dir={dir}
+              variant="outline"
+              size="sm"
+              className="w-32 justify-between rounded font-normal"
+            >
+              <span className="truncate">{columnLabels.get(filter.id)}</span>
+              <ChevronsUpDown className="opacity-50" />
+            </Button>
+          }
+        />
+        <PopoverContent id={fieldListboxId} dir={dir} align="start" className="w-40 p-0">
+          <Command>
+            <CommandInput placeholder="Search fields..." />
+            <CommandList>
+              <CommandEmpty>No fields found.</CommandEmpty>
+              <CommandGroup>
+                {columns.map((column) => (
+                  <CommandItem
+                    key={column.id}
+                    value={column.id}
+                    onSelect={(value) => {
+                      const newVariant = columnVariants.get(value) ?? "short-text";
+                      const newOperator = getDefaultOperator(newVariant);
+
+                      table.setColumnFilters((prevFilters) =>
+                        prevFilters.map((f) =>
+                          f.id === filter.id
+                            ? {
+                                id: value,
+                                value: {
+                                  operator: newOperator,
+                                  value: "",
+                                },
+                              }
+                            : f,
+                        ),
+                      );
+                      setShowFieldSelector(false);
+                    }}
+                  >
+                    <span className="truncate">{column.label}</span>
+                    <Check
+                      className={cn(
+                        "ms-auto",
+                        column.id === filter.id ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <Select
+        open={showOperatorSelector}
+        onOpenChange={setShowOperatorSelector}
+        value={operator}
+        onValueChange={(value) => {
+          if (value !== null) onOperatorChange(value as FilterOperator);
+        }}
+      >
+        <SelectTrigger
+          aria-controls={operatorListboxId}
+          size="sm"
+          className="w-32 rounded lowercase"
+        >
+          <div className="truncate">
+            <SelectValue />
+          </div>
+        </SelectTrigger>
+        <SelectContent id={operatorListboxId}>
+          {operators.map((op) => (
+            <SelectItem key={op.value} value={op.value} className="lowercase">
+              {op.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="min-w-36 max-w-60 flex-1">
+        {needsValue && column ? (
+          <DataGridFilterInput
+            key={filter.id}
+            variant={variant}
+            operator={operator}
+            column={column}
+            inputId={inputId}
+            dir={dir}
+            value={filterValue?.value}
+            endValue={filterValue?.endValue}
+            onValueChange={onValueChange}
+            onEndValueChange={onEndValueChange}
+          />
+        ) : (
+          <div
+            id={inputId}
+            role="status"
+            aria-label={`${columnLabels.get(filter.id)} filter is empty`}
+            aria-live="polite"
+            className="h-8 w-full rounded border bg-transparent dark:bg-input/30"
+          />
+        )}
+      </div>
+      <Button
+        aria-controls={filterItemId}
+        variant="outline"
+        size="icon"
+        className="size-8 rounded"
+        onClick={() => onFilterRemove(filter.id)}
+      >
+        <Trash2 />
+      </Button>
+      <SortableItemHandle
+        render={<Button variant="outline" size="icon" className="size-8 rounded" />}
+      >
+        <GripVertical />
+      </SortableItemHandle>
     </SortableItem>
   );
 }
@@ -589,21 +559,20 @@ function DataGridFilterInput<TData>({
     (newValue: string | number | string[] | undefined) => {
       onValueChange(newValue);
     },
-    FILTER_DEBOUNCE_MS
+    FILTER_DEBOUNCE_MS,
   );
 
   const debouncedOnEndValueChange = useDebouncedCallback(
     (newValue: string | number | string[] | undefined) => {
       onEndValueChange?.(newValue);
     },
-    FILTER_DEBOUNCE_MS
+    FILTER_DEBOUNCE_MS,
   );
 
   const cellVariant = column.columnDef.meta?.cell;
 
   const selectOptions = React.useMemo(() => {
-    return cellVariant?.variant === "select" ||
-      cellVariant?.variant === "multi-select"
+    return cellVariant?.variant === "select" || cellVariant?.variant === "multi-select"
       ? cellVariant.options
       : [];
   }, [cellVariant]);
@@ -669,28 +638,21 @@ function DataGridFilterInput<TData>({
 
     if (isBetween) {
       const startDate =
-        localValue && typeof localValue === "string"
-          ? new Date(localValue)
-          : undefined;
+        localValue && typeof localValue === "string" ? new Date(localValue) : undefined;
       const endDate =
-        localEndValue && typeof localEndValue === "string"
-          ? new Date(localEndValue)
-          : undefined;
+        localEndValue && typeof localEndValue === "string" ? new Date(localEndValue) : undefined;
 
       const isSameDate =
-        startDate &&
-        endDate &&
-        startDate.toDateString() === endDate.toDateString();
+        startDate && endDate && startDate.toDateString() === endDate.toDateString();
 
       const displayValue =
         startDate && endDate && !isSameDate
-          ? `${formatDate(startDate, { month: "short" })} - ${formatDate(
-              endDate,
-              { month: "short" }
-            )}`
+          ? `${formatDate(startDate, { month: "short" })} - ${formatDate(endDate, {
+              month: "short",
+            })}`
           : startDate
-          ? formatDate(startDate, { month: "short" })
-          : "Pick a range";
+            ? formatDate(startDate, { month: "short" })
+            : "Pick a range";
 
       return (
         <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
@@ -704,7 +666,7 @@ function DataGridFilterInput<TData>({
                 size="sm"
                 className={cn(
                   "h-8 w-full justify-start rounded font-normal",
-                  !startDate && "text-muted-foreground"
+                  !startDate && "text-muted-foreground",
                 )}
               >
                 <CalendarIcon />
@@ -712,12 +674,7 @@ function DataGridFilterInput<TData>({
               </Button>
             }
           />
-          <PopoverContent
-            id={inputListboxId}
-            dir={dir}
-            align="start"
-            className="w-auto p-0"
-          >
+          <PopoverContent id={inputListboxId} dir={dir} align="start" className="w-auto p-0">
             <Calendar
               autoFocus
               captionLayout="dropdown"
@@ -726,13 +683,11 @@ function DataGridFilterInput<TData>({
                 startDate && endDate
                   ? { from: startDate, to: endDate }
                   : startDate
-                  ? { from: startDate, to: startDate }
-                  : undefined
+                    ? { from: startDate, to: startDate }
+                    : undefined
               }
               onSelect={(range) => {
-                const fromValue = range?.from
-                  ? range.from.toISOString()
-                  : undefined;
+                const fromValue = range?.from ? range.from.toISOString() : undefined;
                 const toValue = range?.to ? range.to.toISOString() : undefined;
                 setLocalValue(fromValue);
                 setLocalEndValue(toValue);
@@ -746,9 +701,7 @@ function DataGridFilterInput<TData>({
     }
 
     const dateValue =
-      localValue && typeof localValue === "string"
-        ? new Date(localValue)
-        : undefined;
+      localValue && typeof localValue === "string" ? new Date(localValue) : undefined;
 
     return (
       <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
@@ -762,24 +715,17 @@ function DataGridFilterInput<TData>({
               size="sm"
               className={cn(
                 "h-8 w-full justify-start rounded font-normal",
-                !dateValue && "text-muted-foreground"
+                !dateValue && "text-muted-foreground",
               )}
             >
               <CalendarIcon />
               <span className="truncate">
-                {dateValue
-                  ? formatDate(dateValue, { month: "short" })
-                  : "Pick a date"}
+                {dateValue ? formatDate(dateValue, { month: "short" }) : "Pick a date"}
               </span>
             </Button>
           }
         />
-        <PopoverContent
-          id={inputListboxId}
-          dir={dir}
-          align="start"
-          className="w-auto p-0"
-        >
+        <PopoverContent id={inputListboxId} dir={dir} align="start" className="w-auto p-0">
           <Calendar
             autoFocus
             captionLayout="dropdown"
@@ -798,8 +744,7 @@ function DataGridFilterInput<TData>({
   }
 
   const isSelectVariant = variant === "select" || variant === "multi-select";
-  const isMultiValueOperator =
-    operator === "isAnyOf" || operator === "isNoneOf";
+  const isMultiValueOperator = operator === "isAnyOf" || operator === "isNoneOf";
 
   if (isSelectVariant && selectOptions.length > 0) {
     const inputListboxId = `${inputId}-listbox`;
@@ -807,11 +752,11 @@ function DataGridFilterInput<TData>({
     if (isMultiValueOperator) {
       const selectedValues = Array.isArray(value) ? value : [];
       const selectedOptions = selectOptions.filter((option) =>
-        selectedValues.includes(option.value)
+        selectedValues.includes(option.value),
       );
 
       const selectedOptionsWithIcons = selectedOptions.filter(
-        (selectedOption) => selectedOption.icon
+        (selectedOption) => selectedOption.icon,
       );
 
       return (
@@ -841,7 +786,7 @@ function DataGridFilterInput<TData>({
                               >
                                 <selectedOption.icon className="size-3.5" />
                               </div>
-                            )
+                            ),
                         )}
                       </div>
                     )}
@@ -855,12 +800,7 @@ function DataGridFilterInput<TData>({
               </Button>
             }
           />
-          <PopoverContent
-            id={inputListboxId}
-            dir={dir}
-            align="start"
-            className="w-48 p-0"
-          >
+          <PopoverContent id={inputListboxId} dir={dir} align="start" className="w-48 p-0">
             <Command>
               <CommandInput placeholder="Search options..." />
               <CommandList>
@@ -876,23 +816,16 @@ function DataGridFilterInput<TData>({
                           const newValues = isSelected
                             ? selectedValues.filter((v) => v !== option.value)
                             : [...selectedValues, option.value];
-                          onValueChange(
-                            newValues.length > 0 ? newValues : undefined
-                          );
+                          onValueChange(newValues.length > 0 ? newValues : undefined);
                         }}
                       >
                         {option.icon && <option.icon />}
                         <span className="truncate">{option.label}</span>
                         {option.count && (
-                          <span className="ms-auto font-mono text-xs">
-                            {option.count}
-                          </span>
+                          <span className="ms-auto font-mono text-xs">{option.count}</span>
                         )}
                         <Check
-                          className={cn(
-                            "ms-auto",
-                            isSelected ? "opacity-100" : "opacity-0"
-                          )}
+                          className={cn("ms-auto", isSelected ? "opacity-100" : "opacity-0")}
                         />
                       </CommandItem>
                     );
@@ -905,9 +838,7 @@ function DataGridFilterInput<TData>({
       );
     }
 
-    const selectedOption = selectOptions.find(
-      (opt) => opt.value === (value as string)
-    );
+    const selectedOption = selectOptions.find((opt) => opt.value === (value as string));
 
     return (
       <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
@@ -932,12 +863,7 @@ function DataGridFilterInput<TData>({
             </Button>
           }
         />
-        <PopoverContent
-          id={inputListboxId}
-          dir={dir}
-          align="start"
-          className="w-[200px] p-0"
-        >
+        <PopoverContent id={inputListboxId} dir={dir} align="start" className="w-[200px] p-0">
           <Command>
             <CommandInput placeholder="Search options..." />
             <CommandList>
@@ -955,14 +881,12 @@ function DataGridFilterInput<TData>({
                     {option.icon && <option.icon />}
                     <span className="truncate">{option.label}</span>
                     {option.count && (
-                      <span className="ms-auto font-mono text-xs">
-                        {option.count}
-                      </span>
+                      <span className="ms-auto font-mono text-xs">{option.count}</span>
                     )}
                     <Check
                       className={cn(
                         "ms-auto",
-                        value === option.value ? "opacity-100" : "opacity-0"
+                        value === option.value ? "opacity-100" : "opacity-0",
                       )}
                     />
                   </CommandItem>

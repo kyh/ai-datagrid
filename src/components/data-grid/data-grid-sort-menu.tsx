@@ -2,12 +2,7 @@
 
 import { useDirection } from "@base-ui/react/direction-provider";
 import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
-import {
-  ArrowDownUp,
-  ChevronsUpDown,
-  GripVertical,
-  Trash2,
-} from "lucide-react";
+import { ArrowDownUp, ChevronsUpDown, GripVertical, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +15,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -49,8 +40,7 @@ const SORT_ORDERS = [
   { label: "Desc", value: "desc" },
 ];
 
-interface DataGridSortMenuProps<TData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataGridSortMenuProps<TData> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
   disabled?: boolean;
 }
@@ -96,36 +86,29 @@ export function DataGridSortMenu<TData>({
     const firstColumn = columns[0];
     if (!firstColumn) return;
 
-    onSortingChange((prevSorting) => [
-      ...prevSorting,
-      { id: firstColumn.id, desc: false },
-    ]);
+    onSortingChange((prevSorting) => [...prevSorting, { id: firstColumn.id, desc: false }]);
   }, [columns, onSortingChange]);
 
   const onSortUpdate = React.useCallback(
     (sortId: string, updates: Partial<ColumnSort>) => {
       onSortingChange((prevSorting) => {
         if (!prevSorting) return prevSorting;
-        return prevSorting.map((sort) =>
-          sort.id === sortId ? { ...sort, ...updates } : sort
-        );
+        return prevSorting.map((sort) => (sort.id === sortId ? { ...sort, ...updates } : sort));
       });
     },
-    [onSortingChange]
+    [onSortingChange],
   );
 
   const onSortRemove = React.useCallback(
     (sortId: string) => {
-      onSortingChange((prevSorting) =>
-        prevSorting.filter((item) => item.id !== sortId)
-      );
+      onSortingChange((prevSorting) => prevSorting.filter((item) => item.id !== sortId));
     },
-    [onSortingChange]
+    [onSortingChange],
   );
 
   const onSortingReset = React.useCallback(
     () => onSortingChange(table.initialState.sorting),
-    [onSortingChange, table.initialState.sorting]
+    [onSortingChange, table.initialState.sorting],
   );
 
   React.useEffect(() => {
@@ -133,8 +116,7 @@ export function DataGridSortMenu<TData>({
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
-        (event.target instanceof HTMLElement &&
-          event.target.contentEditable === "true")
+        (event.target instanceof HTMLElement && event.target.contentEditable === "true")
       ) {
         return;
       }
@@ -155,23 +137,16 @@ export function DataGridSortMenu<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (
-        REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase()) &&
-        sorting.length > 0
-      ) {
+      if (REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase()) && sorting.length > 0) {
         event.preventDefault();
         onSortingReset();
       }
     },
-    [sorting.length, onSortingReset]
+    [sorting.length, onSortingReset],
   );
 
   return (
-    <Sortable
-      value={sorting}
-      onValueChange={onSortingChange}
-      getItemValue={(item) => item.id}
-    >
+    <Sortable value={sorting} onValueChange={onSortingChange} getItemValue={(item) => item.id}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
@@ -200,7 +175,7 @@ export function DataGridSortMenu<TData>({
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
           dir={dir}
-          className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
+          className="flex w-full max-w-(--available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
           {...props}
         >
           <div className="flex flex-col gap-1">
@@ -209,10 +184,7 @@ export function DataGridSortMenu<TData>({
             </h4>
             <p
               id={descriptionId}
-              className={cn(
-                "text-muted-foreground text-sm",
-                sorting.length > 0 && "sr-only"
-              )}
+              className={cn("text-muted-foreground text-sm", sorting.length > 0 && "sr-only")}
             >
               {sorting.length > 0
                 ? "Modify sorting to organize your rows."
@@ -220,24 +192,26 @@ export function DataGridSortMenu<TData>({
             </p>
           </div>
           {sorting.length > 0 && (
-            <SortableContent asChild>
-              <div
-                role="list"
-                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
-              >
-                {sorting.map((sort) => (
-                  <DataTableSortItem
-                    key={sort.id}
-                    sort={sort}
-                    sortItemId={`${id}-sort-${sort.id}`}
-                    dir={dir}
-                    columns={columns}
-                    columnLabels={columnLabels}
-                    onSortUpdate={onSortUpdate}
-                    onSortRemove={onSortRemove}
-                  />
-                ))}
-              </div>
+            <SortableContent
+              render={
+                <div
+                  role="list"
+                  className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
+                />
+              }
+            >
+              {sorting.map((sort) => (
+                <DataTableSortItem
+                  key={sort.id}
+                  sort={sort}
+                  sortItemId={`${id}-sort-${sort.id}`}
+                  dir={dir}
+                  columns={columns}
+                  columnLabels={columnLabels}
+                  onSortUpdate={onSortUpdate}
+                  onSortRemove={onSortRemove}
+                />
+              ))}
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
@@ -251,12 +225,7 @@ export function DataGridSortMenu<TData>({
               Add sort
             </Button>
             {sorting.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded"
-                onClick={onSortingReset}
-              >
+              <Button variant="outline" size="sm" className="rounded" onClick={onSortingReset}>
                 Reset sorting
               </Button>
             )}
@@ -299,15 +268,11 @@ function DataTableSortItem({
   const directionListboxId = `${sortItemId}-direction-listbox`;
 
   const [showFieldSelector, setShowFieldSelector] = React.useState(false);
-  const [showDirectionSelector, setShowDirectionSelector] =
-    React.useState(false);
+  const [showDirectionSelector, setShowDirectionSelector] = React.useState(false);
 
   const onItemKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
@@ -320,103 +285,87 @@ function DataTableSortItem({
         onSortRemove(sort.id);
       }
     },
-    [sort.id, showFieldSelector, showDirectionSelector, onSortRemove]
+    [sort.id, showFieldSelector, showDirectionSelector, onSortRemove],
   );
 
   return (
-    <SortableItem value={sort.id} asChild>
-      <div
-        role="listitem"
-        id={sortItemId}
-        tabIndex={-1}
-        className="flex items-center gap-2"
-        onKeyDown={onItemKeyDown}
+    <SortableItem
+      value={sort.id}
+      role="listitem"
+      id={sortItemId}
+      tabIndex={-1}
+      className="flex items-center gap-2"
+      onKeyDown={onItemKeyDown}
+    >
+      <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
+        <PopoverTrigger
+          render={
+            <Button
+              id={fieldTriggerId}
+              aria-controls={fieldListboxId}
+              variant="outline"
+              size="sm"
+              className="w-44 justify-between rounded font-normal"
+            >
+              <span className="truncate">{columnLabels.get(sort.id)}</span>
+              <ChevronsUpDown className="opacity-50" />
+            </Button>
+          }
+        />
+        <PopoverContent id={fieldListboxId} dir={dir} className="w-(--anchor-width) p-0">
+          <Command>
+            <CommandInput placeholder="Search fields..." />
+            <CommandList>
+              <CommandEmpty>No fields found.</CommandEmpty>
+              <CommandGroup>
+                {columns.map((column) => (
+                  <CommandItem
+                    key={column.id}
+                    value={column.id}
+                    onSelect={(value) => onSortUpdate(sort.id, { id: value })}
+                  >
+                    <span className="truncate">{column.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <Select
+        open={showDirectionSelector}
+        onOpenChange={setShowDirectionSelector}
+        value={sort.desc ? "desc" : "asc"}
+        onValueChange={(value) => {
+          if (value === null) return;
+          onSortUpdate(sort.id, { desc: (value as SortDirection) === "desc" });
+        }}
       >
-        <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-          <PopoverTrigger
-            render={
-              <Button
-                id={fieldTriggerId}
-                aria-controls={fieldListboxId}
-                variant="outline"
-                size="sm"
-                className="w-44 justify-between rounded font-normal"
-              >
-                <span className="truncate">{columnLabels.get(sort.id)}</span>
-                <ChevronsUpDown className="opacity-50" />
-              </Button>
-            }
-          />
-          <PopoverContent
-            id={fieldListboxId}
-            dir={dir}
-            className="w-(--radix-popover-trigger-width) p-0"
-          >
-            <Command>
-              <CommandInput placeholder="Search fields..." />
-              <CommandList>
-                <CommandEmpty>No fields found.</CommandEmpty>
-                <CommandGroup>
-                  {columns.map((column) => (
-                    <CommandItem
-                      key={column.id}
-                      value={column.id}
-                      onSelect={(value) => onSortUpdate(sort.id, { id: value })}
-                    >
-                      <span className="truncate">{column.label}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        <Select
-          open={showDirectionSelector}
-          onOpenChange={setShowDirectionSelector}
-          value={sort.desc ? "desc" : "asc"}
-          onValueChange={(value) => {
-            if (value === null) return;
-            onSortUpdate(sort.id, { desc: (value as SortDirection) === "desc" });
-          }}
-        >
-          <SelectTrigger
-            aria-controls={directionListboxId}
-            size="sm"
-            className="w-24 rounded"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent
-            id={directionListboxId}
-            className="min-w-(--radix-select-trigger-width)"
-          >
-            {SORT_ORDERS.map((order) => (
-              <SelectItem key={order.value} value={order.value}>
-                {order.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          aria-controls={sortItemId}
-          variant="outline"
-          size="icon"
-          className="size-8 shrink-0 rounded"
-          onClick={() => onSortRemove(sort.id)}
-        >
-          <Trash2 />
-        </Button>
-        <SortableItemHandle asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0 rounded"
-          >
-            <GripVertical />
-          </Button>
-        </SortableItemHandle>
-      </div>
+        <SelectTrigger aria-controls={directionListboxId} size="sm" className="w-24 rounded">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent id={directionListboxId} className="min-w-(--anchor-width)">
+          {SORT_ORDERS.map((order) => (
+            <SelectItem key={order.value} value={order.value}>
+              {order.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button
+        aria-controls={sortItemId}
+        variant="outline"
+        size="icon"
+        className="size-8 shrink-0 rounded"
+        onClick={() => onSortRemove(sort.id)}
+      >
+        <Trash2 />
+      </Button>
+      <SortableItemHandle
+        render={<Button variant="outline" size="icon" className="size-8 shrink-0 rounded" />}
+      >
+        <GripVertical />
+      </SortableItemHandle>
     </SortableItem>
   );
 }
