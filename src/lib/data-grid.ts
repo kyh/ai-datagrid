@@ -256,6 +256,97 @@ export function scrollCellIntoView<TData>(params: {
   container.scrollLeft += scrollDelta;
 }
 
+/**
+ * Parse clipboard TSV into a 2D string array.
+ *
+ * Two shapes are handled:
+ * - Standard quoted TSV (Excel/Google Sheets), where a field containing a tab
+ *   or newline is wrapped in double quotes and `""` escapes a literal quote.
+ *   This is the only unambiguous way to represent multiline cell content, and
+ *   it is what spreadsheet apps emit — so it round-trips exactly.
+ * - Plain unquoted TSV: one row per line, one cell per tab.
+ *
+ * Unquoted embedded newlines are inherently ambiguous — nothing marks a
+ * newline as cell data rather than a row break — so we don't try to
+ * reconstruct them: each physical line becomes its own row. Copy from a real
+ * spreadsheet (which quotes such fields) for multiline cells to survive.
+ */
+export function parseTsv(text: string): string[][] {
+  // Route to the quoted parser when a field starts with a double quote — at the
+  // start of the text, after a tab, or after a newline (a quoted field leading
+  // a later row, which Excel emits with no `\t"` anywhere).
+  if (
+    text.startsWith('"') ||
+    text.includes('\t"') ||
+    text.includes('\n"')
+  ) {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentField = "";
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < text.length) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (inQuotes) {
+        if (char === '"' && nextChar === '"') {
+          currentField += '"';
+          i += 2;
+        } else if (char === '"') {
+          inQuotes = false;
+          i++;
+        } else {
+          currentField += char;
+          i++;
+        }
+      } else {
+        if (char === '"' && currentField === "") {
+          inQuotes = true;
+          i++;
+        } else if (char === "\t") {
+          currentRow.push(currentField);
+          currentField = "";
+          i++;
+        } else if (char === "\n") {
+          currentRow.push(currentField);
+          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = "";
+          i++;
+        } else if (char === "\r" && nextChar === "\n") {
+          currentRow.push(currentField);
+          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = "";
+          i += 2;
+        } else {
+          currentField += char;
+          i++;
+        }
+      }
+    }
+
+    currentRow.push(currentField);
+    if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+      rows.push(currentRow);
+    }
+
+    return rows;
+  }
+
+  return text
+    .split("\n")
+    .map((line) => line.replace(/\r$/, ""))
+    .filter((line) => line.length > 0)
+    .map((line) => line.split("\t"));
+}
+
 export function getIsInPopover(element: unknown): boolean {
   return (
     element instanceof Element &&
