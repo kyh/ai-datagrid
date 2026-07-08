@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 /**
- * Column info for AI operations.
+ * Column info for AI operations. Exported: the `enrich_cells` tool input
+ * (src/lib/assistant-schemas.ts) reuses it for its `columns` field.
  */
-const columnInfoSchema = z.object({
+export const columnInfoSchema = z.object({
   id: z.string(),
   label: z.string(),
   variant: z.string(),

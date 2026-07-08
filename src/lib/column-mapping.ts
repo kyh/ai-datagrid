@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { z } from "zod";
 
-import type { columnDefinitionSchema } from "@/ai/messages/data-parts";
+import type { columnDefinitionSchema } from "@/lib/assistant-schemas";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { CellOpts } from "@/lib/data-grid-types";
 
@@ -11,7 +11,7 @@ const filterFn = getFilterFn<unknown>();
 
 /**
  * Maps an AI-generated column definition (the zod contract in
- * `@/ai/messages/data-parts`) to a TanStack Table ColumnDef.
+ * `@/lib/assistant-schemas`) to a TanStack Table ColumnDef.
  * Pure: no state, safe to call anywhere.
  */
 export function columnDefinitionToColumnDef(col: ColumnDefinition): ColumnDef<unknown> {

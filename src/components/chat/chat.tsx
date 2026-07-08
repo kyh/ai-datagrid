@@ -1,27 +1,91 @@
+"use client";
+
+import type { ColumnDef } from "@tanstack/react-table";
+import { useEveAgent } from "eve/react";
 import { KeyIcon, SparklesIcon } from "lucide-react";
-import { Shimmer } from "../ui/shimmer";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import type {
+  ColumnUpdate,
+  ExistingColumn,
+  ExistingFilter,
+  ExistingSort,
+} from "@/lib/assistant-schemas";
+import {
+  addFiltersPayloadSchema,
+  addSortsInputSchema,
+  deleteColumnsInputSchema,
+  enrichCellsPayloadSchema,
+  generateColumnsInputSchema,
+  removeFiltersInputSchema,
+  removeSortsInputSchema,
+  updateColumnsInputSchema,
+} from "@/lib/assistant-schemas";
+import { columnDefinitionToColumnDef } from "@/lib/column-mapping";
+import type { CellUpdate, FilterValue } from "@/lib/data-grid-types";
+import { buildGridContext } from "@/lib/grid-context";
+import type { SelectionContext } from "@/lib/selection-context";
+import { useDataGridStore } from "@/stores/data-grid-store";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupTextarea,
 } from "../ui/input-group";
-import { toast } from "sonner";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { Shimmer } from "../ui/shimmer";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
-import { useChat } from "@ai-sdk/react";
-import type { ColumnUpdate } from "@/ai/messages/data-parts";
-import { dataPartSchemas } from "@/ai/messages/data-parts";
-import { demoTransport } from "./demo-transport";
-import type { ExistingColumn, ExistingFilter, ExistingSort } from "@/ai/agents/table-agent";
-import type { FilterValue, CellUpdate } from "@/lib/data-grid-types";
-import { z } from "zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import type { SelectionContext } from "@/lib/selection-context";
-import { columnDefinitionToColumnDef } from "@/lib/column-mapping";
-import { GenerateModeChatUIMessage } from "@/ai/messages/types";
-import { useDataGridStore } from "@/stores/data-grid-store";
+
+/**
+ * BYO-key transport: the stored gateway key rides as a bearer header on
+ * every eve request (the channel verifier hands it to the dynamic model
+ * resolver and the enrich_cells tool). Read from localStorage on every
+ * request — eve captures this resolver once at store creation, so React
+ * state would go stale.
+ */
+const resolveAuthHeaders = (): Readonly<Record<string, string>> => {
+  if (typeof window === "undefined") return {};
+  const key = window.localStorage.getItem(GATEWAY_API_KEY_STORAGE_KEY);
+  return key !== null && key.length > 0 ? { authorization: `Bearer ${key}` } : {};
+};
+
+// -----------------------------------------------------------------------------
+// Tool results -> grid callbacks
+//
+// eve streams every tool result as an `action.result` event whose
+// `data.result` is `{ kind: "tool-result", toolName, output, isError? }`,
+// where `output` is the tool's full `execute` return value. Each payload is
+// zod-parsed against the shared schemas before touching the grid.
+// -----------------------------------------------------------------------------
+
+const toolResultEventSchema = z.object({
+  type: z.literal("action.result"),
+  data: z.object({
+    status: z.enum(["completed", "failed", "rejected"]),
+    result: z.object({
+      kind: z.literal("tool-result"),
+      toolName: z.string(),
+      output: z.unknown(),
+      isError: z.boolean().optional(),
+    }),
+  }),
+});
+
+/** `subagent.event` wraps a child session's stream event under `data.event`. */
+const subagentEventSchema = z.object({
+  type: z.literal("subagent.event"),
+  data: z.object({ event: z.unknown() }),
+});
+
+/**
+ * Auth-shaped failures: a 401 from the channel (keyless in prod), a
+ * rejected gateway key at the model call, or a missing server key in dev.
+ * All of them route back to the key dialog.
+ */
+const isAuthError = (error: Error): boolean =>
+  /unauthorized|forbidden|authentication|api.?key|credential|401|403/i.test(error.message);
 
 interface ChatProps {
   onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
@@ -64,206 +128,208 @@ export const Chat = ({
   const { setGeneratingCells, removeGeneratingCell } = useDataGridStore();
   // AI Prompt state
   const [input, setInput] = useState(initialInput);
-  const [progress, setProgress] = useState<{
-    message: string;
-    total?: number;
-    completed?: number;
-  } | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, , removeApiKey] = useLocalStorage(GATEWAY_API_KEY_STORAGE_KEY, "");
 
-  // Counts `count` cells toward the enrich progress bar, clearing it once done
-  const advanceProgress = (count: number) => {
-    setProgress((prev) => {
-      if (!prev || prev.total === undefined || prev.completed === undefined) return null;
-      const completed = prev.completed + count;
-      return completed >= prev.total ? null : { ...prev, completed };
-    });
-  };
-
-  const { sendMessage, status, setMessages } = useChat<GenerateModeChatUIMessage>({
-    id: apiKey,
-    transport: apiKey === "demo" ? demoTransport : undefined,
-    onError: (error) => {
-      setProgress(null);
-      const errorMessage = error.message?.toLowerCase() || "";
-      const isAuthError =
-        errorMessage.includes("unauthorized") ||
-        errorMessage.includes("authentication") ||
-        errorMessage.includes("invalid api key") ||
-        errorMessage.includes("401") ||
-        errorMessage.includes("403");
-
-      if (isAuthError) {
-        removeApiKey();
-        toast.error("Invalid API key. Please enter a valid Vercel Gateway API key.");
-        setShowApiKeyModal(true);
-      } else {
-        toast.error(error.message || "Failed to generate block");
+  const applyToolResult = useCallback(
+    (event: unknown): void => {
+      // Delegation is forbidden by the instructions, but if the model strays,
+      // unwrap the child's events so its tool results still reach the grid.
+      const wrapped = subagentEventSchema.safeParse(event);
+      if (wrapped.success) {
+        applyToolResult(wrapped.data.data.event);
+        return;
       }
-    },
-    onData: (dataPart) => {
-      try {
-        if (!dataPart.data) {
-          return;
-        }
+      const parsed = toolResultEventSchema.safeParse(event);
+      if (!parsed.success) return;
+      const { status, result } = parsed.data.data;
+      if (status !== "completed" || result.isError === true) return;
 
-        // Handle generate-columns data part
-        if (dataPart.type === "data-generate-columns") {
+      switch (result.toolName) {
+        case "generate_columns": {
+          const payload = generateColumnsInputSchema.safeParse(result.output);
+          if (!payload.success) return;
           setProgress(null);
-          const { columns } = dataPartSchemas["generate-columns"].parse(dataPart.data);
+          const { columns } = payload.data;
           if (onColumnsGenerated) {
             onColumnsGenerated(columns.map(columnDefinitionToColumnDef));
             toast.success(`Generated ${columns.length} column${columns.length !== 1 ? "s" : ""}`);
           }
+          break;
         }
-
-        // Handle update-columns data part
-        if (dataPart.type === "data-update-columns") {
+        case "update_columns": {
+          const payload = updateColumnsInputSchema.safeParse(result.output);
+          if (!payload.success) return;
           setProgress(null);
-          const { updates } = dataPartSchemas["update-columns"].parse(dataPart.data);
+          const { updates } = payload.data;
           if (updates.length > 0 && onColumnsUpdated) {
             onColumnsUpdated(updates);
             toast.success(`Updated ${updates.length} column${updates.length !== 1 ? "s" : ""}`);
           }
+          break;
         }
-
-        // Handle delete-columns data part
-        if (dataPart.type === "data-delete-columns") {
+        case "delete_columns": {
+          const payload = deleteColumnsInputSchema.safeParse(result.output);
+          if (!payload.success) return;
           setProgress(null);
-          const { columnIds } = dataPartSchemas["delete-columns"].parse(dataPart.data);
+          const { columnIds } = payload.data;
           if (columnIds.length > 0 && onColumnsDeleted) {
             onColumnsDeleted(columnIds);
             toast.success(`Deleted ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`);
           }
+          break;
         }
-
-        // Handle enrich-data data part
-        if (dataPart.type === "data-enrich-data") {
-          const { updates: enrichUpdates } = dataPartSchemas["enrich-data"].parse(dataPart.data);
-          if (enrichUpdates.length > 0 && onDataEnriched) {
-            const updates: CellUpdate[] = enrichUpdates.map((update) => ({
-              rowIndex: update.rowIndex,
-              columnId: update.columnId,
-              value: update.value,
-            }));
-            onDataEnriched(updates);
-
-            // Remove completed cells from generating set
-            for (const update of updates) {
-              removeGeneratingCell(`${update.rowIndex}:${update.columnId}`);
-            }
-
-            advanceProgress(updates.length);
+        case "enrich_cells": {
+          const payload = enrichCellsPayloadSchema.safeParse(result.output);
+          if (!payload.success) return;
+          setProgress(null);
+          const { updates, failures } = payload.data;
+          if (updates.length > 0 && onDataEnriched) {
+            onDataEnriched(
+              updates.map((update) => ({
+                rowIndex: update.rowIndex,
+                columnId: update.columnId,
+                value: update.value,
+              })),
+            );
             toast.success(`Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`);
           }
-        }
-
-        // Handle enrich-errors data part (cells the data agent failed to fill)
-        if (dataPart.type === "data-enrich-errors") {
-          const { failures } = dataPartSchemas["enrich-errors"].parse(dataPart.data);
+          // Clear the spinner state for every cell the tool reported on
+          for (const cell of [...updates, ...failures]) {
+            removeGeneratingCell(`${cell.rowIndex}:${cell.columnId}`);
+          }
           if (failures.length > 0) {
-            // Clear generating state for failed cells
-            for (const failure of failures) {
-              removeGeneratingCell(`${failure.rowIndex}:${failure.columnId}`);
-            }
-
-            // Count failures toward progress so the bar completes
-            advanceProgress(failures.length);
             toast.error(
               `Failed to enrich ${failures.length} cell${failures.length !== 1 ? "s" : ""}`,
             );
           }
+          break;
         }
-
-        // Handle add-filters data part
-        if (dataPart.type === "data-add-filters") {
-          setProgress(null);
+        case "add_filters": {
           // Parse through schema to apply transforms (cleans malformed values)
-          const { filters } = dataPartSchemas["add-filters"].parse(dataPart.data);
+          const payload = addFiltersPayloadSchema.safeParse(result.output);
+          if (!payload.success) return;
+          setProgress(null);
+          const { filters } = payload.data;
           if (filters.length > 0 && onFiltersAdded) {
-            const filterValues = filters.map((f) => ({
-              columnId: f.columnId,
-              value: {
-                operator: f.operator,
-                value: f.value,
-                endValue: f.endValue,
-              },
-            }));
-            onFiltersAdded(filterValues);
+            onFiltersAdded(
+              filters.map((f) => ({
+                columnId: f.columnId,
+                value: {
+                  operator: f.operator,
+                  value: f.value,
+                  endValue: f.endValue,
+                },
+              })),
+            );
             toast.success(`Added ${filters.length} filter${filters.length !== 1 ? "s" : ""}`);
           }
+          break;
         }
-
-        // Handle remove-filters data part
-        if (dataPart.type === "data-remove-filters") {
+        case "remove_filters": {
+          const payload = removeFiltersInputSchema.safeParse(result.output);
+          if (!payload.success) return;
           setProgress(null);
-          const { columnIds } = dataPartSchemas["remove-filters"].parse(dataPart.data);
+          const { columnIds } = payload.data;
           if (columnIds.length > 0 && onFiltersRemoved) {
             onFiltersRemoved(columnIds);
             toast.success(`Removed ${columnIds.length} filter${columnIds.length !== 1 ? "s" : ""}`);
           }
+          break;
         }
-
-        // Handle clear-filters data part
-        if (dataPart.type === "data-clear-filters") {
+        case "clear_filters": {
           setProgress(null);
           if (onFiltersCleared) {
             onFiltersCleared();
             toast.success("Cleared all filters");
           }
+          break;
         }
-
-        // Handle add-sorts data part
-        if (dataPart.type === "data-add-sorts") {
+        case "add_sorts": {
+          const payload = addSortsInputSchema.safeParse(result.output);
+          if (!payload.success) return;
           setProgress(null);
-          const { sorts } = dataPartSchemas["add-sorts"].parse(dataPart.data);
+          const { sorts } = payload.data;
           if (sorts.length > 0 && onSortsAdded) {
-            const sortValues = sorts.map((s) => ({
-              columnId: s.columnId,
-              desc: s.direction === "desc",
-            }));
-            onSortsAdded(sortValues);
+            onSortsAdded(
+              sorts.map((s) => ({ columnId: s.columnId, desc: s.direction === "desc" })),
+            );
             toast.success(`Added ${sorts.length} sort${sorts.length !== 1 ? "s" : ""}`);
           }
+          break;
         }
-
-        // Handle remove-sorts data part
-        if (dataPart.type === "data-remove-sorts") {
+        case "remove_sorts": {
+          const payload = removeSortsInputSchema.safeParse(result.output);
+          if (!payload.success) return;
           setProgress(null);
-          const { columnIds } = dataPartSchemas["remove-sorts"].parse(dataPart.data);
+          const { columnIds } = payload.data;
           if (columnIds.length > 0 && onSortsRemoved) {
             onSortsRemoved(columnIds);
             toast.success(
               `Removed sorting from ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`,
             );
           }
+          break;
         }
-
-        // Handle clear-sorts data part
-        if (dataPart.type === "data-clear-sorts") {
+        case "clear_sorts": {
           setProgress(null);
           if (onSortsCleared) {
             onSortsCleared();
             toast.success("Cleared all sorting");
           }
+          break;
         }
-      } catch (err) {
-        // Zod parse failure means the AI response violated the data-part contract
-        if (err instanceof z.ZodError) {
-          toast.error("AI response violated the data contract — no changes applied");
-          return;
-        }
-        toast.error(err instanceof Error ? err.message : "Failed to process data part");
+      }
+    },
+    [
+      onColumnsGenerated,
+      onColumnsUpdated,
+      onColumnsDeleted,
+      onDataEnriched,
+      onFiltersAdded,
+      onFiltersRemoved,
+      onFiltersCleared,
+      onSortsAdded,
+      onSortsRemoved,
+      onSortsCleared,
+      removeGeneratingCell,
+    ],
+  );
+
+  const agent = useEveAgent({
+    headers: resolveAuthHeaders,
+    onEvent: applyToolResult,
+    onError: (error) => {
+      setProgress(null);
+      if (isAuthError(error)) {
+        removeApiKey();
+        toast.error("Invalid API key. Please enter a valid Vercel Gateway API key.");
+        setShowApiKeyModal(true);
+      } else {
+        toast.error(error.message || "Something went wrong");
       }
     },
   });
+  const { status } = agent;
 
   const isLoading = status === "submitted" || status === "streaming";
 
+  // The turn is over (success or failure): drop the shimmer and any cell
+  // spinners the enrich flow left behind (e.g. the model never called
+  // enrich_cells, or the turn errored mid-flight).
+  useEffect(() => {
+    if (status === "ready" || status === "error") {
+      setProgress(null);
+      setGeneratingCells(new Set());
+    }
+  }, [status, setGeneratingCells]);
+
+  const needsKey = !apiKey && process.env.NODE_ENV !== "development";
+
   const handleTextareaFocus = () => {
     // Skip modal in local dev (env var handles auth server-side)
-    if (!apiKey && process.env.NODE_ENV !== "development") {
+    if (needsKey) {
       setShowApiKeyModal(true);
     }
   };
@@ -279,61 +345,55 @@ export const Chat = ({
   }, [input]);
 
   const handleSubmit = useCallback(
-    async (e: { preventDefault: () => void }) => {
+    (e: { preventDefault: () => void }) => {
       e.preventDefault();
       if (isLoading) return;
       if (!input.trim() && !hasSelection) return;
+      if (needsKey) {
+        setShowApiKeyModal(true);
+        return;
+      }
 
-      const selectionContext = getSelectionContext?.() ?? null;
+      const selection = getSelectionContext?.() ?? null;
 
-      // Set generating cells before sending
-      if (selectionContext) {
-        const cellKeys = new Set(
-          selectionContext.selectedCells.map((c) => `${c.rowIndex}:${c.columnId}`),
-        );
+      // Set generating cells before sending. Per-cell streaming is gone
+      // (enrich_cells returns one batch), so this is a coarse spinner the
+      // tool result (or turn end) clears.
+      if (selection) {
+        const cellKeys = new Set(selection.selectedCells.map((c) => `${c.rowIndex}:${c.columnId}`));
         setGeneratingCells(cellKeys);
-        setProgress({ message: "Enriching...", total: cellKeys.size, completed: 0 });
+        setProgress(`Enriching ${cellKeys.size} cell${cellKeys.size !== 1 ? "s" : ""}...`);
       } else {
-        setProgress({ message: "Processing..." });
+        setProgress("Processing...");
       }
 
-      const buildRequestBody = () => {
-        const existingColumns = getExistingColumns?.();
-        const existingFilters = getExistingFilters?.();
-        const existingSorts = getExistingSorts?.();
-        return {
-          ...(apiKey ? { gatewayApiKey: apiKey } : {}),
-          ...(selectionContext ? { selectionContext } : {}),
-          ...(existingColumns && existingColumns.length > 0 ? { existingColumns } : {}),
-          ...(existingFilters && existingFilters.length > 0 ? { existingFilters } : {}),
-          ...(existingSorts && existingSorts.length > 0 ? { existingSorts } : {}),
-        };
-      };
-
-      // Clear previous messages to start fresh
-      setMessages([]);
-
-      try {
-        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
-        setInput("");
-      } catch {
-        sendMessage({ text: input || "Enrich selected cells" }, { body: buildRequestBody() });
-        setInput("");
-      }
+      // Single-turn semantics (the old `setMessages([])`): every submit
+      // starts a fresh session; state arrives via clientContext anyway.
+      agent.reset();
+      agent
+        .send({
+          message: input.trim() || "Enrich selected cells",
+          clientContext: buildGridContext({
+            columns: getExistingColumns?.() ?? [],
+            filters: getExistingFilters?.() ?? [],
+            sorts: getExistingSorts?.() ?? [],
+            selection,
+          }),
+        })
+        .catch(() => undefined); // failures surface via status/error/onError
+      setInput("");
     },
     [
       input,
       isLoading,
       hasSelection,
-      apiKey,
-      sendMessage,
-      setInput,
+      needsKey,
+      agent,
       getSelectionContext,
       getExistingColumns,
       getExistingFilters,
       getExistingSorts,
       setGeneratingCells,
-      setMessages,
     ],
   );
 
@@ -354,21 +414,7 @@ export const Chat = ({
       >
         {progress && (
           <div className="mb-2 px-4">
-            <Shimmer className="text-xs">
-              {progress.total !== undefined
-                ? `${progress.completed}/${progress.total} cells`
-                : progress.message}
-            </Shimmer>
-            {progress.total !== undefined && (
-              <div className="h-1 bg-muted rounded-full overflow-hidden mt-1">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{
-                    width: `${((progress.completed ?? 0) / progress.total) * 100}%`,
-                  }}
-                />
-              </div>
-            )}
+            <Shimmer className="text-xs">{progress}</Shimmer>
           </div>
         )}
         <form onSubmit={handleSubmit}>

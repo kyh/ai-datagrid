@@ -13,7 +13,7 @@ import { useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { Chat } from "@/components/chat/chat";
 import type { CellOpts, CellSelectOption, CellUpdate, FilterValue } from "@/lib/data-grid-types";
-import type { ColumnUpdate } from "@/ai/messages/data-parts";
+import type { ColumnUpdate } from "@/lib/assistant-schemas";
 import type { SelectionContext } from "@/lib/selection-context";
 import { getCellKey, parseCellKey } from "@/lib/data-grid";
 import { useDataGridStore } from "@/stores/data-grid-store";

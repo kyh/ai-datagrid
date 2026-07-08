@@ -49,34 +49,37 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## AI Setup
 
-Requests go through the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). Key resolution:
+The assistant runs on [eve](https://eve.dev), Vercel's agent framework, through the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). Key resolution:
 
-- **Local dev**: set `AI_GATEWAY_API_KEY` in `.env.local` — the server uses it automatically.
-- **Deployed**: visitors enter their own gateway key in the UI (stored in localStorage, sent per request). Optionally set `SECRET_KEY` — anyone entering that value uses your server-side `AI_GATEWAY_API_KEY` instead.
-- **Demo mode**: enter `demo` as the key ("Use a demo key" in the dialog) — a scripted `StaticChatTransport` replays a canned generate-columns exchange with no API calls.
+- **Local dev**: set `AI_GATEWAY_API_KEY` in `.env.local` — the agent's fallback model uses it automatically.
+- **Deployed**: visitors enter their own gateway key in the UI (stored in localStorage). It rides each request as a bearer token; an eve channel verifier stashes it in session auth, and a dynamic model resolver runs the whole session on the visitor's key.
+
+`pnpm dev` boots both runtimes: the Next.js dev server and eve's agent dev server (proxied same-origin by `withEve`). Never run `eve build` while `pnpm dev` is running — it corrupts eve's dev cache (fix: delete `.eve/` + `.workflow-data/` and restart).
 
 ## Architecture
 
-- `src/ai/gateway.ts` — single source for model id + gateway construction.
-- `src/ai/agents/table-agent.ts` — `ToolLoopAgent` with 9 tools (generate/update/delete columns, add/remove/clear filters and sorts). Each tool streams a typed data part and returns a summary string to the model.
-- `src/ai/agents/data-agent.ts` — per-cell `generateObject` fan-out for enrichment (5 concurrent), streams one data part per cell; failures surface via a `data-enrich-errors` part.
-- `src/ai/messages/data-parts.ts` — zod schemas for every data part: the client↔server contract. `onData` parses each payload before touching state.
-- Stateless server: the client ships current columns/filters/sorts (and selection for enrich) with each request; the server appends them to the agent instructions.
-
-## Project Structure
-
 ```
-src/
-├── ai/              # AI integration, prompts, tools
-├── app/             # Next.js app dir, API routes
-├── components/
-│   ├── chat/        # Chat interface
-│   ├── data-grid/   # Grid: columns, cells, controls
-│   └── ui/          # shadcn/ui components
-├── data/            # Seed data
-├── hooks/           # Shared hooks
-└── lib/             # Utils, types, schemas
+agent/
+├── agent.ts             # defineAgent: gateway model + BYO-key dynamic model resolver
+├── instructions.md      # system prompt (incl. the per-turn context contract)
+├── channels/eve.ts      # HTTP auth: user bearer key → Vercel OIDC → localhost dev
+└── tools/
+    ├── generate_columns.ts   # defineTool — filename = tool name the model sees
+    ├── update_columns.ts / delete_columns.ts
+    ├── add_filters.ts / remove_filters.ts / clear_filters.ts
+    ├── add_sorts.ts / remove_sorts.ts / clear_sorts.ts
+    ├── enrich_cells.ts       # per-cell generateObject fan-out (5 concurrent)
+    └── *.ts                  # disableTool() sentinels for the built-in harness tools
+next.config.ts           # withEve(nextConfig) — mounts eve behind the Next.js origin
+src/lib/assistant-schemas.ts  # zod contract shared by agent tools + chat bridge
+src/lib/grid-context.ts  # per-turn app state (columns, filters, sorts, selection)
+src/components/chat/     # chat composer (useEveAgent bridge), api key dialog
+src/components/data-grid/ # Grid: columns, cells, controls
 ```
+
+The streaming contract: the client sends the grid snapshot as eve `clientContext` on every turn (`send({ message, clientContext })`); each tool returns a structured payload the chat bridge receives as an `action.result` stream event, zod-parses against `assistant-schemas.ts`, and applies to the grid via callbacks — the server stays stateless.
+
+**Enrichment UX note**: cell enrichment is now a single `enrich_cells` tool call — the server fans out one `generateObject` per cell (5 concurrent, respecting each column's type, options, and prompt) and returns all updates in one batch. The old per-cell streaming progress is gone: the UI shows cell spinners + a shimmer while the tool runs, then applies the whole batch (failed cells surface as an error toast).
 
 ## Customization
 
@@ -89,9 +92,9 @@ src/
 
 **Customize AI**
 
-- Model: `src/ai/gateway.ts`
-- Prompts: `src/ai/response/stream-chat-response-prompt.ts` + tool descriptions in `src/ai/agents/table-agent.ts`
-- Data-part contract: `src/ai/messages/data-parts.ts`
+- Model: `src/lib/gateway.ts` (`MODEL_ID`)
+- Prompts: `agent/instructions.md` + tool descriptions in `agent/tools/*.ts`
+- Tool payload contract: `src/lib/assistant-schemas.ts`
 
 **Theming**
 
@@ -113,7 +116,7 @@ src/
 - dnd-kit
 - Base UI + shadcn/ui (base-vega style)
 - Tailwind CSS 4
-- Vercel AI SDK (ai@6)
+- eve (Vercel's agent framework) + Vercel AI SDK (ai@7)
 
 ## Use Cases
 
@@ -128,6 +131,7 @@ src/
 - [Next.js](https://nextjs.org/docs)
 - [TanStack Table](https://tanstack.com/table)
 - [shadcn/ui](https://ui.shadcn.com/)
+- [eve](https://eve.dev)
 - [Vercel AI SDK](https://sdk.vercel.ai/docs)
 
 ## License
