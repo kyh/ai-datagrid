@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Column info for AI operations.
  */
-export const columnInfoSchema = z.object({
+const columnInfoSchema = z.object({
   id: z.string(),
   label: z.string(),
   variant: z.string(),

@@ -22,10 +22,7 @@ interface ApiKeyDialogProps {
 }
 
 export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
-  const [apiKey, setApiKey, removeApiKey] = useLocalStorage<string>(
-    GATEWAY_API_KEY_STORAGE_KEY,
-    "",
-  );
+  const [apiKey, setApiKey, removeApiKey] = useLocalStorage(GATEWAY_API_KEY_STORAGE_KEY, "");
   const [apiKeyInput, setApiKeyInput] = React.useState(apiKey);
 
   const handleOpenChange = (nextOpen: boolean) => {

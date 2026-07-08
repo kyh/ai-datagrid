@@ -12,14 +12,14 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
 import { useChat } from "@ai-sdk/react";
 import type { ColumnUpdate } from "@/ai/messages/data-parts";
-import { columnDefinitionSchema, dataPartSchemas } from "@/ai/messages/data-parts";
+import { dataPartSchemas } from "@/ai/messages/data-parts";
 import { demoTransport } from "./demo-transport";
 import type { ExistingColumn, ExistingFilter, ExistingSort } from "@/ai/agents/table-agent";
 import type { FilterValue, CellUpdate } from "@/lib/data-grid-types";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { SelectionContext } from "@/lib/selection-context";
-import { getFilterFn } from "@/lib/data-grid-filters";
+import { columnDefinitionToColumnDef } from "@/lib/column-mapping";
 import { GenerateModeChatUIMessage } from "@/ai/messages/types";
 import { useDataGridStore } from "@/stores/data-grid-store";
 
@@ -62,7 +62,6 @@ export const Chat = ({
 }: ChatProps = {}) => {
   // Use Zustand store for generating cells state
   const { setGeneratingCells, removeGeneratingCell } = useDataGridStore();
-  const filterFn = getFilterFn();
   // AI Prompt state
   const [input, setInput] = useState(initialInput);
   const [progress, setProgress] = useState<{
@@ -71,7 +70,16 @@ export const Chat = ({
     completed?: number;
   } | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [apiKey, , removeApiKey] = useLocalStorage<string>(GATEWAY_API_KEY_STORAGE_KEY, "");
+  const [apiKey, , removeApiKey] = useLocalStorage(GATEWAY_API_KEY_STORAGE_KEY, "");
+
+  // Counts `count` cells toward the enrich progress bar, clearing it once done
+  const advanceProgress = (count: number) => {
+    setProgress((prev) => {
+      if (!prev || prev.total === undefined || prev.completed === undefined) return null;
+      const completed = prev.completed + count;
+      return completed >= prev.total ? null : { ...prev, completed };
+    });
+  };
 
   const { sendMessage, status, setMessages } = useChat<GenerateModeChatUIMessage>({
     id: apiKey,
@@ -103,80 +111,9 @@ export const Chat = ({
         // Handle generate-columns data part
         if (dataPart.type === "data-generate-columns") {
           setProgress(null);
-          const parsed = dataPartSchemas["generate-columns"].safeParse(dataPart.data);
-          if (parsed.success && onColumnsGenerated) {
-            // Convert column definitions to ColumnDef format
-            type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
-            const columns: ColumnDef<unknown>[] = parsed.data.columns.map(
-              (col: ColumnDefinition): ColumnDef<unknown> => {
-                const baseMeta = {
-                  label: col.label,
-                };
-
-                // Build cell config based on variant
-                let cellConfig:
-                  | { variant: "short-text" }
-                  | { variant: "long-text" }
-                  | {
-                      variant: "number";
-                      min?: number;
-                      max?: number;
-                      step?: number;
-                    }
-                  | {
-                      variant: "select";
-                      options: Array<{ label: string; value: string }>;
-                    }
-                  | {
-                      variant: "multi-select";
-                      options: Array<{ label: string; value: string }>;
-                    }
-                  | { variant: "checkbox" }
-                  | { variant: "date" }
-                  | { variant: "url" }
-                  | { variant: "file" };
-
-                switch (col.variant) {
-                  case "number":
-                    cellConfig = {
-                      variant: "number",
-                      ...(col.min !== undefined && { min: col.min }),
-                      ...(col.max !== undefined && { max: col.max }),
-                      ...(col.step !== undefined && { step: col.step }),
-                    };
-                    break;
-                  case "select":
-                  case "multi-select":
-                    cellConfig = {
-                      variant: col.variant,
-                      options: col.options || [],
-                    };
-                    break;
-                  case "short-text":
-                  case "long-text":
-                  case "checkbox":
-                  case "date":
-                  case "url":
-                  case "file":
-                    cellConfig = { variant: col.variant };
-                    break;
-                }
-
-                return {
-                  id: col.id,
-                  accessorKey: col.id,
-                  header: col.label,
-                  minSize: 180,
-                  filterFn,
-                  meta: {
-                    ...baseMeta,
-                    cell: cellConfig,
-                    ...(col.prompt && { prompt: col.prompt }),
-                  },
-                };
-              },
-            );
-            onColumnsGenerated(columns);
+          const { columns } = dataPartSchemas["generate-columns"].parse(dataPart.data);
+          if (onColumnsGenerated) {
+            onColumnsGenerated(columns.map(columnDefinitionToColumnDef));
             toast.success(`Generated ${columns.length} column${columns.length !== 1 ? "s" : ""}`);
           }
         }
@@ -184,8 +121,7 @@ export const Chat = ({
         // Handle update-columns data part
         if (dataPart.type === "data-update-columns") {
           setProgress(null);
-          const parsed = dataPartSchemas["update-columns"].safeParse(dataPart.data);
-          const updates = parsed.success ? parsed.data.updates : [];
+          const { updates } = dataPartSchemas["update-columns"].parse(dataPart.data);
           if (updates.length > 0 && onColumnsUpdated) {
             onColumnsUpdated(updates);
             toast.success(`Updated ${updates.length} column${updates.length !== 1 ? "s" : ""}`);
@@ -195,8 +131,7 @@ export const Chat = ({
         // Handle delete-columns data part
         if (dataPart.type === "data-delete-columns") {
           setProgress(null);
-          const parsed = dataPartSchemas["delete-columns"].safeParse(dataPart.data);
-          const columnIds = parsed.success ? parsed.data.columnIds : [];
+          const { columnIds } = dataPartSchemas["delete-columns"].parse(dataPart.data);
           if (columnIds.length > 0 && onColumnsDeleted) {
             onColumnsDeleted(columnIds);
             toast.success(`Deleted ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`);
@@ -205,8 +140,7 @@ export const Chat = ({
 
         // Handle enrich-data data part
         if (dataPart.type === "data-enrich-data") {
-          const parsed = dataPartSchemas["enrich-data"].safeParse(dataPart.data);
-          const enrichUpdates = parsed.success ? parsed.data.updates : [];
+          const { updates: enrichUpdates } = dataPartSchemas["enrich-data"].parse(dataPart.data);
           if (enrichUpdates.length > 0 && onDataEnriched) {
             const updates: CellUpdate[] = enrichUpdates.map((update) => ({
               rowIndex: update.rowIndex,
@@ -217,29 +151,17 @@ export const Chat = ({
 
             // Remove completed cells from generating set
             for (const update of updates) {
-              const cellKey = `${update.rowIndex}:${update.columnId}`;
-              removeGeneratingCell(cellKey);
+              removeGeneratingCell(`${update.rowIndex}:${update.columnId}`);
             }
 
-            // Update progress
-            setProgress((prev) => {
-              if (!prev || prev.total === undefined || prev.completed === undefined) return null;
-              const newCompleted = prev.completed + updates.length;
-              // Clear progress when done
-              if (newCompleted >= prev.total) {
-                return null;
-              }
-              return { ...prev, completed: newCompleted };
-            });
-
+            advanceProgress(updates.length);
             toast.success(`Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`);
           }
         }
 
         // Handle enrich-errors data part (cells the data agent failed to fill)
         if (dataPart.type === "data-enrich-errors") {
-          const parsed = dataPartSchemas["enrich-errors"].safeParse(dataPart.data);
-          const failures = parsed.success ? parsed.data.failures : [];
+          const { failures } = dataPartSchemas["enrich-errors"].parse(dataPart.data);
           if (failures.length > 0) {
             // Clear generating state for failed cells
             for (const failure of failures) {
@@ -247,15 +169,7 @@ export const Chat = ({
             }
 
             // Count failures toward progress so the bar completes
-            setProgress((prev) => {
-              if (!prev || prev.total === undefined || prev.completed === undefined) return null;
-              const newCompleted = prev.completed + failures.length;
-              if (newCompleted >= prev.total) {
-                return null;
-              }
-              return { ...prev, completed: newCompleted };
-            });
-
+            advanceProgress(failures.length);
             toast.error(
               `Failed to enrich ${failures.length} cell${failures.length !== 1 ? "s" : ""}`,
             );
@@ -266,8 +180,7 @@ export const Chat = ({
         if (dataPart.type === "data-add-filters") {
           setProgress(null);
           // Parse through schema to apply transforms (cleans malformed values)
-          const parsed = dataPartSchemas["add-filters"].safeParse(dataPart.data);
-          const filters = parsed.success ? parsed.data.filters : [];
+          const { filters } = dataPartSchemas["add-filters"].parse(dataPart.data);
           if (filters.length > 0 && onFiltersAdded) {
             const filterValues = filters.map((f) => ({
               columnId: f.columnId,
@@ -285,8 +198,7 @@ export const Chat = ({
         // Handle remove-filters data part
         if (dataPart.type === "data-remove-filters") {
           setProgress(null);
-          const parsed = dataPartSchemas["remove-filters"].safeParse(dataPart.data);
-          const columnIds = parsed.success ? parsed.data.columnIds : [];
+          const { columnIds } = dataPartSchemas["remove-filters"].parse(dataPart.data);
           if (columnIds.length > 0 && onFiltersRemoved) {
             onFiltersRemoved(columnIds);
             toast.success(`Removed ${columnIds.length} filter${columnIds.length !== 1 ? "s" : ""}`);
@@ -305,8 +217,7 @@ export const Chat = ({
         // Handle add-sorts data part
         if (dataPart.type === "data-add-sorts") {
           setProgress(null);
-          const parsed = dataPartSchemas["add-sorts"].safeParse(dataPart.data);
-          const sorts = parsed.success ? parsed.data.sorts : [];
+          const { sorts } = dataPartSchemas["add-sorts"].parse(dataPart.data);
           if (sorts.length > 0 && onSortsAdded) {
             const sortValues = sorts.map((s) => ({
               columnId: s.columnId,
@@ -320,8 +231,7 @@ export const Chat = ({
         // Handle remove-sorts data part
         if (dataPart.type === "data-remove-sorts") {
           setProgress(null);
-          const parsed = dataPartSchemas["remove-sorts"].safeParse(dataPart.data);
-          const columnIds = parsed.success ? parsed.data.columnIds : [];
+          const { columnIds } = dataPartSchemas["remove-sorts"].parse(dataPart.data);
           if (columnIds.length > 0 && onSortsRemoved) {
             onSortsRemoved(columnIds);
             toast.success(
@@ -339,6 +249,11 @@ export const Chat = ({
           }
         }
       } catch (err) {
+        // Zod parse failure means the AI response violated the data-part contract
+        if (err instanceof z.ZodError) {
+          toast.error("AI response violated the data contract — no changes applied");
+          return;
+        }
         toast.error(err instanceof Error ? err.message : "Failed to process data part");
       }
     },
