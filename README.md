@@ -38,14 +38,16 @@ cd ai-datagrid
 # Install
 pnpm install
 
-# Configure (optional — see AI setup below)
-echo "AI_GATEWAY_API_KEY=vck_..." > .env.local
+# Configure (required for AI turns — see AI setup below)
+cp .env.example .env.local   # then fill in AI_GATEWAY_API_KEY=vck_...
 
 # Run
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+Driving this repo with a coding agent? Read [AGENTS.md](AGENTS.md). Before committing, run `pnpm verify` (typecheck · lint · format · test) — there is no CI.
 
 ## AI Setup
 

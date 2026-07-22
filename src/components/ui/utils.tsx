@@ -35,7 +35,7 @@ export function composeRefs<T>(...refs: PossibleRef<T>[]) {
  * Accepts callback refs and RefObject(s)
  */
 export function useComposedRefs<T>(...refs: PossibleRef<T>[]) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // `refs` is the dep array by design — the composed callback must change with it.
   return React.useCallback(composeRefs(...refs), refs);
 }
 
@@ -110,13 +110,30 @@ export function useMediaQuery(query = "(min-width: 640px)") {
   return value;
 }
 
+/**
+ * `Intl.DateTimeFormat` construction is the expensive part; `.format()` is cheap.
+ * Callers live inside render (`data-grid-filter-menu.tsx`), so formatters are
+ * built once per distinct option set and reused. The zone is deliberately LOCAL:
+ * inputs are ISO instants derived from a local-midnight `Date`, so pinning UTC
+ * here would display the wrong calendar day east of UTC. Grid cells go through
+ * `formatDateForDisplay` (`src/lib/data-grid.ts`) instead, which is zone-pinned.
+ */
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
 export function formatDate(date: Date | string | number, opts: Intl.DateTimeFormatOptions = {}) {
-  return new Intl.DateTimeFormat("en-US", {
+  const resolved: Intl.DateTimeFormatOptions = {
     month: opts.month ?? "long",
     day: opts.day ?? "numeric",
     year: opts.year ?? "numeric",
     ...opts,
-  }).format(new Date(date));
+  };
+  const key = JSON.stringify(resolved);
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", resolved);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter.format(new Date(date));
 }
 
 const MOBILE_BREAKPOINT = 768;

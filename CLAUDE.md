@@ -39,12 +39,25 @@ Flow: chat composer `send({ message, clientContext: gridSnapshot })` → eve cha
 ```bash
 pnpm dev          # dev server — boots Next.js AND the eve agent runtime
 pnpm build        # production build (Next). Vercel builds the eve service via withEve
-pnpm lint         # oxlint
-pnpm format:fix   # oxfmt
+pnpm verify       # the gate: typecheck · lint · format · test — run before every commit
+pnpm typecheck    # tsc --noEmit
+pnpm lint         # oxlint (warnings are errors)
+pnpm format:fix   # oxfmt --write (`pnpm format` only checks)
 pnpm test         # vitest (grid unit tests)
 ```
 
+There is no CI in this repo, so `pnpm verify` is the only gate that ever runs.
+
 **NEVER run `eve build` while `pnpm dev` is running** — it corrupts the eve dev workflow cache. If dev breaks mysteriously: delete `.eve/` + `.workflow-data/` and restart.
+
+## Agent-driven development
+
+This template is built to be driven end-to-end by a coding agent. `AGENTS.md` is the full workflow; the essentials:
+
+- **Provision**: `pnpm install && pnpm dev`. No database, no auth, no bootstrap script. AI turns need `AI_GATEWAY_API_KEY` in `.env.local` — and in dev the key dialog is suppressed (`chat.tsx` gates it on `NODE_ENV !== "development"`), so a missing key shows up as an unexplained turn failure.
+- **Known state instead of a seeded login**: there is no sign-in. `src/data/seed.tsx` is pinned by `faker.seed(12345)`, so every route renders identical data every boot (e.g. the first row of `/people` is always `Clinton Mertz`) and is directly assertable. Keep fixtures both time-independent (no `faker.date.recent()`) and order-independent (every `get*Data()` calls `resetFixtureRng()` — `faker` is a module singleton, so in-app navigation would otherwise shift the RNG).
+- **Verify**: `pnpm verify` for the static gate; drive the running app with `agent-browser` for runtime checks. Web is the only headless-driveable surface; the eve runtime is exercised through the chat composer.
+- **Runtime smoke tests**: `/generate-demo` and `/filter-sort-demo` preseed the composer via `initialChatInput`, so submitting the prompt already in the box is a repeatable AI round-trip. See `AGENTS.md` → Verify a change end-to-end.
 
 ## Conventions
 

@@ -22,12 +22,14 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "oxlint --report-unused-disable-directives",
+    "lint": "oxlint --report-unused-disable-directives --deny-warnings",
     "lint:fix": "oxlint --fix",
-    "format": "oxfmt",
+    "format": "oxfmt --check",
     "format:fix": "oxfmt --write",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify": "pnpm typecheck && pnpm lint && pnpm format && pnpm test"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

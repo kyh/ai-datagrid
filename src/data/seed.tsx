@@ -21,7 +21,21 @@ export interface Person {
   attachments?: FileCellData[];
 }
 
-faker.seed(12345);
+const FIXTURE_SEED = 12345;
+
+/**
+ * `faker` is a module singleton, so its RNG position depends on how many
+ * generator calls preceded it in the same JS realm. Re-seeding at the top of
+ * every `get*Data()` makes each dataset order-independent: `/people` renders
+ * the same 50 rows whether it was opened directly or navigated to after
+ * `/articles`. Without this, in-app `<Link>` navigation silently shifts every
+ * fixture and assertions stop reproducing.
+ */
+function resetFixtureRng() {
+  faker.seed(FIXTURE_SEED);
+}
+
+resetFixtureRng();
 
 export const departments = ["Engineering", "Marketing", "Sales", "HR", "Finance"] as const;
 
@@ -160,10 +174,9 @@ function generatePerson(id: number): Person {
 }
 
 export function getPeopleData(): Person[] {
+  resetFixtureRng();
   return Array.from({ length: 50 }, (_, i) => generatePerson(i + 1));
 }
-
-export const initialData = getPeopleData();
 
 // Company data
 export interface Company {
@@ -201,7 +214,7 @@ const companyDescriptions = [
   "Global corporation with operations in over 50 countries, serving millions of customers worldwide.",
 ];
 
-function generateCompany(id: number): Company {
+function generateCompany(): Company {
   const companyName = faker.company.name();
 
   return {
@@ -220,7 +233,8 @@ function generateCompany(id: number): Company {
 }
 
 export function getCompaniesData(): Company[] {
-  return Array.from({ length: 50 }, (_, i) => generateCompany(i + 1));
+  resetFixtureRng();
+  return Array.from({ length: 50 }, () => generateCompany());
 }
 
 export function getCompaniesColumns(filterFn: FilterFn<Company>): ColumnDef<Company>[] {
@@ -721,7 +735,13 @@ function generateArticle(): Article {
     title,
     author: faker.person.fullName(),
     category: faker.helpers.arrayElement(articleCategories),
-    publishDate: faker.date.recent({ days: 90 }).toISOString().split("T")[0],
+    // Fixed range, not `faker.date.recent()` — the latter is relative to today,
+    // so it drifts daily and defeats the `faker.seed(12345)` determinism the
+    // rest of the fixtures rely on (and that agent assertions are written against).
+    publishDate: faker.date
+      .between({ from: "2025-01-01", to: "2026-01-01" })
+      .toISOString()
+      .split("T")[0],
     readTime: faker.number.int({ min: 2, max: 15 }),
     tags: faker.helpers.arrayElements(articleTags, {
       min: 1,
@@ -734,6 +754,7 @@ function generateArticle(): Article {
 }
 
 export function getArticlesData(): Article[] {
+  resetFixtureRng();
   return Array.from({ length: 50 }, () => generateArticle());
 }
 
@@ -970,7 +991,7 @@ const tweetAuthors = [
   "@patrickc",
 ] as const;
 
-function generateTweet(id: number): Tweet {
+function generateTweet(): Tweet {
   const author = faker.helpers.arrayElement(tweetAuthors);
   const tweetId = faker.string.numeric(19);
   return {
@@ -986,6 +1007,7 @@ function generateTweet(id: number): Tweet {
 }
 
 export function getTweetsData(): Tweet[] {
+  resetFixtureRng();
   // Ensure @levelsio has 3 bangers
   const levelsioBangers: Tweet[] = [
     {
@@ -1010,7 +1032,7 @@ export function getTweetsData(): Tweet[] {
       createdAt: "2024-09-10",
     },
   ];
-  const randomTweets = Array.from({ length: 47 }, (_, i) => generateTweet(i + 1));
+  const randomTweets = Array.from({ length: 47 }, () => generateTweet());
   return faker.helpers.shuffle([...levelsioBangers, ...randomTweets]);
 }
 

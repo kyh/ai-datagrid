@@ -402,11 +402,25 @@ export function formatDateToString(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+// Locale and zone are both pinned so a date cell renders identically on the
+// server, on the client, and for every visitor — `toLocaleDateString()` gives
+// "19/07/2026" in en-GB and can hydrate-mismatch when a grid is prerendered.
+// Module level so it isn't rebuilt once per cell.
+const dateCellFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+
 export function formatDateForDisplay(dateStr: unknown): string {
   if (!dateStr) return "";
   const date = parseLocalDate(dateStr);
   if (!date) return typeof dateStr === "string" ? dateStr : "";
-  return date.toLocaleDateString();
+  // parseLocalDate returns a *local* midnight Date, so hand the formatter the
+  // calendar parts rebased to UTC — formatting the raw instant in a fixed zone
+  // would shift the day for anyone east of UTC.
+  return dateCellFormatter.format(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
 
 export function formatFileSize(bytes: number): string {

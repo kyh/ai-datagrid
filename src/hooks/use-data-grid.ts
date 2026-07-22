@@ -24,6 +24,7 @@ import { useAsRef } from "@/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
+  formatDateForDisplay,
   getCellKey,
   getIsFileCellData,
   getIsInPopover,
@@ -37,14 +38,11 @@ import {
 import type {
   CellPosition,
   CellUpdate,
-  ContextMenuState,
   Direction,
   FileCellData,
   NavigationDirection,
-  PasteDialogState,
   RowHeightValue,
   SearchState,
-  SelectionState,
 } from "@/lib/data-grid-types";
 import { useDataGridStore, type DataGridStore } from "@/stores/data-grid-store";
 import { useShallow } from "zustand/react/shallow";
@@ -164,7 +162,7 @@ function useDataGrid<TData>({
       rowHeight: rowHeightProp,
       rowSelection: initialState?.rowSelection ?? {},
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Deps intentionally empty — seed the store once, on mount.
   }, []);
 
   // Store adapter wrapping Zustand with microtask-batched updates
@@ -346,7 +344,7 @@ function useDataGrid<TData>({
       }
 
       const tableRowCount = rows?.length ?? currentData.length;
-      const newData: TData[] = new Array(tableRowCount);
+      const newData: TData[] = Array.from({ length: tableRowCount });
 
       for (let i = 0; i < tableRowCount; i++) {
         const updates = rowUpdatesMap.get(i);
@@ -916,7 +914,10 @@ function useDataGrid<TData>({
                 if (ISO_DATE_REGEX.test(pastedValue)) {
                   const date = new Date(pastedValue);
                   if (!Number.isNaN(date.getTime())) {
-                    processedValue = date.toLocaleDateString();
+                    // Format the calendar date, not the instant: `new Date("2026-07-19")`
+                    // is UTC midnight, so `toLocaleDateString()` renders the previous
+                    // day west of UTC. The regex guarantees a YYYY-MM-DD prefix.
+                    processedValue = formatDateForDisplay(pastedValue.slice(0, 10));
                     break;
                   }
                 }
