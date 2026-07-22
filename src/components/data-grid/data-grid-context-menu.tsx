@@ -53,7 +53,8 @@ export function DataGridContextMenu<TData>({
 }
 
 interface ContextMenuProps<TData>
-  extends Pick<
+  extends
+    Pick<
       TableMeta<TData>,
       | "dataGridRef"
       | "onContextMenuOpenChange"
@@ -118,7 +119,7 @@ function ContextMenuImpl<TData>({
       pointerEvents: "none",
       opacity: 0,
     }),
-    [contextMenu.x, contextMenu.y]
+    [contextMenu.x, contextMenu.y],
   );
 
   const onFinalFocus = React.useCallback(() => {
@@ -136,11 +137,7 @@ function ContextMenuImpl<TData>({
   const onClear = React.useCallback(() => {
     const { selectionState, columns, onDataUpdate } = propsRef.current;
 
-    if (
-      !selectionState?.selectedCells ||
-      selectionState.selectedCells.size === 0
-    )
-      return;
+    if (!selectionState?.selectedCells || selectionState.selectedCells.size === 0) return;
 
     const updates: Array<CellUpdate> = [];
 
@@ -169,19 +166,13 @@ function ContextMenuImpl<TData>({
 
     onDataUpdate?.(updates);
 
-    toast.success(
-      `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`
-    );
+    toast.success(`${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`);
   }, [propsRef]);
 
   const onDelete = React.useCallback(async () => {
     const { selectionState, onRowsDelete } = propsRef.current;
 
-    if (
-      !selectionState?.selectedCells ||
-      selectionState.selectedCells.size === 0
-    )
-      return;
+    if (!selectionState?.selectedCells || selectionState.selectedCells.size === 0) return;
 
     const rowIndices = new Set<number>();
     for (const cellKey of selectionState.selectedCells) {
@@ -198,10 +189,7 @@ function ContextMenuImpl<TData>({
   }, [propsRef]);
 
   return (
-    <DropdownMenu
-      open={contextMenu.open}
-      onOpenChange={onContextMenuOpenChange}
-    >
+    <DropdownMenu open={contextMenu.open} onOpenChange={onContextMenuOpenChange}>
       <DropdownMenuTrigger style={triggerStyle} />
       <DropdownMenuContent
         data-grid-popover=""

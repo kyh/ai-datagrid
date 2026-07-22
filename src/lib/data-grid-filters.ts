@@ -150,8 +150,7 @@ export function getFilterFn<TData>(): FilterFn<TData> {
     }
 
     const cellValueStr = String(cellValue ?? "").toLowerCase();
-    const filterValueStr =
-      typeof value === "string" ? value.toLowerCase() : String(value);
+    const filterValueStr = typeof value === "string" ? value.toLowerCase() : String(value);
 
     if (operator === "contains") {
       return cellValueStr.includes(filterValueStr);
@@ -245,18 +244,14 @@ export function getFilterFn<TData>(): FilterFn<TData> {
 
     if (operator === "is") {
       if (Array.isArray(cellValue)) {
-        return cellValue.some(
-          (v) => String(v).toLowerCase() === String(value).toLowerCase()
-        );
+        return cellValue.some((v) => String(v).toLowerCase() === String(value).toLowerCase());
       }
       return String(cellValue).toLowerCase() === String(value).toLowerCase();
     }
 
     if (operator === "isNot") {
       if (Array.isArray(cellValue)) {
-        return !cellValue.some(
-          (v) => String(v).toLowerCase() === String(value).toLowerCase()
-        );
+        return !cellValue.some((v) => String(v).toLowerCase() === String(value).toLowerCase());
       }
       return String(cellValue).toLowerCase() !== String(value).toLowerCase();
     }
@@ -264,27 +259,19 @@ export function getFilterFn<TData>(): FilterFn<TData> {
     if (operator === "isAnyOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return cellValue.some((v) =>
-          value.some(
-            (fv) => String(v).toLowerCase() === String(fv).toLowerCase()
-          )
+          value.some((fv) => String(v).toLowerCase() === String(fv).toLowerCase()),
         );
       }
-      return value.some(
-        (fv) => String(cellValue).toLowerCase() === String(fv).toLowerCase()
-      );
+      return value.some((fv) => String(cellValue).toLowerCase() === String(fv).toLowerCase());
     }
 
     if (operator === "isNoneOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return !cellValue.some((v) =>
-          value.some(
-            (fv) => String(v).toLowerCase() === String(fv).toLowerCase()
-          )
+          value.some((fv) => String(v).toLowerCase() === String(fv).toLowerCase()),
         );
       }
-      return !value.some(
-        (fv) => String(cellValue).toLowerCase() === String(fv).toLowerCase()
-      );
+      return !value.some((fv) => String(cellValue).toLowerCase() === String(fv).toLowerCase());
     }
 
     return true;

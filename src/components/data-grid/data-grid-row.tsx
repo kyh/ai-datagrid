@@ -19,11 +19,7 @@ import {
   getRowHeightValue,
 } from "@/lib/data-grid";
 import { cn } from "@/components/ui/utils";
-import type {
-  CellPosition,
-  Direction,
-  RowHeightValue,
-} from "@/lib/data-grid-types";
+import type { CellPosition, Direction, RowHeightValue } from "@/lib/data-grid-types";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
@@ -199,7 +195,7 @@ function DataGridRowImpl<TData>({
         rowMapRef.current?.delete(virtualRowIndex);
       }
     },
-    [virtualRowIndex, measureElement, rowMapRef]
+    [virtualRowIndex, measureElement, rowMapRef],
   );
 
   const rowRef = useComposedRefs(ref, onRowChange);
@@ -211,7 +207,7 @@ function DataGridRowImpl<TData>({
   // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility, columnPinning, and columns are used for calculating the visible cells
   const visibleCells = React.useMemo(
     () => row.getVisibleCells(),
-    [row, columnVisibility, columnPinning, columns]
+    [row, columnVisibility, columnPinning, columns],
   );
 
   return (
@@ -228,7 +224,7 @@ function DataGridRowImpl<TData>({
       className={cn(
         "absolute flex w-full border-b",
         !adjustLayout && "will-change-transform",
-        className
+        className,
       )}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
@@ -242,20 +238,15 @@ function DataGridRowImpl<TData>({
         const columnId = cell.column.id;
 
         const isCellFocused =
-          focusedCell?.rowIndex === virtualRowIndex &&
-          focusedCell?.columnId === columnId;
+          focusedCell?.rowIndex === virtualRowIndex && focusedCell?.columnId === columnId;
         const isCellEditing =
-          editingCell?.rowIndex === virtualRowIndex &&
-          editingCell?.columnId === columnId;
+          editingCell?.rowIndex === virtualRowIndex && editingCell?.columnId === columnId;
         const isCellSelected =
-          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
-          false;
+          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ?? false;
 
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
-        const isGenerating = generatingCells.has(
-          getCellKey(virtualRowIndex, columnId)
-        );
+        const isGenerating = generatingCells.has(getCellKey(virtualRowIndex, columnId));
 
         const nextCell = visibleCells[colIndex + 1];
         const isLastColumn = colIndex === visibleCells.length - 1;

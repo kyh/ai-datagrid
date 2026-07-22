@@ -9,11 +9,7 @@ import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
-import {
-  flexRender,
-  getColumnBorderVisibility,
-  getColumnPinningStyle,
-} from "@/lib/data-grid";
+import { flexRender, getColumnBorderVisibility, getColumnPinningStyle } from "@/lib/data-grid";
 import { cn } from "@/components/ui/utils";
 import type { Direction } from "@/lib/data-grid-types";
 
@@ -21,7 +17,8 @@ const EMPTY_CELL_SELECTION_SET = new Set<string>();
 const EMPTY_GENERATING_CELLS_SET = new Set<string>();
 
 interface DataGridProps<TData>
-  extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
+  extends
+    Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
   dir?: Direction;
   height?: number;
@@ -70,15 +67,12 @@ export function DataGrid<TData>({
     (event: React.MouseEvent<HTMLDivElement>) => {
       onRowAddRef.current?.(event);
     },
-    [onRowAddRef]
+    [onRowAddRef],
   );
 
-  const onDataGridContextMenu = React.useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      event.preventDefault();
-    },
-    []
-  );
+  const onDataGridContextMenu = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  }, []);
 
   const onFooterCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -89,7 +83,7 @@ export function DataGrid<TData>({
         onRowAddRef.current();
       }
     },
-    [onRowAddRef]
+    [onRowAddRef],
   );
 
   return (
@@ -100,11 +94,7 @@ export function DataGrid<TData>({
       className={cn("relative flex w-full flex-col", className)}
     >
       {searchState && <DataGridSearch {...searchState} />}
-      <DataGridContextMenu
-        tableMeta={tableMeta}
-        columns={columns}
-        contextMenu={contextMenu}
-      />
+      <DataGridContextMenu tableMeta={tableMeta} columns={columns} contextMenu={contextMenu} />
       <DataGridPasteDialog tableMeta={tableMeta} pasteDialog={pasteDialog} />
       <div
         role="grid"
@@ -138,9 +128,7 @@ export function DataGrid<TData>({
             >
               {headerGroup.headers.map((header, colIndex) => {
                 const sorting = table.getState().sorting;
-                const currentSort = sorting.find(
-                  (sort) => sort.id === header.column.id
-                );
+                const currentSort = sorting.find((sort) => sort.id === header.column.id);
                 const isSortable = header.column.getCanSort();
 
                 const nextHeader = headerGroup.headers[colIndex + 1];
@@ -160,10 +148,10 @@ export function DataGrid<TData>({
                       currentSort?.desc === false
                         ? "ascending"
                         : currentSort?.desc === true
-                        ? "descending"
-                        : isSortable
-                        ? "none"
-                        : undefined
+                          ? "descending"
+                          : isSortable
+                            ? "none"
+                            : undefined
                     }
                     data-slot="grid-header-cell"
                     tabIndex={-1}
@@ -177,13 +165,10 @@ export function DataGrid<TData>({
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >
-                    {header.isPlaceholder ? null : typeof header.column
-                        .columnDef.header === "function" ? (
+                    {header.isPlaceholder ? null : typeof header.column.columnDef.header ===
+                      "function" ? (
                       <div className="size-full px-3 py-1.5">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        {flexRender(header.column.columnDef.header, header.getContext())}
                       </div>
                     ) : (
                       <DataGridColumnHeader header={header} table={table} />
@@ -208,13 +193,10 @@ export function DataGrid<TData>({
             if (!row) return null;
 
             const cellSelectionKeys =
-              cellSelectionMap?.get(virtualItem.index) ??
-              EMPTY_CELL_SELECTION_SET;
+              cellSelectionMap?.get(virtualItem.index) ?? EMPTY_CELL_SELECTION_SET;
 
-            const searchMatchColumns =
-              searchMatchesByRow?.get(virtualItem.index) ?? null;
-            const isActiveSearchRow =
-              activeSearchMatch?.rowIndex === virtualItem.index;
+            const searchMatchColumns = searchMatchesByRow?.get(virtualItem.index) ?? null;
+            const isActiveSearchRow = activeSearchMatch?.rowIndex === virtualItem.index;
 
             return (
               <DataGridRow

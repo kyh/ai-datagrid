@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  CellContext,
-  ColumnDef,
-  HeaderContext,
-} from "@tanstack/react-table";
+import type { CellContext, ColumnDef, HeaderContext } from "@tanstack/react-table";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/components/ui/utils";
@@ -18,12 +14,7 @@ interface DataGridSelectHitboxProps {
   debug?: boolean;
 }
 
-function DataGridSelectHitbox({
-  htmlFor,
-  children,
-  size,
-  debug,
-}: DataGridSelectHitboxProps) {
+function DataGridSelectHitbox({ htmlFor, children, size, debug }: DataGridSelectHitboxProps) {
   return (
     <div
       className={cn(
@@ -45,8 +36,7 @@ function DataGridSelectHitbox({
   );
 }
 
-interface DataGridSelectCheckboxProps
-  extends Omit<React.ComponentProps<typeof Checkbox>, "id"> {
+interface DataGridSelectCheckboxProps extends Omit<React.ComponentProps<typeof Checkbox>, "id"> {
   rowNumber?: number;
   hitboxSize?: HitboxSize;
   debug?: boolean;
@@ -104,8 +94,7 @@ function DataGridSelectCheckbox({
   return checkbox;
 }
 
-interface DataGridSelectHeaderProps<TData>
-  extends Pick<HeaderContext<TData, unknown>, "table"> {
+interface DataGridSelectHeaderProps<TData> extends Pick<HeaderContext<TData, unknown>, "table"> {
   hitboxSize?: HitboxSize;
   readOnly?: boolean;
   debug?: boolean;
@@ -119,15 +108,11 @@ function DataGridSelectHeader<TData>({
 }: DataGridSelectHeaderProps<TData>) {
   const onCheckedChange = React.useCallback(
     (value: boolean) => table.toggleAllPageRowsSelected(value),
-    [table]
+    [table],
   );
 
   if (readOnly) {
-    return (
-      <div className="mt-1 flex items-center ps-1 text-muted-foreground text-sm">
-        #
-      </div>
-    );
+    return <div className="mt-1 flex items-center ps-1 text-muted-foreground text-sm">#</div>;
   }
 
   return (
@@ -142,8 +127,10 @@ function DataGridSelectHeader<TData>({
   );
 }
 
-interface DataGridSelectCellProps<TData>
-  extends Pick<CellContext<TData, unknown>, "row" | "table"> {
+interface DataGridSelectCellProps<TData> extends Pick<
+  CellContext<TData, unknown>,
+  "row" | "table"
+> {
   enableRowMarkers?: boolean;
   hitboxSize?: HitboxSize;
   readOnly?: boolean;
@@ -173,7 +160,7 @@ function DataGridSelectCell<TData>({
         row.toggleSelected(value);
       }
     },
-    [onRowSelect, row]
+    [onRowSelect, row],
   );
 
   const onClick = React.useCallback(
@@ -183,7 +170,7 @@ function DataGridSelectCell<TData>({
         onRowSelect?.(row.index, !row.getIsSelected(), true);
       }
     },
-    [onRowSelect, row]
+    [onRowSelect, row],
   );
 
   if (readOnly) {
@@ -207,8 +194,10 @@ function DataGridSelectCell<TData>({
   );
 }
 
-interface GetDataGridSelectColumnOptions<TData>
-  extends Omit<Partial<ColumnDef<TData>>, "id" | "header" | "cell"> {
+interface GetDataGridSelectColumnOptions<TData> extends Omit<
+  Partial<ColumnDef<TData>>,
+  "id" | "header" | "cell"
+> {
   enableRowMarkers?: boolean;
   hitboxSize?: HitboxSize;
   readOnly?: boolean;

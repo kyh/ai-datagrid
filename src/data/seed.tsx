@@ -23,13 +23,7 @@ export interface Person {
 
 faker.seed(12345);
 
-export const departments = [
-  "Engineering",
-  "Marketing",
-  "Sales",
-  "HR",
-  "Finance",
-] as const;
+export const departments = ["Engineering", "Marketing", "Sales", "HR", "Finance"] as const;
 
 export const statuses = ["Active", "On Leave", "Remote", "In Office"] as const;
 
@@ -158,10 +152,8 @@ function generatePerson(id: number): Person {
     status: faker.helpers.arrayElement(statuses),
     isActive: faker.datatype.boolean(),
     startDate:
-      faker.date
-        .between({ from: "2018-01-01", to: "2024-01-01" })
-        .toISOString()
-        .split("T")[0] ?? "",
+      faker.date.between({ from: "2018-01-01", to: "2024-01-01" }).toISOString().split("T")[0] ??
+      "",
     skills: faker.helpers.arrayElements(skills, { min: 1, max: 5 }),
     attachments,
   };
@@ -199,13 +191,7 @@ export const industries = [
   "Real Estate",
 ] as const;
 
-export const companyStatuses = [
-  "Active",
-  "Acquired",
-  "IPO",
-  "Private",
-  "Startup",
-] as const;
+export const companyStatuses = ["Active", "Acquired", "IPO", "Private", "Startup"] as const;
 
 const companyDescriptions = [
   "A leading provider of innovative solutions in the industry. Known for exceptional customer service and cutting-edge technology.",
@@ -226,10 +212,7 @@ function generateCompany(id: number): Company {
     website: `https://${companyName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
     description: faker.helpers.arrayElement(companyDescriptions),
     revenue: faker.number.int({ min: 100000, max: 10000000000 }),
-    founded: faker.date
-      .between({ from: "1950-01-01", to: "2023-01-01" })
-      .getFullYear()
-      .toString(),
+    founded: faker.date.between({ from: "1950-01-01", to: "2023-01-01" }).getFullYear().toString(),
     headquarters: `${faker.location.city()}, ${faker.location.country()}`,
     status: faker.helpers.arrayElement(companyStatuses),
     isPublic: faker.datatype.boolean(),
@@ -240,9 +223,7 @@ export function getCompaniesData(): Company[] {
   return Array.from({ length: 50 }, (_, i) => generateCompany(i + 1));
 }
 
-export function getCompaniesColumns(
-  filterFn: FilterFn<Company>,
-): ColumnDef<Company>[] {
+export function getCompaniesColumns(filterFn: FilterFn<Company>): ColumnDef<Company>[] {
   return [
     {
       id: "select",
@@ -426,9 +407,7 @@ export interface SpreadsheetRow {
 }
 
 export function getSpreadsheetData(): SpreadsheetRow[] {
-  const columns = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i),
-  ); // A-Z
+  const columns = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)); // A-Z
   return Array.from({ length: 1001 }, () => {
     const row: SpreadsheetRow = {};
     for (const col of columns) {
@@ -441,9 +420,7 @@ export function getSpreadsheetData(): SpreadsheetRow[] {
 export function getSpreadsheetColumns(
   filterFn: FilterFn<SpreadsheetRow>,
 ): ColumnDef<SpreadsheetRow>[] {
-  const columns = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i),
-  ); // A-Z
+  const columns = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)); // A-Z
 
   return [
     {
@@ -479,9 +456,7 @@ export function getSpreadsheetColumns(
   ];
 }
 
-export function getPeopleColumns(
-  filterFn: FilterFn<Person>,
-): ColumnDef<Person>[] {
+export function getPeopleColumns(filterFn: FilterFn<Person>): ColumnDef<Person>[] {
   return [
     {
       id: "select",
@@ -695,8 +670,7 @@ export function getPeopleColumns(
           variant: "file",
           maxFileSize: 10 * 1024 * 1024, // 10MB
           maxFiles: 5,
-          accept:
-            "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
+          accept: "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
           multiple: true,
         },
       },
@@ -763,9 +737,7 @@ export function getArticlesData(): Article[] {
   return Array.from({ length: 50 }, () => generateArticle());
 }
 
-export function getArticlesColumns(
-  filterFn: FilterFn<Article>,
-): ColumnDef<Article>[] {
+export function getArticlesColumns(filterFn: FilterFn<Article>): ColumnDef<Article>[] {
   return [
     {
       id: "select",
@@ -941,9 +913,7 @@ export function getRecipesData(): Recipe[] {
   }));
 }
 
-export function getRecipesColumns(
-  filterFn: FilterFn<Recipe>,
-): ColumnDef<Recipe>[] {
+export function getRecipesColumns(filterFn: FilterFn<Recipe>): ColumnDef<Recipe>[] {
   return [
     {
       id: "index",

@@ -29,7 +29,7 @@ import type {
 
 export function flexRender<TProps extends object>(
   Comp: ((props: TProps) => React.ReactNode) | string | undefined,
-  props: TProps
+  props: TProps,
 ): React.ReactNode {
   if (typeof Comp === "string") {
     return Comp;
@@ -50,13 +50,13 @@ export function getIsFileCellData(item: unknown): item is FileCellData {
 
 export function matchSelectOption(
   value: string,
-  options: { value: string; label: string }[]
+  options: { value: string; label: string }[],
 ): string | undefined {
   return options.find(
     (o) =>
       o.value === value ||
       o.value.toLowerCase() === value.toLowerCase() ||
-      o.label.toLowerCase() === value.toLowerCase()
+      o.label.toLowerCase() === value.toLowerCase(),
   )?.value;
 }
 
@@ -110,17 +110,13 @@ export function getColumnBorderVisibility<TData>(params: {
   const { column, nextColumn, isLastColumn } = params;
 
   const isPinned = column.getIsPinned();
-  const isFirstRightPinnedColumn =
-    isPinned === "right" && column.getIsFirstColumn("right");
-  const isLastRightPinnedColumn =
-    isPinned === "right" && column.getIsLastColumn("right");
+  const isFirstRightPinnedColumn = isPinned === "right" && column.getIsFirstColumn("right");
+  const isLastRightPinnedColumn = isPinned === "right" && column.getIsLastColumn("right");
 
   const nextIsPinned = nextColumn?.getIsPinned();
-  const isBeforeRightPinned =
-    nextIsPinned === "right" && nextColumn?.getIsFirstColumn("right");
+  const isBeforeRightPinned = nextIsPinned === "right" && nextColumn?.getIsFirstColumn("right");
 
-  const showEndBorder =
-    !isBeforeRightPinned && (isLastColumn || !isLastRightPinnedColumn);
+  const showEndBorder = !isBeforeRightPinned && (isLastColumn || !isLastRightPinnedColumn);
 
   const showStartBorder = isFirstRightPinnedColumn;
 
@@ -138,17 +134,13 @@ export function getColumnPinningStyle<TData>(params: {
   const { column, withBorder = false, dir = "ltr" } = params;
 
   const isPinned = column.getIsPinned();
-  const isLastLeftPinnedColumn =
-    isPinned === "left" && column.getIsLastColumn("left");
-  const isFirstRightPinnedColumn =
-    isPinned === "right" && column.getIsFirstColumn("right");
+  const isLastLeftPinnedColumn = isPinned === "left" && column.getIsLastColumn("left");
+  const isFirstRightPinnedColumn = isPinned === "right" && column.getIsFirstColumn("right");
 
   const isRtl = dir === "rtl";
 
-  const leftPosition =
-    isPinned === "left" ? `${column.getStart("left")}px` : undefined;
-  const rightPosition =
-    isPinned === "right" ? `${column.getAfter("right")}px` : undefined;
+  const leftPosition = isPinned === "left" ? `${column.getStart("left")}px` : undefined;
+  const rightPosition = isPinned === "right" ? `${column.getAfter("right")}px` : undefined;
 
   return {
     boxShadow: withBorder
@@ -157,10 +149,10 @@ export function getColumnPinningStyle<TData>(params: {
           ? "4px 0 4px -4px var(--border) inset"
           : "-4px 0 4px -4px var(--border) inset"
         : isFirstRightPinnedColumn
-        ? isRtl
-          ? "-4px 0 4px -4px var(--border) inset"
-          : "4px 0 4px -4px var(--border) inset"
-        : undefined
+          ? isRtl
+            ? "-4px 0 4px -4px var(--border) inset"
+            : "4px 0 4px -4px var(--border) inset"
+          : undefined
       : undefined,
     left: isRtl ? rightPosition : leftPosition,
     right: isRtl ? leftPosition : rightPosition,
@@ -173,7 +165,7 @@ export function getColumnPinningStyle<TData>(params: {
 }
 
 export function getScrollDirection(
-  direction: string
+  direction: string,
 ): "left" | "right" | "home" | "end" | undefined {
   if (
     direction === "left" ||
@@ -196,8 +188,7 @@ export function scrollCellIntoView<TData>(params: {
   direction?: "left" | "right" | "home" | "end";
   isRtl: boolean;
 }): void {
-  const { container, targetCell, tableRef, direction, viewportOffset, isRtl } =
-    params;
+  const { container, targetCell, tableRef, direction, viewportOffset, isRtl } = params;
 
   const containerRect = container.getBoundingClientRect();
   const cellRect = targetCell.getBoundingClientRect();
@@ -209,14 +200,8 @@ export function scrollCellIntoView<TData>(params: {
   const leftPinnedColumns = currentTable?.getLeftVisibleLeafColumns() ?? [];
   const rightPinnedColumns = currentTable?.getRightVisibleLeafColumns() ?? [];
 
-  const leftPinnedWidth = leftPinnedColumns.reduce(
-    (sum, c) => sum + c.getSize(),
-    0
-  );
-  const rightPinnedWidth = rightPinnedColumns.reduce(
-    (sum, c) => sum + c.getSize(),
-    0
-  );
+  const leftPinnedWidth = leftPinnedColumns.reduce((sum, c) => sum + c.getSize(), 0);
+  const rightPinnedWidth = rightPinnedColumns.reduce((sum, c) => sum + c.getSize(), 0);
 
   const viewportLeft = isActuallyRtl
     ? containerRect.left + rightPinnedWidth + viewportOffset
@@ -225,8 +210,7 @@ export function scrollCellIntoView<TData>(params: {
     ? containerRect.right - leftPinnedWidth - viewportOffset
     : containerRect.right - rightPinnedWidth - viewportOffset;
 
-  const isFullyVisible =
-    cellRect.left >= viewportLeft && cellRect.right <= viewportRight;
+  const isFullyVisible = cellRect.left >= viewportLeft && cellRect.right <= viewportRight;
 
   if (isFullyVisible) return;
 
@@ -275,11 +259,7 @@ export function parseTsv(text: string): string[][] {
   // Route to the quoted parser when a field starts with a double quote — at the
   // start of the text, after a tab, or after a newline (a quoted field leading
   // a later row, which Excel emits with no `\t"` anywhere).
-  if (
-    text.startsWith('"') ||
-    text.includes('\t"') ||
-    text.includes('\n"')
-  ) {
+  if (text.startsWith('"') || text.includes('\t"') || text.includes('\n"')) {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentField = "";
@@ -409,11 +389,7 @@ export function parseLocalDate(dateStr: unknown): Date | null {
   if (!year || !month || !day) return null;
   const date = new Date(year, month - 1, day);
   // Verify date wasn't auto-corrected (e.g. Feb 30 -> Mar 1)
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
     return null;
   }
   return date;
@@ -437,34 +413,20 @@ export function formatFileSize(bytes: number): string {
   if (bytes <= 0 || !Number.isFinite(bytes)) return "0 B";
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.min(
-    sizes.length - 1,
-    Math.floor(Math.log(bytes) / Math.log(k))
-  );
+  const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
   return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
 }
 
-export function getFileIcon(
-  type: string
-): React.ComponentType<React.SVGProps<SVGSVGElement>> {
+export function getFileIcon(type: string): React.ComponentType<React.SVGProps<SVGSVGElement>> {
   if (type.startsWith("image/")) return FileImage;
   if (type.startsWith("video/")) return FileVideo;
   if (type.startsWith("audio/")) return FileAudio;
   if (type.includes("pdf")) return FileText;
   if (type.includes("zip") || type.includes("rar")) return FileArchive;
-  if (
-    type.includes("word") ||
-    type.includes("document") ||
-    type.includes("doc")
-  )
-    return FileText;
+  if (type.includes("word") || type.includes("document") || type.includes("doc")) return FileText;
   if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
     return FileSpreadsheet;
-  if (
-    type.includes("presentation") ||
-    type.includes("powerpoint") ||
-    type.includes("ppt")
-  )
+  if (type.includes("presentation") || type.includes("powerpoint") || type.includes("ppt"))
     return Presentation;
   return File;
 }
