@@ -35,7 +35,7 @@ export function composeRefs<T>(...refs: PossibleRef<T>[]) {
  * Accepts callback refs and RefObject(s)
  */
 export function useComposedRefs<T>(...refs: PossibleRef<T>[]) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // `refs` is the dep array by design — the composed callback must change with it.
   return React.useCallback(composeRefs(...refs), refs);
 }
 
@@ -56,10 +56,7 @@ export function useCallbackRef<T extends (...args: never[]) => unknown>(
   });
 
   // https://github.com/facebook/react/issues/19240
-  return React.useMemo(
-    () => ((...args) => callbackRef.current?.(...args)) as T,
-    [],
-  );
+  return React.useMemo(() => ((...args) => callbackRef.current?.(...args)) as T, []);
 }
 
 export function useDebounce<T>(value: T, delay?: number): T {
@@ -82,18 +79,12 @@ export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
 ) {
   const handleCallback = useCallbackRef(callback);
   const debounceTimerRef = React.useRef(0);
-  React.useEffect(
-    () => () => window.clearTimeout(debounceTimerRef.current),
-    [],
-  );
+  React.useEffect(() => () => window.clearTimeout(debounceTimerRef.current), []);
 
   const setValue = React.useCallback(
     (...args: Parameters<T>) => {
       window.clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = window.setTimeout(
-        () => handleCallback(...args),
-        delay,
-      );
+      debounceTimerRef.current = window.setTimeout(() => handleCallback(...args), delay);
     },
     [handleCallback, delay],
   );
@@ -119,24 +110,36 @@ export function useMediaQuery(query = "(min-width: 640px)") {
   return value;
 }
 
-export function formatDate(
-  date: Date | string | number,
-  opts: Intl.DateTimeFormatOptions = {},
-) {
-  return new Intl.DateTimeFormat("en-US", {
+/**
+ * `Intl.DateTimeFormat` construction is the expensive part; `.format()` is cheap.
+ * Callers live inside render (`data-grid-filter-menu.tsx`), so formatters are
+ * built once per distinct option set and reused. The zone is deliberately LOCAL:
+ * inputs are ISO instants derived from a local-midnight `Date`, so pinning UTC
+ * here would display the wrong calendar day east of UTC. Grid cells go through
+ * `formatDateForDisplay` (`src/lib/data-grid.ts`) instead, which is zone-pinned.
+ */
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+export function formatDate(date: Date | string | number, opts: Intl.DateTimeFormatOptions = {}) {
+  const resolved: Intl.DateTimeFormatOptions = {
     month: opts.month ?? "long",
     day: opts.day ?? "numeric",
     year: opts.year ?? "numeric",
     ...opts,
-  }).format(new Date(date));
+  };
+  const key = JSON.stringify(resolved);
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", resolved);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter.format(new Date(date));
 }
 
 const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
-    undefined,
-  );
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
 
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);

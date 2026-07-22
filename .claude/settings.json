@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "prompt": "This template is built to be driven by coding agents — read AGENTS.md first. `pnpm install && pnpm dev` is the whole setup (no database, no auth, no bootstrap script); AI turns additionally need AI_GATEWAY_API_KEY in .env.local. Gate every change with `pnpm verify` — there is no CI. Never run `eve build` while `pnpm dev` is running.",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm verify:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm test:*)",
+      "Bash(agent-browser:*)"
+    ]
+  }
+}

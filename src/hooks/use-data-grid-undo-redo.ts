@@ -40,14 +40,8 @@ interface Store<TData> {
   notify: () => void;
 }
 
-function useStore<T>(
-  store: Store<T>,
-  selector: (state: StoreState<T>) => boolean,
-): boolean {
-  const getSnapshot = React.useCallback(
-    () => selector(store.getState()),
-    [store, selector],
-  );
+function useStore<T>(store: Store<T>, selector: (state: StoreState<T>) => boolean): boolean {
+  const getSnapshot = React.useCallback(() => selector(store.getState()), [store, selector]);
 
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
@@ -113,12 +107,8 @@ function useDataGridUndoRedo<TData>({
   }));
 
   // Batching state for cell updates
-  const pendingUpdatesRef = useLazyRef(
-    () => new Map<string, UndoRedoCellUpdate>(),
-  );
-  const batchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const pendingUpdatesRef = useLazyRef(() => new Map<string, UndoRedoCellUpdate>());
+  const batchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const store = React.useMemo<Store<TData>>(() => {
     return {
@@ -194,10 +184,7 @@ function useDataGridUndoRedo<TData>({
     };
   }, [listenersRef, stateRef, propsRef]);
 
-  const canUndo = useStore(
-    store,
-    (state) => state.undoStack.length > 0 || state.hasPendingChanges,
-  );
+  const canUndo = useStore(store, (state) => state.undoStack.length > 0 || state.hasPendingChanges);
   const canRedo = useStore(store, (state) => state.redoStack.length > 0);
 
   const flushPendingUpdates = React.useCallback(() => {
@@ -448,11 +435,8 @@ function useDataGridUndoRedo<TData>({
 
       const activeElement = document.activeElement;
       if (activeElement) {
-        const isInput =
-          activeElement.tagName === "INPUT" ||
-          activeElement.tagName === "TEXTAREA";
-        const isContentEditable =
-          activeElement.getAttribute("contenteditable") === "true";
+        const isInput = activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA";
+        const isContentEditable = activeElement.getAttribute("contenteditable") === "true";
         const isInPopover = getIsInPopover(activeElement);
 
         if (isInput || isContentEditable || isInPopover) return;

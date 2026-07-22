@@ -5,9 +5,7 @@ import { getFilterFn } from "@/lib/data-grid-filters";
 import { getSpreadsheetColumns, getSpreadsheetData, type SpreadsheetRow } from "@/data/seed";
 
 function createSpreadsheetRow(): SpreadsheetRow {
-  const columns = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i)
-  );
+  const columns = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
   const row: SpreadsheetRow = {};
   for (const col of columns) {
     row[col] = "";
@@ -16,9 +14,7 @@ function createSpreadsheetRow(): SpreadsheetRow {
 }
 
 function createSpreadsheetRows(count: number): SpreadsheetRow[] {
-  const columns = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i)
-  );
+  const columns = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
   return Array.from({ length: count }, () => {
     const row: SpreadsheetRow = {};
     for (const col of columns) {

@@ -39,7 +39,8 @@ export function DataGridPasteDialog<TData>({
 }
 
 interface PasteDialogProps
-  extends Pick<TableMeta<unknown>, "onPasteDialogOpenChange" | "onCellsPaste">,
+  extends
+    Pick<TableMeta<unknown>, "onPasteDialogOpenChange" | "onCellsPaste">,
     Required<Pick<TableMeta<unknown>, "pasteDialog">> {}
 
 const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
@@ -50,11 +51,7 @@ const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
   return true;
 });
 
-function PasteDialogImpl({
-  pasteDialog,
-  onPasteDialogOpenChange,
-  onCellsPaste,
-}: PasteDialogProps) {
+function PasteDialogImpl({ pasteDialog, onPasteDialogOpenChange, onCellsPaste }: PasteDialogProps) {
   const propsRef = useAsRef({
     onPasteDialogOpenChange,
     onCellsPaste,
@@ -66,7 +63,7 @@ function PasteDialogImpl({
     (open: boolean) => {
       propsRef.current.onPasteDialogOpenChange?.(open);
     },
-    [propsRef]
+    [propsRef],
   );
 
   const onCancel = React.useCallback(() => {
@@ -84,35 +81,24 @@ function PasteDialogImpl({
           <DialogTitle>Do you want to add more rows?</DialogTitle>
           <DialogDescription>
             We need <strong>{pasteDialog.rowsNeeded}</strong> additional row
-            {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to paste everything from
-            your clipboard.
+            {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to paste everything from your clipboard.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-1">
           <label className="flex cursor-pointer items-start gap-3">
-            <RadioItem
-              ref={expandRadioRef}
-              name="expand-option"
-              value="expand"
-              defaultChecked
-            />
+            <RadioItem ref={expandRadioRef} name="expand-option" value="expand" defaultChecked />
             <div className="flex flex-col gap-1">
-              <span className="font-medium text-sm leading-none">
-                Create new rows
-              </span>
+              <span className="font-medium text-sm leading-none">Create new rows</span>
               <span className="text-muted-foreground text-sm">
                 Add {pasteDialog.rowsNeeded} new row
-                {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to the table and paste
-                all data
+                {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to the table and paste all data
               </span>
             </div>
           </label>
           <label className="flex cursor-pointer items-start gap-3">
             <RadioItem name="expand-option" value="no-expand" />
             <div className="flex flex-col gap-1">
-              <span className="font-medium text-sm leading-none">
-                Keep current rows
-              </span>
+              <span className="font-medium text-sm leading-none">Keep current rows</span>
               <span className="text-muted-foreground text-sm">
                 Paste only what fits in the existing rows
               </span>
@@ -140,7 +126,7 @@ function RadioItem({ className, ...props }: React.ComponentProps<"input">) {
         "disabled:cursor-not-allowed disabled:opacity-50",
         "checked:before:absolute checked:before:start-1/2 checked:before:top-1/2 checked:before:size-2 checked:before:-translate-x-1/2 checked:before:-translate-y-1/2 checked:before:rounded-full checked:before:bg-primary checked:before:content-['']",
         "dark:bg-input/30",
-        className
+        className,
       )}
       {...props}
     />

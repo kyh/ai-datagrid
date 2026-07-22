@@ -13,15 +13,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/components/ui/utils";
 
-interface DataGridViewMenuProps<TData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataGridViewMenuProps<TData> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
   disabled?: boolean;
 }
@@ -38,11 +33,8 @@ export function DataGridViewMenu<TData>({
     () =>
       table
         .getAllColumns()
-        .filter(
-          (column) =>
-            typeof column.accessorFn !== "undefined" && column.getCanHide()
-        ),
-    [table]
+        .filter((column) => typeof column.accessorFn !== "undefined" && column.getCanHide()),
+    [table],
   );
 
   return (
@@ -63,11 +55,7 @@ export function DataGridViewMenu<TData>({
           </Button>
         }
       />
-      <PopoverContent
-        dir={dir}
-        className={cn("w-44 p-0", className)}
-        {...props}
-      >
+      <PopoverContent dir={dir} className={cn("w-44 p-0", className)} {...props}>
         <Command>
           <CommandInput placeholder="Search columns..." />
           <CommandList>
@@ -76,17 +64,13 @@ export function DataGridViewMenu<TData>({
               {columns.map((column) => (
                 <CommandItem
                   key={column.id}
-                  onSelect={() =>
-                    column.toggleVisibility(!column.getIsVisible())
-                  }
+                  onSelect={() => column.toggleVisibility(!column.getIsVisible())}
                 >
-                  <span className="truncate">
-                    {column.columnDef.meta?.label ?? column.id}
-                  </span>
+                  <span className="truncate">{column.columnDef.meta?.label ?? column.id}</span>
                   <Check
                     className={cn(
                       "ms-auto size-4 shrink-0",
-                      column.getIsVisible() ? "opacity-100" : "opacity-0"
+                      column.getIsVisible() ? "opacity-100" : "opacity-0",
                     )}
                   />
                 </CommandItem>

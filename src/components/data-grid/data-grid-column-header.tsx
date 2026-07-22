@@ -1,12 +1,6 @@
 "use client";
 
-import type {
-  ColumnSort,
-  Header,
-  SortDirection,
-  SortingState,
-  Table,
-} from "@tanstack/react-table";
+import type { ColumnSort, Header, SortDirection, SortingState, Table } from "@tanstack/react-table";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -30,24 +24,14 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellSelectOption } from "@/lib/data-grid-types";
 import { cn } from "@/components/ui/utils";
 import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
 
-interface DataGridColumnHeaderProps<TData, TValue>
-  extends React.HTMLAttributes<HTMLDivElement> {
+interface DataGridColumnHeaderProps<TData, TValue> extends React.HTMLAttributes<HTMLDivElement> {
   header: Header<TData, TValue>;
   table: Table<TData>;
   onColumnInsert?: (columnId: string, position: "left" | "right") => void;
@@ -72,8 +56,7 @@ export function DataGridColumnHeader<TData, TValue>({
   const currentOptions: CellSelectOption[] =
     (column.columnDef.meta?.cell as { options?: CellSelectOption[] } | undefined)?.options ?? [];
 
-  const isAnyColumnResizing =
-    table.getState().columnSizingInfo.isResizingColumn;
+  const isAnyColumnResizing = table.getState().columnSizingInfo.isResizingColumn;
 
   const cellVariant = column.columnDef.meta?.cell;
   const currentType = cellVariant?.variant ?? "short-text";
@@ -89,9 +72,7 @@ export function DataGridColumnHeader<TData, TValue>({
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {
       table.setSorting((prev: SortingState) => {
-        const existingSortIndex = prev.findIndex(
-          (sort) => sort.id === column.id
-        );
+        const existingSortIndex = prev.findIndex((sort) => sort.id === column.id);
         const newSort: ColumnSort = {
           id: column.id,
           desc: direction === "desc",
@@ -106,13 +87,11 @@ export function DataGridColumnHeader<TData, TValue>({
         }
       });
     },
-    [column.id, table]
+    [column.id, table],
   );
 
   const onSortRemove = React.useCallback(() => {
-    table.setSorting((prev: SortingState) =>
-      prev.filter((sort) => sort.id !== column.id)
-    );
+    table.setSorting((prev: SortingState) => prev.filter((sort) => sort.id !== column.id));
   }, [column.id, table]);
 
   const onLeftPin = React.useCallback(() => {
@@ -138,7 +117,7 @@ export function DataGridColumnHeader<TData, TValue>({
       });
       setPopoverOpen(false);
     },
-    [isSelectType, column.id, table.options.meta]
+    [isSelectType, column.id, table.options.meta],
   );
 
   return (
@@ -147,7 +126,7 @@ export function DataGridColumnHeader<TData, TValue>({
         className={cn(
           "flex size-full items-center text-sm",
           isAnyColumnResizing && "pointer-events-none",
-          className
+          className,
         )}
         {...props}
       >
@@ -178,12 +157,7 @@ export function DataGridColumnHeader<TData, TValue>({
             )}
             <span className="truncate">{label}</span>
           </PopoverTrigger>
-          <PopoverContent
-            align="start"
-            sideOffset={0}
-            className="w-64 p-0"
-            data-grid-popover
-          >
+          <PopoverContent align="start" sideOffset={0} className="w-64 p-0" data-grid-popover>
             {popoverOpen && (
               <ColumnForm
                 mode="edit"
@@ -250,7 +224,7 @@ export function DataGridColumnHeader<TData, TValue>({
                   <TableColumnsSplitIcon />
                   Insert column right
                 </DropdownMenuItem>
-              <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
               </>
             )}
             {column.getCanPin() && (
@@ -330,24 +304,21 @@ export function DataGridColumnHeader<TData, TValue>({
   );
 }
 
-const DataGridColumnResizer = React.memo(
-  DataGridColumnResizerImpl,
-  (prev, next) => {
-    const prevColumn = prev.header.column;
-    const nextColumn = next.header.column;
+const DataGridColumnResizer = React.memo(DataGridColumnResizerImpl, (prev, next) => {
+  const prevColumn = prev.header.column;
+  const nextColumn = next.header.column;
 
-    if (
-      prevColumn.getIsResizing() !== nextColumn.getIsResizing() ||
-      prevColumn.getSize() !== nextColumn.getSize()
-    ) {
-      return false;
-    }
-
-    if (prev.label !== next.label) return false;
-
-    return true;
+  if (
+    prevColumn.getIsResizing() !== nextColumn.getIsResizing() ||
+    prevColumn.getSize() !== nextColumn.getSize()
+  ) {
+    return false;
   }
-) as typeof DataGridColumnResizerImpl;
+
+  if (prev.label !== next.label) return false;
+
+  return true;
+}) as typeof DataGridColumnResizerImpl;
 
 interface DataGridColumnResizerProps<TData, TValue> {
   header: Header<TData, TValue>;
@@ -377,9 +348,7 @@ function DataGridColumnResizerImpl<TData, TValue>({
       tabIndex={0}
       className={cn(
         "absolute -end-px top-0 z-50 h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:inset-y-0 after:start-1/2 after:h-full after:w-[18px] after:-translate-x-1/2 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
-        header.column.getIsResizing()
-          ? "bg-primary"
-          : "opacity-0 hover:opacity-100"
+        header.column.getIsResizing() ? "bg-primary" : "opacity-0 hover:opacity-100",
       )}
       onDoubleClick={onDoubleClick}
       onMouseDown={header.getResizeHandler()}

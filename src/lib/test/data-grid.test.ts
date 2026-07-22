@@ -5,9 +5,7 @@ import { parseTsv } from "@/lib/data-grid";
 describe("parseTsv", () => {
   describe("basic parsing", () => {
     it("should parse simple single-row TSV", () => {
-      expect(parseTsv("Alice\tKickflip\t95")).toEqual([
-        ["Alice", "Kickflip", "95"],
-      ]);
+      expect(parseTsv("Alice\tKickflip\t95")).toEqual([["Alice", "Kickflip", "95"]]);
     });
 
     it("should parse multiple rows", () => {
@@ -18,11 +16,7 @@ describe("parseTsv", () => {
     });
 
     it("should handle single-column paste", () => {
-      expect(parseTsv("Alice\nBob\nCharlie")).toEqual([
-        ["Alice"],
-        ["Bob"],
-        ["Charlie"],
-      ]);
+      expect(parseTsv("Alice\nBob\nCharlie")).toEqual([["Alice"], ["Bob"], ["Charlie"]]);
     });
 
     it("should skip empty rows", () => {
@@ -42,8 +36,7 @@ describe("parseTsv", () => {
 
   describe("quoted fields (standard spreadsheet TSV)", () => {
     it("should handle quoted multiline content", () => {
-      const text =
-        'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98';
+      const text = 'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98';
       expect(parseTsv(text)).toEqual([
         ["Alice", "Kickflip", "95"],
         ["Bob", "Trick with\nmultiple\nlines", "98"],
@@ -100,10 +93,7 @@ describe("parseTsv", () => {
 
   describe("ragged rows (rows preserved, never dropped)", () => {
     it("should keep a short final row with fewer columns", () => {
-      expect(parseTsv("Alice\tKickflip\t95\nBob")).toEqual([
-        ["Alice", "Kickflip", "95"],
-        ["Bob"],
-      ]);
+      expect(parseTsv("Alice\tKickflip\t95\nBob")).toEqual([["Alice", "Kickflip", "95"], ["Bob"]]);
     });
 
     it("should keep a short final row with some but not all tabs", () => {

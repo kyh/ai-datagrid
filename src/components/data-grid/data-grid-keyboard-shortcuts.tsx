@@ -34,18 +34,15 @@ interface DataGridKeyboardShortcutsProps {
   enableRowsDelete?: boolean;
 }
 
-export const DataGridKeyboardShortcuts = React.memo(
-  DataGridKeyboardShortcutsImpl,
-  (prev, next) => {
-    return (
-      prev.enableSearch === next.enableSearch &&
-      prev.enableUndoRedo === next.enableUndoRedo &&
-      prev.enablePaste === next.enablePaste &&
-      prev.enableRowAdd === next.enableRowAdd &&
-      prev.enableRowsDelete === next.enableRowsDelete
-    );
-  },
-);
+export const DataGridKeyboardShortcuts = React.memo(DataGridKeyboardShortcutsImpl, (prev, next) => {
+  return (
+    prev.enableSearch === next.enableSearch &&
+    prev.enableUndoRedo === next.enableUndoRedo &&
+    prev.enablePaste === next.enablePaste &&
+    prev.enableRowAdd === next.enableRowAdd &&
+    prev.enableRowsDelete === next.enableRowsDelete
+  );
+});
 
 function DataGridKeyboardShortcutsImpl({
   enableSearch = false,
@@ -60,9 +57,7 @@ function DataGridKeyboardShortcutsImpl({
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const isMac =
-    typeof navigator !== "undefined"
-      ? /Mac|iPhone|iPad|iPod/.test(navigator.userAgent)
-      : false;
+    typeof navigator !== "undefined" ? /Mac|iPhone|iPad|iPod/.test(navigator.userAgent) : false;
 
   const modKey = isMac ? "⌘" : "Ctrl";
 
@@ -77,12 +72,9 @@ function DataGridKeyboardShortcutsImpl({
     inputRef.current?.focus();
   }, []);
 
-  const onInputChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setInput(event.target.value);
-    },
-    [],
-  );
+  const onInputChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(event.target.value);
+  }, []);
 
   const shortcutGroups: ShortcutGroup[] = React.useMemo(
     () => [
@@ -394,8 +386,8 @@ function DataGridKeyboardShortcutsImpl({
         <DialogHeader className="px-6">
           <DialogTitle>Keyboard shortcuts</DialogTitle>
           <DialogDescription className="sr-only">
-            Use these keyboard shortcuts to navigate and interact with the data
-            grid more efficiently.
+            Use these keyboard shortcuts to navigate and interact with the data grid more
+            efficiently.
           </DialogDescription>
         </DialogHeader>
         <div className="px-6">
@@ -418,21 +410,15 @@ function DataGridKeyboardShortcutsImpl({
                 <SearchIcon className="pointer-events-none size-6" />
               </div>
               <div className="flex flex-col gap-1">
-                <div className="font-medium text-lg tracking-tight">
-                  No shortcuts found
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  Try searching for a different term.
-                </p>
+                <div className="font-medium text-lg tracking-tight">No shortcuts found</div>
+                <p className="text-muted-foreground text-sm">Try searching for a different term.</p>
               </div>
             </div>
           ) : (
             <div className="flex flex-col gap-6">
               {filteredGroups.map((shortcutGroup) => (
                 <div key={shortcutGroup.title} className="flex flex-col gap-2">
-                  <h3 className="font-semibold text-foreground text-sm">
-                    {shortcutGroup.title}
-                  </h3>
+                  <h3 className="font-semibold text-foreground text-sm">{shortcutGroup.title}</h3>
                   <div className="divide-y divide-border rounded-md border">
                     {shortcutGroup.shortcuts.map((shortcut, index) => (
                       <ShortcutCard
@@ -452,19 +438,14 @@ function DataGridKeyboardShortcutsImpl({
   );
 }
 
-function ShortcutCard({
-  keys,
-  description,
-}: ShortcutGroup["shortcuts"][number]) {
+function ShortcutCard({ keys, description }: ShortcutGroup["shortcuts"][number]) {
   return (
     <div className="flex items-center gap-4 px-3 py-2">
       <span className="flex-1 text-sm">{description}</span>
       <KbdGroup className="shrink-0">
         {keys.map((key, index) => (
           <React.Fragment key={key}>
-            {index > 0 && (
-              <span className="text-muted-foreground text-xs">+</span>
-            )}
+            {index > 0 && <span className="text-muted-foreground text-xs">+</span>}
             <Kbd>{key}</Kbd>
           </React.Fragment>
         ))}

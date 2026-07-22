@@ -75,10 +75,7 @@ export type TypedCellValue =
  * Validates that a value matches the expected type for a given cell variant.
  * Returns true if the value is valid for the variant, false otherwise.
  */
-export function validateCellValue(
-  variant: CellOpts["variant"],
-  value: unknown
-): boolean {
+export function validateCellValue(variant: CellOpts["variant"], value: unknown): boolean {
   if (value === null || value === undefined) {
     return true; // Allow null/undefined for all variants
   }
@@ -100,9 +97,7 @@ export function validateCellValue(
       return typeof value === "string";
 
     case "multi-select":
-      return (
-        Array.isArray(value) && value.every((item) => typeof item === "string")
-      );
+      return Array.isArray(value) && value.every((item) => typeof item === "string");
 
     case "file":
       return (
@@ -114,7 +109,7 @@ export function validateCellValue(
             typeof item.id === "string" &&
             typeof item.name === "string" &&
             typeof item.size === "number" &&
-            typeof item.type === "string"
+            typeof item.type === "string",
         )
       );
 
@@ -148,32 +143,16 @@ declare module "@tanstack/react-table" {
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     rowHeight?: RowHeightValue;
     onRowHeightChange?: (value: RowHeightValue) => void;
-    onRowSelect?: (
-      rowIndex: number,
-      checked: boolean,
-      shiftKey: boolean
-    ) => void;
+    onRowSelect?: (rowIndex: number, checked: boolean, shiftKey: boolean) => void;
     onDataUpdate?: (params: CellUpdate | Array<CellUpdate>) => void;
     onRowsDelete?: (rowIndices: number[]) => void | Promise<void>;
     onColumnClick?: (columnId: string) => void;
-    onCellClick?: (
-      rowIndex: number,
-      columnId: string,
-      event?: React.MouseEvent
-    ) => void;
+    onCellClick?: (rowIndex: number, columnId: string, event?: React.MouseEvent) => void;
     onCellDoubleClick?: (rowIndex: number, columnId: string) => void;
-    onCellMouseDown?: (
-      rowIndex: number,
-      columnId: string,
-      event: React.MouseEvent
-    ) => void;
+    onCellMouseDown?: (rowIndex: number, columnId: string, event: React.MouseEvent) => void;
     onCellMouseEnter?: (rowIndex: number, columnId: string) => void;
     onCellMouseUp?: () => void;
-    onCellContextMenu?: (
-      rowIndex: number,
-      columnId: string,
-      event: React.MouseEvent
-    ) => void;
+    onCellContextMenu?: (rowIndex: number, columnId: string, event: React.MouseEvent) => void;
     onCellEditingStart?: (rowIndex: number, columnId: string) => void;
     onCellEditingStop?: (opts?: {
       direction?: NavigationDirection;
@@ -205,7 +184,7 @@ declare module "@tanstack/react-table" {
         variant: CellOpts["variant"];
         prompt: string;
         options: CellSelectOption[];
-      }>
+      }>,
     ) => void;
     onColumnDelete?: (columnId: string) => void;
     onEnrichColumn?: (columnId: string, prompt: string) => void;

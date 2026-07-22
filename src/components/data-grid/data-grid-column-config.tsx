@@ -6,11 +6,7 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellOpts } from "@/lib/data-grid-types";
@@ -42,7 +38,7 @@ interface DataGridColumnConfigProps<TData> {
       label: string;
       variant: CellOpts["variant"];
       prompt: string;
-    }>
+    }>,
   ) => void;
   onColumnDelete?: (columnId: string) => void;
   onEnrichColumn?: (columnId: string, prompt: string) => void;
@@ -62,9 +58,7 @@ export function DataGridColumnConfig<TData>({
   const currentVariant = meta?.cell?.variant ?? "short-text";
   const currentLabel =
     meta?.label ??
-    (typeof column.columnDef.header === "string"
-      ? column.columnDef.header
-      : column.id);
+    (typeof column.columnDef.header === "string" ? column.columnDef.header : column.id);
   const currentPrompt = meta?.prompt ?? "";
 
   const [config, setConfig] = React.useState<ColumnConfigState>({
@@ -132,10 +126,7 @@ export function DataGridColumnConfig<TData>({
       <PopoverContent align="start" className="w-72 space-y-4">
         {/* Column Name */}
         <div className="space-y-1.5">
-          <label
-            htmlFor={`col-name-${column.id}`}
-            className="text-sm font-medium"
-          >
+          <label htmlFor={`col-name-${column.id}`} className="text-sm font-medium">
             Name
           </label>
           <Input
@@ -150,22 +141,16 @@ export function DataGridColumnConfig<TData>({
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Data Type</label>
           <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/50 text-sm">
-            {columnVariant && (
-              <columnVariant.icon className="size-4 text-muted-foreground" />
-            )}
+            {columnVariant && <columnVariant.icon className="size-4 text-muted-foreground" />}
             <span>
-              {CELL_VARIANTS.find((v) => v.value === config.variant)?.label ??
-                config.variant}
+              {CELL_VARIANTS.find((v) => v.value === config.variant)?.label ?? config.variant}
             </span>
           </div>
         </div>
 
         {/* AI Prompt */}
         <div className="space-y-1.5">
-          <label
-            htmlFor={`col-prompt-${column.id}`}
-            className="text-sm font-medium"
-          >
+          <label htmlFor={`col-prompt-${column.id}`} className="text-sm font-medium">
             Prompt
           </label>
           <Textarea
@@ -180,23 +165,13 @@ export function DataGridColumnConfig<TData>({
         {/* Actions */}
         <div className="flex items-center gap-2 pt-2">
           {onEnrichColumn && config.prompt.trim() && (
-            <Button
-              variant="default"
-              size="sm"
-              className="flex-1"
-              onClick={handleEnrich}
-            >
+            <Button variant="default" size="sm" className="flex-1" onClick={handleEnrich}>
               <SparklesIcon className="size-4 mr-1.5" />
               Enrich Column
             </Button>
           )}
           {!config.prompt.trim() && (
-            <Button
-              variant="default"
-              size="sm"
-              className="flex-1"
-              onClick={handleSave}
-            >
+            <Button variant="default" size="sm" className="flex-1" onClick={handleSave}>
               Save
             </Button>
           )}

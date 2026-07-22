@@ -3,8 +3,7 @@ export const siteConfig = {
   shortName: "AI Datagrid",
   description:
     "Forkable Next.js template featuring an AI spreadsheet — generate columns, enrich cells, filter and sort in natural language.",
-  url:
-    process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://datagrid.kyh.io",
+  url: process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://datagrid.kyh.io",
   creator: "@kaiyuhsu",
   routes: [
     "",

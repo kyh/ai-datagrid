@@ -7,11 +7,7 @@ import type {
   RowHeightValue,
   SelectionState,
 } from "@/lib/data-grid-types";
-import type {
-  ColumnFiltersState,
-  RowSelectionState,
-  SortingState,
-} from "@tanstack/react-table";
+import type { ColumnFiltersState, RowSelectionState, SortingState } from "@tanstack/react-table";
 
 const DEFAULT_ROW_HEIGHT: RowHeightValue = "short";
 
@@ -153,6 +149,6 @@ export const useDataGridStore = create<DataGridStore>()(
       // Batch update for multiple state changes
       batch: (updates) => set(updates),
     }),
-    { name: "data-grid-store" }
-  )
+    { name: "data-grid-store" },
+  ),
 );

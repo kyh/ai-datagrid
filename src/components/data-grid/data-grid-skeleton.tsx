@@ -10,7 +10,7 @@ function DataGridSkeleton({ className, ...props }: DivProps) {
       data-slot="grid-skeleton"
       className={cn(
         "flex h-[calc(100dvh-(--spacing(16)))] w-full flex-col gap-4 has-[>[data-slot=grid-skeleton-toolbar]]:h-[calc(100dvh-(--spacing(20)))]",
-        className
+        className,
       )}
       {...props}
     />
@@ -38,7 +38,7 @@ function DataGridSkeletonToolbar({
           "justify-center": align === "center",
           "justify-end": align === "end",
         },
-        className
+        className,
       )}
       {...props}
     >
@@ -50,13 +50,7 @@ function DataGridSkeletonToolbar({
 }
 
 function DataGridSkeletonGrid({ className, ...props }: DivProps) {
-  return (
-    <Skeleton
-      data-slot="grid-skeleton-grid"
-      className={cn("flex-1", className)}
-      {...props}
-    />
-  );
+  return <Skeleton data-slot="grid-skeleton-grid" className={cn("flex-1", className)} {...props} />;
 }
 
 export { DataGridSkeleton, DataGridSkeletonGrid, DataGridSkeletonToolbar };

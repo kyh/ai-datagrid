@@ -4,20 +4,18 @@ import type { ColumnDef, Table } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { ColumnForm, type ColumnFormRef, type ColumnFormValues } from "@/components/data-grid/column-form";
+  ColumnForm,
+  type ColumnFormRef,
+  type ColumnFormValues,
+} from "@/components/data-grid/column-form";
 
 interface DataGridAddColumnHeaderProps<TData> {
   table: Table<TData>;
 }
 
-function DataGridAddColumnHeader<TData>({
-  table,
-}: DataGridAddColumnHeaderProps<TData>) {
+function DataGridAddColumnHeader<TData>({ table }: DataGridAddColumnHeaderProps<TData>) {
   const onColumnAdd = table.options.meta?.onColumnAdd;
   const [open, setOpen] = React.useState(false);
   const formRef = React.useRef<ColumnFormRef>(null);
@@ -50,7 +48,7 @@ function DataGridAddColumnHeader<TData>({
       formRef.current?.reset();
       setOpen(false);
     },
-    [onColumnAdd, getInsertAfterColumnId]
+    [onColumnAdd, getInsertAfterColumnId],
   );
 
   if (!onColumnAdd) return null;
@@ -75,27 +73,19 @@ function DataGridAddColumnHeader<TData>({
           </div>
         }
       />
-      <PopoverContent
-        align="end"
-        sideOffset={0}
-        className="w-64 p-0"
-        data-grid-popover
-      >
+      <PopoverContent align="end" sideOffset={0} className="w-64 p-0" data-grid-popover>
         {open && (
-          <ColumnForm
-            ref={formRef}
-            mode="add"
-            onSubmit={handleSubmit}
-            submitLabel="Add Column"
-          />
+          <ColumnForm ref={formRef} mode="add" onSubmit={handleSubmit} submitLabel="Add Column" />
         )}
       </PopoverContent>
     </Popover>
   );
 }
 
-interface GetDataGridAddColumnOptions<TData>
-  extends Omit<Partial<ColumnDef<TData>>, "id" | "header" | "cell"> {}
+interface GetDataGridAddColumnOptions<TData> extends Omit<
+  Partial<ColumnDef<TData>>,
+  "id" | "header" | "cell"
+> {}
 
 export function getDataGridAddColumn<TData>({
   size = 40,
