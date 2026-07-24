@@ -63,7 +63,7 @@ This template is built to be driven end-to-end by a coding agent. `AGENTS.md` is
 
 - Path alias: `@/*` → `./src/*` — but files imported by `agent/` code MUST use relative imports (eve's compiler doesn't read tsconfig paths)
 - kebab-case filenames for TS/TSX; `agent/tools/*` are snake_case (eve derives tool names from filenames)
-- No `any`, no `!`, no `as` — zod-parse at boundaries (stream events, tool payloads, localStorage)
+- No `any`, no `!`, no `as` — enforced by `pnpm lint` via `.oxlintrc.json`; zod-parse at boundaries (stream events, tool payloads, localStorage). Unavoidable widenings go through `asRow` / `genericMemo` / `withColumnPatch`, never a bare cast
 - Zod transforms are banned in tool schemas (eve can't express them in the model-facing JSON Schema) — cleaning transforms live in the client-side payload parse (`filterSchema` vs `filterWireSchema` in `assistant-schemas.ts`)
 - Add ui components ONLY via `pnpm dlx shadcn@latest add <name>` (base-vega registry); never hand-copy
 - Base UI idioms: `render` prop (not `asChild`), `data-open:`/`data-closed:` variants

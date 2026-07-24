@@ -10,13 +10,13 @@ import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getColumnBorderVisibility, getColumnPinningStyle } from "@/lib/data-grid";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 import type { Direction } from "@/lib/data-grid-types";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 const EMPTY_GENERATING_CELLS_SET = new Set<string>();
 
-interface DataGridProps<TData>
+interface DataGridProps<TData extends Record<string, unknown>>
   extends
     Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
@@ -25,7 +25,7 @@ interface DataGridProps<TData>
   stretchColumns?: boolean;
 }
 
-export function DataGrid<TData>({
+export function DataGrid<TData extends Record<string, unknown>>({
   dataGridRef,
   headerRef,
   rowMapRef,

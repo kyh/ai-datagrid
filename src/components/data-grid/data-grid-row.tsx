@@ -18,8 +18,9 @@ import {
   getColumnPinningStyle,
   getRowHeightValue,
 } from "@/lib/data-grid";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 import type { CellPosition, Direction, RowHeightValue } from "@/lib/data-grid-types";
+import { genericMemo } from "@/lib/generic-memo";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
@@ -43,7 +44,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   generatingCells: Set<string>;
 }
 
-export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
+export const DataGridRow = genericMemo(DataGridRowImpl, (prev, next) => {
   const prevRowIndex = prev.virtualItem.index;
   const nextRowIndex = next.virtualItem.index;
 
@@ -155,9 +156,9 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
   // Skip re-render - props are equal
   return true;
-}) as typeof DataGridRowImpl;
+});
 
-function DataGridRowImpl<TData>({
+function DataGridRowImpl<TData extends Record<string, unknown>>({
   row,
   tableMeta,
   virtualItem,
@@ -204,9 +205,12 @@ function DataGridRowImpl<TData>({
 
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility, columnPinning, and columns are used for calculating the visible cells
+  // `getVisibleCells()` reads columnVisibility, columnPinning and columns off the
+  // table internally, so they must invalidate this memo even though the call
+  // site never names them.
   const visibleCells = React.useMemo(
     () => row.getVisibleCells(),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
     [row, columnVisibility, columnPinning, columns],
   );
 

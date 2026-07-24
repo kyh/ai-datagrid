@@ -10,12 +10,25 @@ import {
   Loader2Icon,
 } from "lucide-react";
 
+/** CSS custom properties aren't in `React.CSSProperties`; widen by annotation, not a cast. */
+type StyleWithVars = React.CSSProperties & Record<`--${string}`, string>;
+
+const toasterStyle: StyleWithVars = {
+  "--normal-bg": "var(--popover)",
+  "--normal-text": "var(--popover-foreground)",
+  "--normal-border": "var(--border)",
+  "--border-radius": "var(--radius)",
+};
+
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  // `next-themes` types `theme` as an open string; narrow it to sonner's union.
+  const { theme } = useTheme();
+  const toasterTheme: ToasterProps["theme"] =
+    theme === "light" || theme === "dark" ? theme : "system";
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={toasterTheme}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
@@ -24,14 +37,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: <OctagonXIcon className="size-4" />,
         loading: <Loader2Icon className="size-4 animate-spin" />,
       }}
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
+      style={toasterStyle}
       toastOptions={{
         classNames: {
           toast: "cn-toast",

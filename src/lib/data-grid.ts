@@ -173,7 +173,7 @@ export function getScrollDirection(
     direction === "home" ||
     direction === "end"
   ) {
-    return direction as "left" | "right" | "home" | "end";
+    return direction;
   }
   if (direction === "pageleft") return "left";
   if (direction === "pageright") return "right";

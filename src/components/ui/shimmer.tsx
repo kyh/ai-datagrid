@@ -1,8 +1,8 @@
 "use client";
 
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
-import { type CSSProperties, type ElementType, type JSX, memo, useMemo } from "react";
+import { type CSSProperties, type ElementType, memo, useMemo } from "react";
 
 export interface TextShimmerProps {
   children: string;
@@ -12,6 +12,9 @@ export interface TextShimmerProps {
   spread?: number;
 }
 
+/** CSS custom properties aren't in `CSSProperties`; widen by annotation, not a cast. */
+type StyleWithVars = CSSProperties & Record<`--${string}`, string>;
+
 const ShimmerComponent = ({
   children,
   as: Component = "p",
@@ -19,7 +22,7 @@ const ShimmerComponent = ({
   duration = 2,
   spread = 2,
 }: TextShimmerProps) => {
-  const MotionComponent = motion.create(Component as keyof JSX.IntrinsicElements);
+  const MotionComponent = motion.create(Component);
 
   const dynamicSpread = useMemo(() => (children?.length ?? 0) * spread, [children, spread]);
 
@@ -37,7 +40,7 @@ const ShimmerComponent = ({
           "--spread": `${dynamicSpread}px`,
           backgroundImage:
             "var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))",
-        } as CSSProperties
+        } satisfies StyleWithVars
       }
       transition={{
         repeat: Number.POSITIVE_INFINITY,

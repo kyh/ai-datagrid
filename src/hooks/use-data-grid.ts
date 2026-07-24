@@ -55,14 +55,14 @@ const SCROLL_SYNC_RETRY_COUNT = 16;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
-const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
+const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
 const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
 const VALID_BOOLEANS = new Set(["true", "false", "1", "0", "yes", "no", "checked", "unchecked"]);
 
-interface UseDataGridProps<TData> extends Omit<
+interface UseDataGridProps<TData extends Record<string, unknown>> extends Omit<
   TableOptions<TData>,
   "pageCount" | "getCoreRowModel"
 > {
@@ -111,7 +111,18 @@ interface UseDataGridProps<TData> extends Omit<
   readOnly?: boolean;
 }
 
-function useDataGrid<TData>({
+/**
+ * The grid addresses cells by column id, so a row it has generated or edited is
+ * assembled from a runtime column set and cannot be proven to still satisfy the
+ * caller's nominal row type. `TData extends Record<string, unknown>` gets the
+ * reads type-checked; this is the single place the dynamic writes are widened
+ * back to `TData`.
+ */
+const asRow = <TRow extends Record<string, unknown>>(row: Record<string, unknown>): TRow =>
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
+  row as TRow;
+
+function useDataGrid<TData extends Record<string, unknown>>({
   data,
   columns,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
@@ -162,14 +173,17 @@ function useDataGrid<TData>({
       rowHeight: rowHeightProp,
       rowSelection: initialState?.rowSelection ?? {},
     });
-    // Deps intentionally empty — seed the store once, on mount.
+    // Deps intentionally empty — seed the store once, on mount. Re-running this
+    // on prop changes would clobber the user's live sorting, filters, row height
+    // and selection with the initial values.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
   }, []);
 
   // Store adapter wrapping Zustand with microtask-batched updates
   // This prevents multiple synchronous state changes from causing multiple re-renders
   const store = React.useMemo(() => {
     const zustandStore = useDataGridStore;
-    const pendingUpdates: Partial<DataGridStore> = {};
+    let pendingUpdates: Partial<DataGridStore> = {};
     let isBatching = false;
     let pendingMicrotask = false;
 
@@ -177,14 +191,12 @@ function useDataGrid<TData>({
       pendingMicrotask = false;
       if (Object.keys(pendingUpdates).length > 0) {
         zustandStore.getState().batch({ ...pendingUpdates });
-        for (const key of Object.keys(pendingUpdates)) {
-          delete pendingUpdates[key as keyof typeof pendingUpdates];
-        }
+        pendingUpdates = {};
       }
     };
 
     const setStateImpl = <K extends keyof DataGridStore>(key: K, value: DataGridStore[K]) => {
-      (pendingUpdates as Record<K, DataGridStore[K]>)[key] = value;
+      pendingUpdates[key] = value;
 
       if (isBatching) {
         return; // Will be flushed when batch ends
@@ -293,14 +305,14 @@ function useDataGrid<TData>({
     return columns
       .map((c) => {
         if (c.id) return c.id;
-        if ("accessorKey" in c) return c.accessorKey as string;
+        if ("accessorKey" in c) return String(c.accessorKey);
         return undefined;
       })
       .filter((id): id is string => Boolean(id));
   }, [columns]);
 
   const navigableColumnIds = React.useMemo(() => {
-    return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
+    return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
   }, [columnIds]);
 
   const onDataUpdate = React.useCallback(
@@ -352,14 +364,14 @@ function useDataGrid<TData>({
         const tableRow = rows?.[i];
 
         if (updates) {
-          const baseRow = existingRow ?? tableRow?.original ?? ({} as TData);
-          const updatedRow = { ...baseRow } as Record<string, unknown>;
+          const baseRow = existingRow ?? tableRow?.original ?? asRow<TData>({});
+          const updatedRow: Record<string, unknown> = { ...baseRow };
           for (const { columnId, value } of updates) {
             updatedRow[columnId] = value;
           }
-          newData[i] = updatedRow as TData;
+          newData[i] = asRow<TData>(updatedRow);
         } else {
-          newData[i] = existingRow ?? tableRow?.original ?? ({} as TData);
+          newData[i] = existingRow ?? tableRow?.original ?? asRow<TData>({});
         }
       }
 
@@ -552,8 +564,8 @@ function useDataGrid<TData>({
       }
     }
 
-    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
-    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
+    const sortedRowIndices = Array.from(rowIndices).toSorted((a, b) => a - b);
+    const sortedColIndices = Array.from(colIndices).toSorted((a, b) => a - b);
     const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
 
     const tsvData = sortedRowIndices
@@ -649,8 +661,8 @@ function useDataGrid<TData>({
       }
     }
 
-    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
-    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
+    const sortedRowIndices = Array.from(rowIndices).toSorted((a, b) => a - b);
+    const sortedColIndices = Array.from(colIndices).toSorted((a, b) => a - b);
     const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
 
     const tsvData = sortedRowIndices
@@ -849,7 +861,7 @@ function useDataGrid<TData>({
 
                 const validated = values
                   .map((v) => matchSelectOption(v, options))
-                  .filter(Boolean) as string[];
+                  .filter((v) => v !== undefined);
 
                 if (values.length > 0 && validated.length === 0) {
                   shouldSkip = true;
@@ -890,15 +902,12 @@ function useDataGrid<TData>({
                   if (firstChar === "[" || firstChar === "{") {
                     shouldSkip = true;
                   } else {
-                    try {
-                      new URL(pastedValue);
+                    if (URL.canParse(pastedValue)) {
                       processedValue = pastedValue;
-                    } catch {
-                      if (DOMAIN_REGEX.test(pastedValue)) {
-                        processedValue = pastedValue;
-                      } else {
-                        shouldSkip = true;
-                      }
+                    } else if (DOMAIN_REGEX.test(pastedValue)) {
+                      processedValue = pastedValue;
+                    } else {
+                      shouldSkip = true;
                     }
                   }
                 }
@@ -936,7 +945,7 @@ function useDataGrid<TData>({
                       if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
                         processedValue = parsed.map((f) => f.name).join(", ");
                       } else if (parsed.every((v) => typeof v === "string")) {
-                        processedValue = (parsed as string[]).join(", ");
+                        processedValue = parsed.join(", ");
                       }
                     } else if (typeof parsed === "boolean") {
                       processedValue = parsed ? "Checked" : "Unchecked";
@@ -2085,7 +2094,9 @@ function useDataGrid<TData>({
     tableRef.current = table;
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnSizingInfo, columnSizing, and columns are used for calculating the column size vars
+  // The size vars are read off the table internally, so columnSizingInfo,
+  // columnSizing and columns must invalidate these memos even though the call
+  // sites never name them.
   const columnSizeVars = React.useMemo(() => {
     const headers = table.getFlatHeaders();
     const colSizes: { [key: string]: number } = {};
@@ -2094,6 +2105,7 @@ function useDataGrid<TData>({
       colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
     }
     return colSizes;
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
   }, [table.getState().columnSizingInfo, table.getState().columnSizing, columns]);
 
   const adjustLayout = React.useMemo(() => {
@@ -2101,6 +2113,9 @@ function useDataGrid<TData>({
     return (
       isFirefox && ((columnPinning.left?.length ?? 0) > 0 || (columnPinning.right?.length ?? 0) > 0)
     );
+    // `columnPinning` is read through `table.getState()`, which the rule cannot
+    // follow; the memo must still invalidate when pinning changes.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
   }, [isFirefox, table.getState().columnPinning]);
 
   const rowVirtualizer = useVirtualizer({
@@ -2125,13 +2140,13 @@ function useDataGrid<TData>({
       const navigableIds = propsRef.current.columns
         .map((c) => {
           if (c.id) return c.id;
-          if ("accessorKey" in c) return c.accessorKey as string;
+          if ("accessorKey" in c) return String(c.accessorKey);
           return undefined;
         })
         .filter((id): id is string => Boolean(id))
-        .filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
+        .filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
 
-      const targetColumnId = columnId ?? navigableIds[0];
+      const targetColumnId = columnId ?? navigableIds.find(Boolean);
 
       if (!targetColumnId) {
         releaseFocusGuard(true);
@@ -2411,7 +2426,7 @@ function useDataGrid<TData>({
 
         Promise.resolve(propsRef.current.onRowAdd())
           .then(async (result) => {
-            if (result === null) return;
+            if (result === null) return undefined;
 
             onSelectionClear();
 
@@ -2422,6 +2437,7 @@ function useDataGrid<TData>({
               rowIndex: targetRowIndex,
               columnId: targetColumnId,
             });
+            return undefined;
           })
           .catch(() => {
             // Callback threw an error, don't proceed with scroll/focus
@@ -2912,7 +2928,7 @@ function useDataGrid<TData>({
       const relatedTarget = event.relatedTarget;
 
       const isFocusMovingOutsideGrid =
-        !relatedTarget || !currentContainer.contains(relatedTarget as Node);
+        !(relatedTarget instanceof Node) || !currentContainer.contains(relatedTarget);
 
       const isFocusMovingToPopover = getIsInPopover(relatedTarget);
 
@@ -2946,7 +2962,11 @@ function useDataGrid<TData>({
         return;
       }
 
-      if (dataGridRef.current && !dataGridRef.current.contains(event.target as Node)) {
+      if (
+        dataGridRef.current &&
+        event.target instanceof Node &&
+        !dataGridRef.current.contains(event.target)
+      ) {
         const elements = document.elementsFromPoint(event.clientX, event.clientY);
 
         // Compensate for event.target bubbling up

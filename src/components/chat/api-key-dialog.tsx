@@ -71,6 +71,7 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
                 handleSaveApiKey();
               }
             }}
+            // oxlint-disable-next-line jsx-a11y/no-autofocus -- opened by explicit user action
             autoFocus
           />
         </div>

@@ -41,7 +41,7 @@ import { useRender } from "@base-ui/react/use-render";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { useComposedRefs } from "@/components/ui/utils";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 const orientationConfig = {
   vertical: {
@@ -138,10 +138,13 @@ function SortableRoot<T>(props: SortableRootProps<T>) {
 
   const getItemValue = React.useCallback(
     (item: T): UniqueIdentifier => {
-      if (typeof item === "object" && !getItemValueProp) {
+      if (getItemValueProp) {
+        return getItemValueProp(item);
+      }
+      if (typeof item !== "string" && typeof item !== "number") {
         throw new Error("getItemValue is required when using array of objects");
       }
-      return getItemValueProp ? getItemValueProp(item) : (item as UniqueIdentifier);
+      return item;
     },
     [getItemValueProp],
   );
@@ -289,6 +292,12 @@ function SortableRoot<T>(props: SortableRootProps<T>) {
   );
 
   return (
+    // `SortableRootContextValue<T>` is contravariant in `T` through
+    // `getItemValue: (item: T) => …`, so no instantiation is assignable to the
+    // `<unknown>` the context is declared with. Consumers re-narrow via
+    // `useSortableRoot<T>()`; the item type is fixed per provider tree, so the
+    // erasure round-trips. This is the one place it happens.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
     <SortableRootContext.Provider value={contextValue as SortableRootContextValue<unknown>}>
       <DndContext
         collisionDetection={collisionDetection ?? config.collisionDetection}

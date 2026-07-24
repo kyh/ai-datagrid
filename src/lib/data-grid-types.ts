@@ -114,14 +114,54 @@ export function validateCellValue(variant: CellOpts["variant"], value: unknown):
       );
 
     default: {
+      // oxlint-disable-next-line eslint/no-underscore-dangle -- exhaustiveness sentinel: a new `CellOpts` variant makes this assignment fail
       const _exhaustive: never = variant;
+      void _exhaustive;
       return false;
     }
   }
 }
 
+/**
+ * `options` exists only on the select-like variants of `CellOpts`. Reading it
+ * off the union directly does not type-check, and the anonymous structural
+ * casts this replaces silently claimed every variant carried it.
+ */
+/** Every `CellOpts` variant tag, as a runtime list for validating string input. */
+export const CELL_VARIANT_TAGS = [
+  "short-text",
+  "long-text",
+  "number",
+  "select",
+  "multi-select",
+  "checkbox",
+  "date",
+  "url",
+  "file",
+] as const satisfies ReadonlyArray<CellOpts["variant"]>;
+
+/** Narrow assistant- or form-supplied strings to a known cell variant. */
+export function isCellVariant(value: string | undefined): value is CellOpts["variant"] {
+  return CELL_VARIANT_TAGS.some((variant) => variant === value);
+}
+
+/**
+ * The grid addresses cells by column id, so rows it generates are assembled from
+ * a runtime column set and cannot be proven to satisfy the caller's nominal row
+ * type. This is the single place that widening happens.
+ */
+export function asRow<TRow extends Record<string, unknown>>(row: Record<string, unknown>): TRow {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
+  return row as TRow;
+}
+
+export function getCellOptions(cell: CellOpts | undefined): CellSelectOption[] | undefined {
+  if (!cell) return undefined;
+  return cell.variant === "select" || cell.variant === "multi-select" ? cell.options : undefined;
+}
+
 declare module "@tanstack/react-table" {
-  // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
+  // TData and TValue are consumed by the augmented interface below.
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
     cell?: CellOpts;
@@ -129,7 +169,7 @@ declare module "@tanstack/react-table" {
     prompt?: string;
   }
 
-  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
+  // TData is consumed by the augmented interface below.
   interface TableMeta<TData extends RowData> {
     dataGridRef?: React.RefObject<HTMLElement | null>;
     cellMapRef?: React.RefObject<Map<string, HTMLDivElement>>;
@@ -254,7 +294,7 @@ export interface SearchState {
   onNavigateToPrevMatch: () => void;
 }
 
-export interface DataGridCellProps<TData> {
+export interface DataGridCellProps<TData extends Record<string, unknown>> {
   cell: Cell<TData, unknown>;
   tableMeta: TableMeta<TData>;
   rowIndex: number;

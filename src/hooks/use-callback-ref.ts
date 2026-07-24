@@ -16,6 +16,10 @@ function useCallbackRef<T extends (...args: never[]) => unknown>(callback: T | u
   });
 
   // https://github.com/facebook/react/issues/19240
+  // The stable wrapper forwards to whatever `callbackRef` currently holds, so it
+  // behaves as a `T` but cannot be inferred as one — the parameter tuple is only
+  // known through the type variable.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
   return React.useMemo(() => ((...args) => callbackRef.current?.(...args)) as T, []);
 }
 

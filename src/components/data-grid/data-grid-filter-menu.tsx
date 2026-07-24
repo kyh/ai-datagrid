@@ -40,15 +40,15 @@ import {
   SortableOverlay,
 } from "@/components/ui/sortable";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getDefaultOperator, getOperatorsForVariant } from "@/lib/data-grid-filters";
+import { getDefaultOperator, getOperatorsForVariant, isFilterValue } from "@/lib/data-grid-filters";
 import { formatDate } from "@/components/ui/utils";
-import { cn } from "@/components/ui/utils";
-import type { FilterOperator, FilterValue } from "@/lib/data-grid-types";
+import { cn } from "@/lib/utils";
+import type { FilterOperator } from "@/lib/data-grid-types";
 
 const FILTER_SHORTCUT_KEY = "f";
-const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
+const REMOVE_FILTER_SHORTCUTS = new Set(["backspace", "delete"]);
 const FILTER_DEBOUNCE_MS = 300;
-const OPERATORS_WITHOUT_VALUE = ["isEmpty", "isNotEmpty", "isTrue", "isFalse"];
+const OPERATORS_WITHOUT_VALUE = new Set(["isEmpty", "isNotEmpty", "isTrue", "isFalse"]);
 
 interface DataGridFilterMenuProps<TData> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
@@ -165,7 +165,7 @@ export function DataGridFilterMenu<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) && columnFilters.length > 0) {
+      if (REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase()) && columnFilters.length > 0) {
         event.preventDefault();
         onFiltersReset();
       }
@@ -318,11 +318,11 @@ function DataGridFilterItem<TData>({
   const [showOperatorSelector, setShowOperatorSelector] = React.useState(false);
 
   const variant = columnVariants.get(filter.id) ?? "short-text";
-  const filterValue = filter.value as FilterValue | undefined;
+  const filterValue = isFilterValue(filter.value) ? filter.value : undefined;
   const operator = filterValue?.operator ?? getDefaultOperator(variant);
 
   const operators = getOperatorsForVariant(variant);
-  const needsValue = !OPERATORS_WITHOUT_VALUE.includes(operator);
+  const needsValue = !OPERATORS_WITHOUT_VALUE.has(operator);
 
   const column = table.getColumn(filter.id);
 
@@ -336,7 +336,7 @@ function DataGridFilterItem<TData>({
         return;
       }
 
-      if (REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase())) {
+      if (REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase())) {
         event.preventDefault();
         onFilterRemove(filter.id);
       }
@@ -376,7 +376,7 @@ function DataGridFilterItem<TData>({
         value: {
           operator,
           value: filterValue?.value,
-          endValue: newValue as string | number | undefined,
+          endValue: Array.isArray(newValue) ? undefined : newValue,
         },
       });
     },
@@ -464,7 +464,8 @@ function DataGridFilterItem<TData>({
         onOpenChange={setShowOperatorSelector}
         value={operator}
         onValueChange={(value) => {
-          if (value !== null) onOperatorChange(value as FilterOperator);
+          const picked = operators.find((entry) => entry.value === value);
+          if (picked) onOperatorChange(picked.value);
         }}
       >
         <SelectTrigger
@@ -588,7 +589,7 @@ function DataGridFilterInput<TData>({
             type="number"
             inputMode="numeric"
             placeholder="Start"
-            value={(localValue as number | undefined) ?? ""}
+            value={typeof localValue === "number" ? localValue : ""}
             onChange={(event) => {
               const val = event.target.value;
               const newValue = val === "" ? undefined : Number(val);
@@ -602,7 +603,7 @@ function DataGridFilterInput<TData>({
             type="number"
             inputMode="numeric"
             placeholder="End"
-            value={(localEndValue as number | undefined) ?? ""}
+            value={typeof localEndValue === "number" ? localEndValue : ""}
             onChange={(event) => {
               const val = event.target.value;
               const newValue = val === "" ? undefined : Number(val);
@@ -621,7 +622,7 @@ function DataGridFilterInput<TData>({
         type="number"
         inputMode="numeric"
         placeholder={placeholder}
-        value={(localValue as number | undefined) ?? ""}
+        value={typeof localValue === "number" ? localValue : ""}
         onChange={(event) => {
           const val = event.target.value;
           const newValue = val === "" ? undefined : Number(val);
@@ -676,6 +677,7 @@ function DataGridFilterInput<TData>({
           />
           <PopoverContent id={inputListboxId} dir={dir} align="start" className="w-auto p-0">
             <Calendar
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- opened by explicit user action
               autoFocus
               captionLayout="dropdown"
               mode="range"
@@ -727,6 +729,7 @@ function DataGridFilterInput<TData>({
         />
         <PopoverContent id={inputListboxId} dir={dir} align="start" className="w-auto p-0">
           <Calendar
+            // oxlint-disable-next-line jsx-a11y/no-autofocus -- opened by explicit user action
             autoFocus
             captionLayout="dropdown"
             mode="single"
@@ -838,7 +841,7 @@ function DataGridFilterInput<TData>({
       );
     }
 
-    const selectedOption = selectOptions.find((opt) => opt.value === (value as string));
+    const selectedOption = selectOptions.find((opt) => opt.value === value);
 
     return (
       <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
@@ -907,7 +910,7 @@ function DataGridFilterInput<TData>({
           type="text"
           placeholder="Start"
           className="h-8 w-full flex-1 rounded"
-          value={(localValue as string | undefined) ?? ""}
+          value={typeof localValue === "string" ? localValue : ""}
           onChange={(event) => {
             const val = event.target.value;
             const newValue = val === "" ? undefined : val;
@@ -920,7 +923,7 @@ function DataGridFilterInput<TData>({
           type="text"
           placeholder="End"
           className="h-8 w-full flex-1 rounded"
-          value={(localEndValue as string | undefined) ?? ""}
+          value={typeof localEndValue === "string" ? localEndValue : ""}
           onChange={(event) => {
             const val = event.target.value;
             const newValue = val === "" ? undefined : val;
@@ -938,7 +941,7 @@ function DataGridFilterInput<TData>({
       type="text"
       placeholder={placeholder}
       className="h-8 w-full rounded"
-      value={(localValue as string | undefined) ?? ""}
+      value={typeof localValue === "string" ? localValue : ""}
       onChange={(event) => {
         const val = event.target.value;
         const newValue = val === "" ? undefined : val;

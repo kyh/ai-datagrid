@@ -3,7 +3,7 @@
 import type { CellContext, ColumnDef, HeaderContext } from "@tanstack/react-table";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 type HitboxSize = "default" | "sm" | "lg";
 
@@ -27,6 +27,7 @@ function DataGridSelectHitbox({ htmlFor, children, size, debug }: DataGridSelect
       {children}
       <label
         htmlFor={htmlFor}
+        aria-label="Select row"
         className={cn(
           "absolute inset-0 cursor-pointer",
           debug && "border border-red-500 border-dashed bg-red-500/20",

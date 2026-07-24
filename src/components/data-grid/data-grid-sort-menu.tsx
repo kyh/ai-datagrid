@@ -1,7 +1,7 @@
 "use client";
 
 import { useDirection } from "@base-ui/react/direction-provider";
-import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
+import type { ColumnSort, Table } from "@tanstack/react-table";
 import { ArrowDownUp, ChevronsUpDown, GripVertical, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -30,10 +30,10 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/components/ui/sortable";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 const SORT_SHORTCUT_KEY = "s";
-const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
+const REMOVE_SORT_SHORTCUTS = new Set(["backspace", "delete"]);
 
 const SORT_ORDERS = [
   { label: "Asc", value: "asc" },
@@ -137,7 +137,7 @@ export function DataGridSortMenu<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase()) && sorting.length > 0) {
+      if (REMOVE_SORT_SHORTCUTS.has(event.key.toLowerCase()) && sorting.length > 0) {
         event.preventDefault();
         onSortingReset();
       }
@@ -280,7 +280,7 @@ function DataTableSortItem({
         return;
       }
 
-      if (REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase())) {
+      if (REMOVE_SORT_SHORTCUTS.has(event.key.toLowerCase())) {
         event.preventDefault();
         onSortRemove(sort.id);
       }
@@ -338,7 +338,7 @@ function DataTableSortItem({
         value={sort.desc ? "desc" : "asc"}
         onValueChange={(value) => {
           if (value === null) return;
-          onSortUpdate(sort.id, { desc: (value as SortDirection) === "desc" });
+          onSortUpdate(sort.id, { desc: value === "desc" });
         }}
       >
         <SelectTrigger aria-controls={directionListboxId} size="sm" className="w-24 rounded">

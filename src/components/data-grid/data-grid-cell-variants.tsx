@@ -39,10 +39,10 @@ import {
   getUrlHref,
   parseLocalDate,
 } from "@/lib/data-grid";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 
-export function ShortTextCell<TData>({
+export function ShortTextCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -55,7 +55,7 @@ export function ShortTextCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as string;
+  const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -191,7 +191,7 @@ export function ShortTextCell<TData>({
   );
 }
 
-export function LongTextCell<TData>({
+export function LongTextCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -204,7 +204,7 @@ export function LongTextCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as string;
+  const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -380,7 +380,7 @@ export function LongTextCell<TData>({
   );
 }
 
-export function NumberCell<TData>({
+export function NumberCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -393,7 +393,7 @@ export function NumberCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as number;
+  const initialValue = cell.getValue<number>();
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -506,7 +506,7 @@ export function NumberCell<TData>({
   );
 }
 
-export function UrlCell<TData>({
+export function UrlCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -519,7 +519,7 @@ export function UrlCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as string;
+  const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -707,7 +707,7 @@ export function UrlCell<TData>({
   );
 }
 
-export function CheckboxCell<TData>({
+export function CheckboxCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -719,7 +719,7 @@ export function CheckboxCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: Omit<DataGridCellProps<TData>, "isEditing">) {
-  const initialValue = cell.getValue() as boolean;
+  const initialValue = cell.getValue<boolean>();
   const [value, setValue] = React.useState(Boolean(initialValue));
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -808,7 +808,7 @@ export function CheckboxCell<TData>({
   );
 }
 
-export function SelectCell<TData>({
+export function SelectCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -821,7 +821,7 @@ export function SelectCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as string;
+  const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
@@ -937,7 +937,7 @@ export function SelectCell<TData>({
   );
 }
 
-export function MultiSelectCell<TData>({
+export function MultiSelectCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -951,7 +951,7 @@ export function MultiSelectCell<TData>({
   readOnly,
 }: DataGridCellProps<TData>) {
   const cellValue = React.useMemo(() => {
-    const value = cell.getValue() as string[];
+    const value = cell.getValue<string[]>();
     return value ?? [];
   }, [cell]);
 
@@ -1199,7 +1199,7 @@ export function MultiSelectCell<TData>({
   );
 }
 
-export function DateCell<TData>({
+export function DateCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -1212,7 +1212,7 @@ export function DateCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as string;
+  const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -1293,6 +1293,7 @@ export function DateCell<TData>({
             className="w-auto p-0"
           >
             <Calendar
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- opened by explicit user action
               autoFocus
               captionLayout="dropdown"
               mode="single"
@@ -1307,7 +1308,7 @@ export function DateCell<TData>({
   );
 }
 
-export function FileCell<TData>({
+export function FileCell<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,
@@ -1320,7 +1321,7 @@ export function FileCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const cellValue = React.useMemo(() => (cell.getValue() as FileCellData[]) ?? [], [cell]);
+  const cellValue = React.useMemo(() => cell.getValue<FileCellData[]>() ?? [], [cell]);
 
   const cellKey = getCellKey(rowIndex, columnId);
   const prevCellKeyRef = React.useRef(cellKey);
@@ -1816,10 +1817,12 @@ export function FileCell<TData>({
                 File upload
               </span>
               <div
-                role="region"
+                // focusable, clickable and a drop target — a button, not a landmark.
+                // The error state reaches AT through `aria-describedby`; `aria-invalid`
+                // is only supported on form-input roles.
+                role="button"
                 aria-labelledby={labelId}
                 aria-describedby={descriptionId}
-                aria-invalid={!!error}
                 aria-disabled={isPending}
                 data-dragging={isDragging ? "" : undefined}
                 data-invalid={error ? "" : undefined}

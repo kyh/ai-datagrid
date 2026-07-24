@@ -5,7 +5,7 @@ import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { FileCellData } from "@/lib/data-grid-types";
 
-export interface Person {
+export type Person = {
   id: string;
   name?: string;
   age?: number;
@@ -19,7 +19,7 @@ export interface Person {
   isActive?: boolean;
   startDate?: string;
   attachments?: FileCellData[];
-}
+};
 
 const FIXTURE_SEED = 12345;
 
@@ -179,7 +179,7 @@ export function getPeopleData(): Person[] {
 }
 
 // Company data
-export interface Company {
+export type Company = {
   id: string;
   name?: string;
   industry?: string;
@@ -191,7 +191,7 @@ export interface Company {
   headquarters?: string;
   status?: string;
   isPublic?: boolean;
-}
+};
 
 export const industries = [
   "Technology",
@@ -693,7 +693,7 @@ export function getPeopleColumns(filterFn: FilterFn<Person>): ColumnDef<Person>[
 }
 
 // Article data
-export interface Article {
+export type Article = {
   id: string;
   title?: string;
   author?: string;
@@ -704,7 +704,7 @@ export interface Article {
   excerpt?: string;
   url?: string;
   isFeatured?: boolean;
-}
+};
 
 export const articleCategories = [
   "Technology",
@@ -746,7 +746,7 @@ function generateArticle(): Article {
     tags: faker.helpers.arrayElements(articleTags, {
       min: 1,
       max: 3,
-    }) as string[],
+    }),
     excerpt: faker.lorem.paragraph(),
     url: `https://example.com/articles/${faker.helpers.slugify(title).toLowerCase()}`,
     isFeatured: faker.datatype.boolean({ probability: 0.2 }),
@@ -909,10 +909,10 @@ export function getArticlesColumns(filterFn: FilterFn<Article>): ColumnDef<Artic
 }
 
 // Recipe Demo - Generate columns demo
-export interface Recipe {
+export type Recipe = {
   id: string;
   name: string;
-}
+};
 
 const recipeNames = [
   "Spaghetti Carbonara",
@@ -970,13 +970,13 @@ export const recipeDemoPrompt =
   "Add columns for cuisine type, difficulty level, prep time (minutes), cooking time (minutes), and calories";
 
 // Tweet data
-export interface Tweet {
+export type Tweet = {
   id: string;
   url?: string;
   author?: string;
   banger?: boolean;
   createdAt?: string;
-}
+};
 
 const tweetAuthors = [
   "@elonmusk",
@@ -1126,14 +1126,14 @@ export function getTweetsColumns(filterFn: FilterFn<Tweet>): ColumnDef<Tweet>[] 
 }
 
 // Email Demo - Enrich cells demo
-export interface EmailContact {
+export type EmailContact = {
   id: string;
   email: string;
   name?: string;
   company?: string;
   role?: string;
   location?: string;
-}
+};
 
 const emailContacts = [
   "sarah.chen@techcorp.io",

@@ -28,13 +28,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellSelectOption } from "@/lib/data-grid-types";
-import { cn } from "@/components/ui/utils";
+import { getCellOptions } from "@/lib/data-grid-types";
+import { cn } from "@/lib/utils";
 import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
+import { genericMemo } from "@/lib/generic-memo";
 
-interface DataGridColumnHeaderProps<TData, TValue> extends React.HTMLAttributes<HTMLDivElement> {
+interface DataGridColumnHeaderProps<TData, TValue> extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onPointerDown"
+> {
   header: Header<TData, TValue>;
   table: Table<TData>;
   onColumnInsert?: (columnId: string, position: "left" | "right") => void;
+  /** Attached to the popover trigger (a `<button>`), not to the header div. */
+  onPointerDown?: React.PointerEventHandler<HTMLElement>;
 }
 
 export function DataGridColumnHeader<TData, TValue>({
@@ -53,8 +60,7 @@ export function DataGridColumnHeader<TData, TValue>({
       : column.id;
 
   const currentPrompt = column.columnDef.meta?.prompt ?? "";
-  const currentOptions: CellSelectOption[] =
-    (column.columnDef.meta?.cell as { options?: CellSelectOption[] } | undefined)?.options ?? [];
+  const currentOptions: CellSelectOption[] = getCellOptions(column.columnDef.meta?.cell) ?? [];
 
   const isAnyColumnResizing = table.getState().columnSizingInfo.isResizingColumn;
 
@@ -135,7 +141,7 @@ export function DataGridColumnHeader<TData, TValue>({
           <PopoverTrigger
             className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2 hover:bg-accent/40 data-[state=open]:bg-accent/40"
             onPointerDown={(e) => {
-              onPointerDown?.(e as unknown as React.PointerEvent<HTMLDivElement>);
+              onPointerDown?.(e);
               if (e.defaultPrevented) return;
               if (e.button !== 0) return;
               table.options.meta?.onColumnClick?.(column.id);
@@ -304,7 +310,7 @@ export function DataGridColumnHeader<TData, TValue>({
   );
 }
 
-const DataGridColumnResizer = React.memo(DataGridColumnResizerImpl, (prev, next) => {
+const DataGridColumnResizer = genericMemo(DataGridColumnResizerImpl, (prev, next) => {
   const prevColumn = prev.header.column;
   const nextColumn = next.header.column;
 
@@ -318,7 +324,7 @@ const DataGridColumnResizer = React.memo(DataGridColumnResizerImpl, (prev, next)
   if (prev.label !== next.label) return false;
 
   return true;
-}) as typeof DataGridColumnResizerImpl;
+});
 
 interface DataGridColumnResizerProps<TData, TValue> {
   header: Header<TData, TValue>;
@@ -331,6 +337,7 @@ function DataGridColumnResizerImpl<TData, TValue>({
   table,
   label,
 }: DataGridColumnResizerProps<TData, TValue>) {
+  // oxlint-disable-next-line eslint/no-underscore-dangle -- TanStack names this API with a leading underscore
   const defaultColumnDef = table._getDefaultColumnDef();
 
   const onDoubleClick = React.useCallback(() => {

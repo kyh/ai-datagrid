@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxc/json-schema-for-oxfmt/npm/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "node_modules",
+    "pnpm-lock.yaml",
+    "*.tsbuildinfo",
+    ".next",
+    ".eve",
+    ".workflow-data",
+    ".output",
+    "out"
+  ],
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "react",
+    "nextjs",
+    "jsx-a11y",
+    "oxc",
+    "node",
+    "promise"
+  ],
+  "categories": {
+    "correctness": "warn",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "react/react-in-jsx-scope": "off",
+    "eslint/no-shadow": "off",
+    "eslint/no-await-in-loop": "off",
+    "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
+    "jsx-a11y/prefer-tag-over-role": "off"
+  }
+}

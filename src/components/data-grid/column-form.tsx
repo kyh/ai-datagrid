@@ -16,6 +16,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellOpts, CellSelectOption } from "@/lib/data-grid-types";
+import { isCellVariant } from "@/lib/data-grid-types";
 
 const CELL_VARIANTS: Array<{ value: CellOpts["variant"]; label: string }> = [
   { value: "short-text", label: "Text" },
@@ -168,7 +169,8 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
   const handleVariantChange = React.useCallback(
     (newVariant: string | null) => {
       if (newVariant === null) return;
-      const v = newVariant as CellOpts["variant"];
+      if (!isCellVariant(newVariant)) return;
+      const v = newVariant;
       form.setValue("variant", v);
       // Clear options when changing away from select types
       if (v !== "select" && v !== "multi-select") {
@@ -190,6 +192,7 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
           onKeyDown={handleKeyDown}
           placeholder="Column name"
           className="h-8"
+          // oxlint-disable-next-line jsx-a11y/no-autofocus -- opt-in via prop; set only when the form opens on user intent
           autoFocus={autoFocus}
         />
       </div>

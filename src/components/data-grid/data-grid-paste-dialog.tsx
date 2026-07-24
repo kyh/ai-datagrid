@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAsRef } from "@/hooks/use-as-ref";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 import type { PasteDialogState } from "@/lib/data-grid-types";
 
 interface DataGridPasteDialogProps<TData> {
@@ -85,8 +85,14 @@ function PasteDialogImpl({ pasteDialog, onPasteDialogOpenChange, onCellsPaste }:
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-1">
-          <label className="flex cursor-pointer items-start gap-3">
-            <RadioItem ref={expandRadioRef} name="expand-option" value="expand" defaultChecked />
+          <label htmlFor="paste-expand" className="flex cursor-pointer items-start gap-3">
+            <RadioItem
+              id="paste-expand"
+              ref={expandRadioRef}
+              name="expand-option"
+              value="expand"
+              defaultChecked
+            />
             <div className="flex flex-col gap-1">
               <span className="font-medium text-sm leading-none">Create new rows</span>
               <span className="text-muted-foreground text-sm">
@@ -95,8 +101,8 @@ function PasteDialogImpl({ pasteDialog, onPasteDialogOpenChange, onCellsPaste }:
               </span>
             </div>
           </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <RadioItem name="expand-option" value="no-expand" />
+          <label htmlFor="paste-no-expand" className="flex cursor-pointer items-start gap-3">
+            <RadioItem id="paste-no-expand" name="expand-option" value="no-expand" />
             <div className="flex flex-col gap-1">
               <span className="font-medium text-sm leading-none">Keep current rows</span>
               <span className="text-muted-foreground text-sm">

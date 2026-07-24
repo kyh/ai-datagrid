@@ -420,9 +420,9 @@ function DataGridKeyboardShortcutsImpl({
                 <div key={shortcutGroup.title} className="flex flex-col gap-2">
                   <h3 className="font-semibold text-foreground text-sm">{shortcutGroup.title}</h3>
                   <div className="divide-y divide-border rounded-md border">
-                    {shortcutGroup.shortcuts.map((shortcut, index) => (
+                    {shortcutGroup.shortcuts.map((shortcut) => (
                       <ShortcutCard
-                        key={index}
+                        key={shortcut.description}
                         keys={shortcut.keys}
                         description={shortcut.description}
                       />

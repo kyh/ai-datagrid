@@ -5,7 +5,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 type AnchorContextValue = {
   anchor: HTMLElement | null;

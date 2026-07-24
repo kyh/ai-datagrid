@@ -14,7 +14,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 interface DataGridViewMenuProps<TData> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
@@ -43,7 +43,6 @@ export function DataGridViewMenu<TData>({
         render={
           <Button
             aria-label="Toggle columns"
-            role="combobox"
             dir={dir}
             variant="outline"
             size="sm"

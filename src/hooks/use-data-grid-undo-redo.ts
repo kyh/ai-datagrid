@@ -135,29 +135,29 @@ function useDataGridUndoRedo<TData>({
       },
       undo: () => {
         const state = stateRef.current;
-        if (state.undoStack.length === 0) return null;
+        const entry = state.undoStack.at(-1);
+        if (!entry) return null;
 
-        const entry = state.undoStack[state.undoStack.length - 1];
         stateRef.current = {
           undoStack: state.undoStack.slice(0, -1),
-          redoStack: [...state.redoStack, entry!],
+          redoStack: [...state.redoStack, entry],
           hasPendingChanges: state.hasPendingChanges,
         };
         store.notify();
-        return entry!;
+        return entry;
       },
       redo: () => {
         const state = stateRef.current;
-        if (state.redoStack.length === 0) return null;
+        const entry = state.redoStack.at(-1);
+        if (!entry) return null;
 
-        const entry = state.redoStack[state.redoStack.length - 1];
         stateRef.current = {
-          undoStack: [...state.undoStack, entry!],
+          undoStack: [...state.undoStack, entry],
           redoStack: state.redoStack.slice(0, -1),
           hasPendingChanges: state.hasPendingChanges,
         };
         store.notify();
-        return entry!;
+        return entry;
       },
       clear: () => {
         stateRef.current = {

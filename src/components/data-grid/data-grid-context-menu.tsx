@@ -14,6 +14,7 @@ import {
 import { useAsRef } from "@/hooks/use-as-ref";
 import { parseCellKey } from "@/lib/data-grid";
 import type { CellUpdate, ContextMenuState } from "@/lib/data-grid-types";
+import { genericMemo } from "@/lib/generic-memo";
 
 interface DataGridContextMenuProps<TData> {
   tableMeta: TableMeta<TData>;
@@ -21,7 +22,7 @@ interface DataGridContextMenuProps<TData> {
   contextMenu: ContextMenuState;
 }
 
-export function DataGridContextMenu<TData>({
+export function DataGridContextMenu<TData extends Record<string, unknown>>({
   tableMeta,
   columns,
   contextMenu,
@@ -70,7 +71,7 @@ interface ContextMenuProps<TData>
   columns: Array<ColumnDef<TData>>;
 }
 
-const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
+const ContextMenu = genericMemo(ContextMenuImpl, (prev, next) => {
   if (prev.contextMenu.open !== next.contextMenu.open) return false;
   if (!next.contextMenu.open) return true;
   if (prev.contextMenu.x !== next.contextMenu.x) return false;
@@ -81,9 +82,9 @@ const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
   if (prevSize !== nextSize) return false;
 
   return true;
-}) as typeof ContextMenuImpl;
+});
 
-function ContextMenuImpl<TData>({
+function ContextMenuImpl<TData extends Record<string, unknown>>({
   tableMeta,
   columns,
   dataGridRef,
@@ -180,7 +181,7 @@ function ContextMenuImpl<TData>({
       rowIndices.add(rowIndex);
     }
 
-    const rowIndicesArray = Array.from(rowIndices).sort((a, b) => a - b);
+    const rowIndicesArray = Array.from(rowIndices).toSorted((a, b) => a - b);
     const rowCount = rowIndicesArray.length;
 
     await onRowsDelete?.(rowIndicesArray);

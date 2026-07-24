@@ -14,8 +14,9 @@ import {
   UrlCell,
 } from "@/components/data-grid/data-grid-cell-variants";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
+import { genericMemo } from "@/lib/generic-memo";
 
-export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
+export const DataGridCell = genericMemo(DataGridCellImpl, (prev, next) => {
   // Fast path: check stable primitive props first
   if (prev.isFocused !== next.isFocused) return false;
   if (prev.isEditing !== next.isEditing) return false;
@@ -30,8 +31,8 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
 
   // Check cell value using row.original instead of getValue() for stability
   // getValue() is unstable and recreates on every render, breaking memoization
-  const prevValue = (prev.cell.row.original as Record<string, unknown>)[prev.columnId];
-  const nextValue = (next.cell.row.original as Record<string, unknown>)[next.columnId];
+  const prevValue = prev.cell.row.original[prev.columnId];
+  const nextValue = next.cell.row.original[next.columnId];
   if (prevValue !== nextValue) {
     return false;
   }
@@ -46,9 +47,9 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   }
 
   return true;
-}) as typeof DataGridCellImpl;
+});
 
-function DataGridCellImpl<TData>({
+function DataGridCellImpl<TData extends Record<string, unknown>>({
   cell,
   tableMeta,
   rowIndex,

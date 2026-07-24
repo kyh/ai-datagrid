@@ -3,13 +3,13 @@
 import * as React from "react";
 import { useComposedRefs } from "@/components/ui/utils";
 import { getCellKey } from "@/lib/data-grid";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
-interface DataGridCellWrapperProps<TData>
+interface DataGridCellWrapperProps<TData extends Record<string, unknown>>
   extends Omit<DataGridCellProps<TData>, "isGenerating">, React.ComponentProps<"div"> {}
 
-export function DataGridCellWrapper<TData>({
+export function DataGridCellWrapper<TData extends Record<string, unknown>>({
   tableMeta,
   rowIndex,
   columnId,

@@ -42,7 +42,7 @@ interface DataGridColumnConfigProps<TData> {
   ) => void;
   onColumnDelete?: (columnId: string) => void;
   onEnrichColumn?: (columnId: string, prompt: string) => void;
-  children: React.ReactNode;
+  children: React.ReactElement;
 }
 
 export function DataGridColumnConfig<TData>({
@@ -122,7 +122,7 @@ export function DataGridColumnConfig<TData>({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger render={children as React.ReactElement} />
+      <PopoverTrigger render={children} />
       <PopoverContent align="start" className="w-72 space-y-4">
         {/* Column Name */}
         <div className="space-y-1.5">
@@ -139,7 +139,7 @@ export function DataGridColumnConfig<TData>({
 
         {/* Data Type (readonly) */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Data Type</label>
+          <span className="block text-sm font-medium">Data Type</span>
           <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/50 text-sm">
             {columnVariant && <columnVariant.icon className="size-4 text-muted-foreground" />}
             <span>

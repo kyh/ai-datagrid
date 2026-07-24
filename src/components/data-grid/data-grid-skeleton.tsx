@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 interface DivProps extends React.ComponentProps<"div"> {}
 
@@ -42,8 +42,8 @@ function DataGridSkeletonToolbar({
       )}
       {...props}
     >
-      {Array.from({ length: actionCount }).map((_, i) => (
-        <Skeleton key={i} className="h-7 w-20 shrink-0" />
+      {Array.from({ length: actionCount }, (_, i) => `action-${i}`).map((key) => (
+        <Skeleton key={key} className="h-7 w-20 shrink-0" />
       ))}
     </div>
   );

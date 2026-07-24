@@ -108,14 +108,26 @@ export function getOperatorsForVariant(variant: string): ReadonlyArray<{
   }
 }
 
+/**
+ * TanStack stores column filter state as `unknown`, so every read of it is a
+ * boundary. This is the one check that turns it into a `FilterValue`.
+ */
+export function isFilterValue(value: unknown): value is FilterValue {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "operator" in value &&
+    typeof value.operator === "string"
+  );
+}
+
 export function getFilterFn<TData>(): FilterFn<TData> {
   return (row: Row<TData>, columnId: string, filterValue: unknown): boolean => {
-    if (!filterValue || typeof filterValue !== "object") {
+    if (!isFilterValue(filterValue)) {
       return true;
     }
 
-    const filter = filterValue as FilterValue;
-    const { operator, value, endValue } = filter;
+    const { operator, value, endValue } = filterValue;
 
     const cellValue = row.getValue(columnId);
 
