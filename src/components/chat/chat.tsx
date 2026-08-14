@@ -371,8 +371,7 @@ export const Chat = ({
       // starts a fresh session; state arrives via clientContext anyway.
       agent.reset();
       agent
-        .send({
-          message: input.trim() || "Enrich selected cells",
+        .send(input.trim() || "Enrich selected cells", {
           clientContext: buildGridContext({
             columns: getExistingColumns?.() ?? [],
             filters: getExistingFilters?.() ?? [],
