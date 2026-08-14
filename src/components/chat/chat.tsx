@@ -1,5 +1,6 @@
 "use client";
 
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useEveAgent } from "eve/react";
 import { KeyIcon, SparklesIcon } from "lucide-react";
@@ -88,7 +89,7 @@ const isAuthError = (error: Error): boolean =>
   /unauthorized|forbidden|authentication|api.?key|credential|401|403/i.test(error.message);
 
 interface ChatProps {
-  onColumnsGenerated?: (columns: ColumnDef<unknown>[]) => void;
+  onColumnsGenerated?: (columns: ColumnDef<DataGridFeatures, Record<string, unknown>>[]) => void;
   onColumnsUpdated?: (updates: ColumnUpdate[]) => void;
   onColumnsDeleted?: (columnIds: string[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;

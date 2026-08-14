@@ -58,8 +58,8 @@ export function DataGrid<TData extends Record<string, unknown>>({
 }: DataGridProps<TData>) {
   const rows = table.getRowModel().rows;
   const readOnly = tableMeta?.readOnly ?? false;
-  const columnVisibility = table.getState().columnVisibility;
-  const columnPinning = table.getState().columnPinning;
+  const columnVisibility = table.state.columnVisibility;
+  const columnPinning = table.state.columnPinning;
 
   const onRowAddRef = useAsRef(onRowAddProp);
 
@@ -127,7 +127,7 @@ export function DataGrid<TData extends Record<string, unknown>>({
               className="flex w-full"
             >
               {headerGroup.headers.map((header, colIndex) => {
-                const sorting = table.getState().sorting;
+                const sorting = table.state.sorting;
                 const currentSort = sorting.find((sort) => sort.id === header.column.id);
                 const isSortable = header.column.getCanSort();
 

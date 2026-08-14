@@ -4,9 +4,6 @@ import { useDirection } from "@base-ui/react/direction-provider";
 import {
   type ColumnDef,
   type ColumnFiltersState,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   type Row,
   type RowSelectionState,
   type SortingState,
@@ -14,7 +11,7 @@ import {
   type TableOptions,
   type TableState,
   type Updater,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
@@ -23,6 +20,7 @@ import { toast } from "sonner";
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
+import { dataGridFeatures, type DataGridFeatures } from "@/lib/data-grid-features";
 import {
   formatDateForDisplay,
   getCellKey,
@@ -63,8 +61,10 @@ const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
 const VALID_BOOLEANS = new Set(["true", "false", "1", "0", "yes", "no", "checked", "unchecked"]);
 
 interface UseDataGridProps<TData extends Record<string, unknown>> extends Omit<
-  TableOptions<TData>,
-  "pageCount" | "getCoreRowModel"
+  TableOptions<DataGridFeatures, TData>,
+  // `features` is supplied by the hook, not the caller: every grid shares one
+  // feature set, and the hook's own type annotations depend on it.
+  "pageCount" | "features"
 > {
   onDataChange?: (data: TData[]) => void;
   onRowAdd?: (
@@ -146,7 +146,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
   );
 
   const dataGridRef = React.useRef<HTMLDivElement>(null);
-  const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>>>(null);
+  const tableRef = React.useRef<ReturnType<typeof useTable<DataGridFeatures, TData>>>(null);
   const rowVirtualizerRef = React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
@@ -154,7 +154,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
   const footerRef = React.useRef<HTMLDivElement>(null);
   const focusGuardRef = React.useRef(false);
   const visualRowIndexCacheRef = React.useRef<{
-    rows: Row<TData>[] | null;
+    rows: Row<DataGridFeatures, TData>[] | null;
     map: Map<string, number>;
   } | null>(null);
 
@@ -1881,6 +1881,8 @@ function useDataGrid<TData extends Record<string, unknown>>({
         const startIndex = Math.min(currentState.lastClickedRowIndex, rowIndex);
         const endIndex = Math.max(currentState.lastClickedRowIndex, rowIndex);
 
+        // v9 models selection as `Record<string, true>`: a deselected row is an
+        // absent key, not a `false` value.
         const newRowSelection: RowSelectionState = {
           ...currentState.rowSelection,
         };
@@ -1888,16 +1890,26 @@ function useDataGrid<TData extends Record<string, unknown>>({
         for (let i = startIndex; i <= endIndex; i++) {
           const row = rows[i];
           if (row) {
-            newRowSelection[row.id] = selected;
+            if (selected) {
+              newRowSelection[row.id] = true;
+            } else {
+              delete newRowSelection[row.id];
+            }
           }
         }
 
         onRowSelectionChange(newRowSelection);
       } else {
-        onRowSelectionChange({
+        const newRowSelection: RowSelectionState = {
           ...currentState.rowSelection,
-          [currentRow.id]: selected,
-        });
+        };
+        if (selected) {
+          newRowSelection[currentRow.id] = true;
+        } else {
+          delete newRowSelection[currentRow.id];
+        }
+
+        onRowSelectionChange(newRowSelection);
       }
 
       store.setState("lastClickedRowIndex", rowIndex);
@@ -1941,7 +1953,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
     [store],
   );
 
-  const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
+  const defaultColumn: Partial<ColumnDef<DataGridFeatures, TData>> = React.useMemo(
     () => ({
       // Note: cell is rendered directly in DataGridRow to bypass flexRender's
       // unstable cell.getContext() (see TanStack Table issue #4794)
@@ -1951,7 +1963,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
     [],
   );
 
-  const tableMeta = React.useMemo<TableMeta<TData>>(() => {
+  const tableMeta = React.useMemo<TableMeta<DataGridFeatures, TData>>(() => {
     return {
       ...propsRef.current.meta,
       dataGridRef,
@@ -2039,12 +2051,8 @@ function useDataGrid<TData extends Record<string, unknown>>({
     onPasteDialogOpenChange,
   ]);
 
-  const getMemoizedCoreRowModel = React.useMemo(() => getCoreRowModel(), []);
-  const getMemoizedFilteredRowModel = React.useMemo(() => getFilteredRowModel(), []);
-  const getMemoizedSortedRowModel = React.useMemo(() => getSortedRowModel(), []);
-
   // Memoize state object to reduce shallow equality checks
-  const tableState = React.useMemo<Partial<TableState>>(
+  const tableState = React.useMemo<Partial<TableState<DataGridFeatures>>>(
     () => ({
       ...propsRef.current.state,
       sorting,
@@ -2054,7 +2062,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
     [propsRef, sorting, columnFilters, rowSelection],
   );
 
-  const tableOptions = React.useMemo<TableOptions<TData>>(() => {
+  const tableOptions = React.useMemo<TableOptions<DataGridFeatures, TData>>(() => {
     return {
       ...propsRef.current,
       data,
@@ -2067,9 +2075,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
       onColumnFiltersChange,
       columnResizeMode: "onChange",
       columnResizeDirection: dir,
-      getCoreRowModel: getMemoizedCoreRowModel,
-      getFilteredRowModel: getMemoizedFilteredRowModel,
-      getSortedRowModel: getMemoizedSortedRowModel,
+      features: dataGridFeatures,
       meta: tableMeta,
     };
   }, [
@@ -2082,13 +2088,10 @@ function useDataGrid<TData extends Record<string, unknown>>({
     onRowSelectionChange,
     onSortingChange,
     onColumnFiltersChange,
-    getMemoizedCoreRowModel,
-    getMemoizedFilteredRowModel,
-    getMemoizedSortedRowModel,
     tableMeta,
   ]);
 
-  const table = useReactTable(tableOptions);
+  const table = useTable(tableOptions);
 
   if (!tableRef.current) {
     tableRef.current = table;
@@ -2106,17 +2109,14 @@ function useDataGrid<TData extends Record<string, unknown>>({
     }
     return colSizes;
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
-  }, [table.getState().columnSizingInfo, table.getState().columnSizing, columns]);
+  }, [table.state.columnResizing, table.state.columnSizing, columns]);
 
   const adjustLayout = React.useMemo(() => {
-    const columnPinning = table.getState().columnPinning;
+    const columnPinning = table.state.columnPinning;
     return (
-      isFirefox && ((columnPinning.left?.length ?? 0) > 0 || (columnPinning.right?.length ?? 0) > 0)
+      isFirefox && ((columnPinning.start?.length ?? 0) > 0 || (columnPinning.end?.length ?? 0) > 0)
     );
-    // `columnPinning` is read through `table.getState()`, which the rule cannot
-    // follow; the memo must still invalidate when pinning changes.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
-  }, [isFirefox, table.getState().columnPinning]);
+  }, [isFirefox, table.state.columnPinning]);
 
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
@@ -3030,16 +3030,12 @@ function useDataGrid<TData extends Record<string, unknown>>({
     return () => cancelAnimationFrame(rafId);
   }, [
     rowHeight,
-    table.getState().columnFilters,
-    table.getState().columnOrder,
-    table.getState().columnPinning,
-    table.getState().columnSizing,
-    table.getState().columnVisibility,
-    table.getState().expanded,
-    table.getState().globalFilter,
-    table.getState().grouping,
-    table.getState().rowSelection,
-    table.getState().sorting,
+    table.state.columnFilters,
+    table.state.columnPinning,
+    table.state.columnSizing,
+    table.state.columnVisibility,
+    table.state.rowSelection,
+    table.state.sorting,
   ]);
 
   // Calculate virtual values outside of child render to avoid flushSync issues

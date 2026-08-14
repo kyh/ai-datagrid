@@ -1,6 +1,7 @@
 "use client";
 
-import type { CellContext, ColumnDef, HeaderContext } from "@tanstack/react-table";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { CellContext, ColumnDef, HeaderContext, RowData } from "@tanstack/react-table";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -95,13 +96,16 @@ function DataGridSelectCheckbox({
   return checkbox;
 }
 
-interface DataGridSelectHeaderProps<TData> extends Pick<HeaderContext<TData, unknown>, "table"> {
+interface DataGridSelectHeaderProps<TData extends RowData> extends Pick<
+  HeaderContext<DataGridFeatures, TData, unknown>,
+  "table"
+> {
   hitboxSize?: HitboxSize;
   readOnly?: boolean;
   debug?: boolean;
 }
 
-function DataGridSelectHeader<TData>({
+function DataGridSelectHeader<TData extends RowData>({
   table,
   hitboxSize,
   readOnly,
@@ -128,8 +132,8 @@ function DataGridSelectHeader<TData>({
   );
 }
 
-interface DataGridSelectCellProps<TData> extends Pick<
-  CellContext<TData, unknown>,
+interface DataGridSelectCellProps<TData extends RowData> extends Pick<
+  CellContext<DataGridFeatures, TData, unknown>,
   "row" | "table"
 > {
   enableRowMarkers?: boolean;
@@ -138,7 +142,7 @@ interface DataGridSelectCellProps<TData> extends Pick<
   debug?: boolean;
 }
 
-function DataGridSelectCell<TData>({
+function DataGridSelectCell<TData extends RowData>({
   row,
   table,
   enableRowMarkers,
@@ -195,8 +199,8 @@ function DataGridSelectCell<TData>({
   );
 }
 
-interface GetDataGridSelectColumnOptions<TData> extends Omit<
-  Partial<ColumnDef<TData>>,
+interface GetDataGridSelectColumnOptions<TData extends RowData> extends Omit<
+  Partial<ColumnDef<DataGridFeatures, TData>>,
   "id" | "header" | "cell"
 > {
   enableRowMarkers?: boolean;
@@ -205,7 +209,7 @@ interface GetDataGridSelectColumnOptions<TData> extends Omit<
   debug?: boolean;
 }
 
-export function getDataGridSelectColumn<TData>({
+export function getDataGridSelectColumn<TData extends RowData>({
   size = 40,
   enableHiding = false,
   enableResizing = false,
@@ -215,7 +219,7 @@ export function getDataGridSelectColumn<TData>({
   readOnly = false,
   debug = false,
   ...props
-}: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<TData> {
+}: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<DataGridFeatures, TData> {
   return {
     id: "select",
     header: ({ table }) => (

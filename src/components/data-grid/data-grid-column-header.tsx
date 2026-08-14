@@ -1,6 +1,13 @@
 "use client";
 
-import type { ColumnSort, Header, SortDirection, SortingState, Table } from "@tanstack/react-table";
+import type { DataGridFeatures, DataGridTable } from "@/lib/data-grid-features";
+import type {
+  ColumnSort,
+  Header,
+  RowData,
+  SortDirection,
+  SortingState,
+} from "@tanstack/react-table";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -33,18 +40,18 @@ import { cn } from "@/lib/utils";
 import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
 import { genericMemo } from "@/lib/generic-memo";
 
-interface DataGridColumnHeaderProps<TData, TValue> extends Omit<
+interface DataGridColumnHeaderProps<TData extends RowData, TValue> extends Omit<
   React.HTMLAttributes<HTMLDivElement>,
   "onPointerDown"
 > {
-  header: Header<TData, TValue>;
-  table: Table<TData>;
+  header: Header<DataGridFeatures, TData, TValue>;
+  table: DataGridTable<TData>;
   onColumnInsert?: (columnId: string, position: "left" | "right") => void;
   /** Attached to the popover trigger (a `<button>`), not to the header div. */
   onPointerDown?: React.PointerEventHandler<HTMLElement>;
 }
 
-export function DataGridColumnHeader<TData, TValue>({
+export function DataGridColumnHeader<TData extends RowData, TValue>({
   header,
   table,
   className,
@@ -62,7 +69,7 @@ export function DataGridColumnHeader<TData, TValue>({
   const currentPrompt = column.columnDef.meta?.prompt ?? "";
   const currentOptions: CellSelectOption[] = getCellOptions(column.columnDef.meta?.cell) ?? [];
 
-  const isAnyColumnResizing = table.getState().columnSizingInfo.isResizingColumn;
+  const isAnyColumnResizing = table.state.columnResizing.isResizingColumn;
 
   const cellVariant = column.columnDef.meta?.cell;
   const currentType = cellVariant?.variant ?? "short-text";
@@ -72,8 +79,8 @@ export function DataGridColumnHeader<TData, TValue>({
   const [popoverOpen, setPopoverOpen] = React.useState(false);
 
   const pinnedPosition = column.getIsPinned();
-  const isPinnedLeft = pinnedPosition === "left";
-  const isPinnedRight = pinnedPosition === "right";
+  const isPinnedLeft = pinnedPosition === "start";
+  const isPinnedRight = pinnedPosition === "end";
 
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {
@@ -101,11 +108,11 @@ export function DataGridColumnHeader<TData, TValue>({
   }, [column.id, table]);
 
   const onLeftPin = React.useCallback(() => {
-    column.pin("left");
+    column.pin("start");
   }, [column]);
 
   const onRightPin = React.useCallback(() => {
-    column.pin("right");
+    column.pin("end");
   }, [column]);
 
   const onUnpin = React.useCallback(() => {
@@ -326,19 +333,18 @@ const DataGridColumnResizer = genericMemo(DataGridColumnResizerImpl, (prev, next
   return true;
 });
 
-interface DataGridColumnResizerProps<TData, TValue> {
-  header: Header<TData, TValue>;
-  table: Table<TData>;
+interface DataGridColumnResizerProps<TData extends RowData, TValue> {
+  header: Header<DataGridFeatures, TData, TValue>;
+  table: DataGridTable<TData>;
   label: string;
 }
 
-function DataGridColumnResizerImpl<TData, TValue>({
+function DataGridColumnResizerImpl<TData extends RowData, TValue>({
   header,
   table,
   label,
 }: DataGridColumnResizerProps<TData, TValue>) {
-  // oxlint-disable-next-line eslint/no-underscore-dangle -- TanStack names this API with a leading underscore
-  const defaultColumnDef = table._getDefaultColumnDef();
+  const defaultColumnDef = table.getDefaultColumnDef();
 
   const onDoubleClick = React.useCallback(() => {
     header.column.resetSize();

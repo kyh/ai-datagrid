@@ -1,6 +1,7 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { ColumnDef, RowData } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { getDataGridAddColumn } from "@/components/data-grid/data-grid-add-column";
@@ -47,7 +48,7 @@ function createCellConfig(variant: CellOpts["variant"]): CellOpts {
 
 export interface DataGridContainerProps<T extends Record<string, unknown>> {
   initialData: T[];
-  initialColumns: ColumnDef<T>[];
+  initialColumns: ColumnDef<DataGridFeatures, T>[];
   getRowId: (row: T, index: number) => string;
   createNewRow: () => T;
   createNewRows: (count: number) => T[];
@@ -57,18 +58,18 @@ export interface DataGridContainerProps<T extends Record<string, unknown>> {
 }
 
 /**
- * `ColumnDef<T>` is a union (accessor-key / accessor-fn / display / group) and
+ * `ColumnDef<DataGridFeatures, T>` is a union (accessor-key / accessor-fn / display / group) and
  * spreading a union member widens it past every variant, so TS cannot see that
  * an edited copy is still the same kind of column. Only `header`/`meta` ever
  * change here, which never alters the variant — this is the one place that is
  * restated.
  */
-function withColumnPatch<T>(
-  column: ColumnDef<T>,
-  patch: Partial<Pick<ColumnDef<T>, "header" | "meta">>,
-): ColumnDef<T> {
+function withColumnPatch<T extends RowData>(
+  column: ColumnDef<DataGridFeatures, T>,
+  patch: Partial<Pick<ColumnDef<DataGridFeatures, T>, "header" | "meta">>,
+): ColumnDef<DataGridFeatures, T> {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
-  return { ...column, ...patch } as ColumnDef<T>;
+  return { ...column, ...patch } as ColumnDef<DataGridFeatures, T>;
 }
 
 export function DataGridContainer<T extends Record<string, unknown>>({
@@ -83,7 +84,7 @@ export function DataGridContainer<T extends Record<string, unknown>>({
 }: DataGridContainerProps<T>) {
   const windowSize = useWindowSize({ defaultHeight: 760 });
   const [data, setData] = React.useState<T[]>(initialData);
-  const [columns, setColumns] = React.useState<ColumnDef<T>[]>(initialColumns);
+  const [columns, setColumns] = React.useState<ColumnDef<DataGridFeatures, T>[]>(initialColumns);
 
   const onColumnUpdate = React.useCallback(
     (
@@ -96,7 +97,7 @@ export function DataGridContainer<T extends Record<string, unknown>>({
       }>,
     ) => {
       setColumns((prev) =>
-        prev.map((col): ColumnDef<T> => {
+        prev.map((col): ColumnDef<DataGridFeatures, T> => {
           if (col.id !== columnId) return col;
 
           const currentMeta = col.meta ?? {};
@@ -153,7 +154,7 @@ export function DataGridContainer<T extends Record<string, unknown>>({
         cellConfig = { ...cellConfig, options: addConfig.options };
       }
 
-      const newColumn: ColumnDef<T> = {
+      const newColumn: ColumnDef<DataGridFeatures, T> = {
         id: newId,
         accessorKey: newId,
         header: addConfig.label,
@@ -237,8 +238,8 @@ export function DataGridContainer<T extends Record<string, unknown>>({
     onEnrichColumn,
     initialState: {
       columnPinning: {
-        left: pinnedColumns,
-        right: ["add-column"],
+        start: pinnedColumns,
+        end: ["add-column"],
       },
     },
     enableSearch: true,
@@ -246,7 +247,7 @@ export function DataGridContainer<T extends Record<string, unknown>>({
   });
 
   const onColumnsGenerated = React.useCallback(
-    (newColumns: ColumnDef<unknown>[]) => {
+    (newColumns: ColumnDef<DataGridFeatures, Record<string, unknown>>[]) => {
       // Get IDs of existing non-system columns
       const existingIds = new Set(
         columns
@@ -264,7 +265,7 @@ export function DataGridContainer<T extends Record<string, unknown>>({
       // cannot be proven to — `T` is nominal and these are built from a tool
       // result. This is the boundary where generated columns enter typed state.
       // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
-      setColumns((prev) => [...prev, ...(columnsToAdd as ColumnDef<T>[])]);
+      setColumns((prev) => [...prev, ...(columnsToAdd as ColumnDef<DataGridFeatures, T>[])]);
 
       // Initialize new column properties in existing data rows
       if (newColumnIds.length > 0) {
@@ -317,7 +318,7 @@ export function DataGridContainer<T extends Record<string, unknown>>({
         // Handle options update for select/multi-select
         if (update.options) {
           setColumns((prev) =>
-            prev.map((col): ColumnDef<T> => {
+            prev.map((col): ColumnDef<DataGridFeatures, T> => {
               if (col.id !== update.columnId) return col;
               const currentMeta = col.meta ?? {};
               const currentCell = currentMeta.cell;

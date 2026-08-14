@@ -1,6 +1,7 @@
 "use client";
 
-import type { Column, Table } from "@tanstack/react-table";
+import type { DataGridFeatures, DataGridTable } from "@/lib/data-grid-features";
+import type { Column, RowData } from "@tanstack/react-table";
 import { SparklesIcon, TrashIcon } from "lucide-react";
 import * as React from "react";
 
@@ -29,9 +30,9 @@ interface ColumnConfigState {
   prompt: string;
 }
 
-interface DataGridColumnConfigProps<TData> {
-  column: Column<TData, unknown>;
-  table: Table<TData>;
+interface DataGridColumnConfigProps<TData extends RowData> {
+  column: Column<DataGridFeatures, TData, unknown>;
+  table: DataGridTable<TData>;
   onColumnUpdate?: (
     columnId: string,
     updates: Partial<{
@@ -45,7 +46,7 @@ interface DataGridColumnConfigProps<TData> {
   children: React.ReactElement;
 }
 
-export function DataGridColumnConfig<TData>({
+export function DataGridColumnConfig<TData extends RowData>({
   column,
   onColumnUpdate,
   onColumnDelete,

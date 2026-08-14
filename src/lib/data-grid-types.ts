@@ -1,4 +1,6 @@
-import type { Cell, RowData, TableMeta } from "@tanstack/react-table";
+import type { Cell, RowData, TableFeatures, TableMeta } from "@tanstack/react-table";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 export type Direction = "ltr" | "rtl";
 
@@ -161,16 +163,16 @@ export function getCellOptions(cell: CellOpts | undefined): CellSelectOption[] |
 }
 
 declare module "@tanstack/react-table" {
-  // TData and TValue are consumed by the augmented interface below.
-  interface ColumnMeta<TData extends RowData, TValue> {
+  // TFeatures, TData and TValue are consumed by the augmented interface below.
+  interface ColumnMeta<TFeatures extends TableFeatures, TData extends RowData, TValue> {
     label?: string;
     cell?: CellOpts;
     /** Optional AI prompt for enriching this column's data */
     prompt?: string;
   }
 
-  // TData is consumed by the augmented interface below.
-  interface TableMeta<TData extends RowData> {
+  // TFeatures and TData are consumed by the augmented interface below.
+  interface TableMeta<TFeatures extends TableFeatures, TData extends RowData> {
     dataGridRef?: React.RefObject<HTMLElement | null>;
     cellMapRef?: React.RefObject<Map<string, HTMLDivElement>>;
     focusedCell?: CellPosition | null;
@@ -295,8 +297,8 @@ export interface SearchState {
 }
 
 export interface DataGridCellProps<TData extends Record<string, unknown>> {
-  cell: Cell<TData, unknown>;
-  tableMeta: TableMeta<TData>;
+  cell: Cell<DataGridFeatures, TData, unknown>;
+  tableMeta: TableMeta<DataGridFeatures, TData>;
   rowIndex: number;
   columnId: string;
   rowHeight: RowHeightValue;

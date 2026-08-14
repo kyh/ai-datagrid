@@ -1,7 +1,8 @@
 "use client";
 
+import type { DataGridTable } from "@/lib/data-grid-features";
 import { useDirection } from "@base-ui/react/direction-provider";
-import type { ColumnSort, Table } from "@tanstack/react-table";
+import type { ColumnSort, RowData } from "@tanstack/react-table";
 import { ArrowDownUp, ChevronsUpDown, GripVertical, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -40,12 +41,14 @@ const SORT_ORDERS = [
   { label: "Desc", value: "desc" },
 ];
 
-interface DataGridSortMenuProps<TData> extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<TData>;
+interface DataGridSortMenuProps<TData extends RowData> extends React.ComponentProps<
+  typeof PopoverContent
+> {
+  table: DataGridTable<TData>;
   disabled?: boolean;
 }
 
-export function DataGridSortMenu<TData>({
+export function DataGridSortMenu<TData extends RowData>({
   table,
   disabled,
   ...props
@@ -57,7 +60,7 @@ export function DataGridSortMenu<TData>({
   const [open, setOpen] = React.useState(false);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
-  const sorting = table.getState().sorting;
+  const sorting = table.state.sorting;
   const onSortingChange = table.setSorting;
 
   const { columnLabels, columns } = React.useMemo(() => {

@@ -1,3 +1,4 @@
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { z } from "zod";
 
@@ -7,14 +8,16 @@ import type { CellOpts } from "@/lib/data-grid-types";
 
 type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
 
-const filterFn = getFilterFn<unknown>();
+const filterFn = getFilterFn<Record<string, unknown>>();
 
 /**
  * Maps an AI-generated column definition (the zod contract in
  * `@/lib/assistant-schemas`) to a TanStack Table ColumnDef.
  * Pure: no state, safe to call anywhere.
  */
-export function columnDefinitionToColumnDef(col: ColumnDefinition): ColumnDef<unknown> {
+export function columnDefinitionToColumnDef(
+  col: ColumnDefinition,
+): ColumnDef<DataGridFeatures, Record<string, unknown>> {
   let cell: CellOpts;
   switch (col.variant) {
     case "number":

@@ -1,11 +1,13 @@
 "use client";
 
+import type { RowData } from "@tanstack/react-table";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   ColumnDef,
   ColumnPinningState,
   Row,
   TableMeta,
-  VisibilityState,
+  ColumnVisibilityState,
 } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 import * as React from "react";
@@ -22,15 +24,15 @@ import { cn } from "@/lib/utils";
 import type { CellPosition, Direction, RowHeightValue } from "@/lib/data-grid-types";
 import { genericMemo } from "@/lib/generic-memo";
 
-interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
-  row: Row<TData>;
-  tableMeta: TableMeta<TData>;
+interface DataGridRowProps<TData extends RowData> extends React.ComponentProps<"div"> {
+  row: Row<DataGridFeatures, TData>;
+  tableMeta: TableMeta<DataGridFeatures, TData>;
   virtualItem: VirtualItem;
   measureElement: (node: Element | null) => void;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
-  columns: ColumnDef<TData>[];
-  columnVisibility: VisibilityState;
+  columns: readonly ColumnDef<DataGridFeatures, TData>[];
+  columnVisibility: ColumnVisibilityState;
   columnPinning: ColumnPinningState;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;

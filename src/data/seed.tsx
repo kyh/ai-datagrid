@@ -1,3 +1,4 @@
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { faker } from "@faker-js/faker";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { FilterFn } from "@tanstack/react-table";
@@ -237,7 +238,9 @@ export function getCompaniesData(): Company[] {
   return Array.from({ length: 50 }, () => generateCompany());
 }
 
-export function getCompaniesColumns(filterFn: FilterFn<Company>): ColumnDef<Company>[] {
+export function getCompaniesColumns(
+  filterFn: FilterFn<DataGridFeatures, Company>,
+): ColumnDef<DataGridFeatures, Company>[] {
   return [
     {
       id: "select",
@@ -432,8 +435,8 @@ export function getSpreadsheetData(): SpreadsheetRow[] {
 }
 
 export function getSpreadsheetColumns(
-  filterFn: FilterFn<SpreadsheetRow>,
-): ColumnDef<SpreadsheetRow>[] {
+  filterFn: FilterFn<DataGridFeatures, SpreadsheetRow>,
+): ColumnDef<DataGridFeatures, SpreadsheetRow>[] {
   const columns = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)); // A-Z
 
   return [
@@ -470,7 +473,9 @@ export function getSpreadsheetColumns(
   ];
 }
 
-export function getPeopleColumns(filterFn: FilterFn<Person>): ColumnDef<Person>[] {
+export function getPeopleColumns(
+  filterFn: FilterFn<DataGridFeatures, Person>,
+): ColumnDef<DataGridFeatures, Person>[] {
   return [
     {
       id: "select",
@@ -758,7 +763,9 @@ export function getArticlesData(): Article[] {
   return Array.from({ length: 50 }, () => generateArticle());
 }
 
-export function getArticlesColumns(filterFn: FilterFn<Article>): ColumnDef<Article>[] {
+export function getArticlesColumns(
+  filterFn: FilterFn<DataGridFeatures, Article>,
+): ColumnDef<DataGridFeatures, Article>[] {
   return [
     {
       id: "select",
@@ -934,7 +941,9 @@ export function getRecipesData(): Recipe[] {
   }));
 }
 
-export function getRecipesColumns(filterFn: FilterFn<Recipe>): ColumnDef<Recipe>[] {
+export function getRecipesColumns(
+  filterFn: FilterFn<DataGridFeatures, Recipe>,
+): ColumnDef<DataGridFeatures, Recipe>[] {
   return [
     {
       id: "index",
@@ -1036,7 +1045,9 @@ export function getTweetsData(): Tweet[] {
   return faker.helpers.shuffle([...levelsioBangers, ...randomTweets]);
 }
 
-export function getTweetsColumns(filterFn: FilterFn<Tweet>): ColumnDef<Tweet>[] {
+export function getTweetsColumns(
+  filterFn: FilterFn<DataGridFeatures, Tweet>,
+): ColumnDef<DataGridFeatures, Tweet>[] {
   return [
     {
       id: "select",
@@ -1156,8 +1167,8 @@ export function getEmailContactsData(): EmailContact[] {
 }
 
 export function getEmailContactsColumns(
-  filterFn: FilterFn<EmailContact>,
-): ColumnDef<EmailContact>[] {
+  filterFn: FilterFn<DataGridFeatures, EmailContact>,
+): ColumnDef<DataGridFeatures, EmailContact>[] {
   return [
     {
       id: "select",

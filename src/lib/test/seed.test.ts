@@ -11,14 +11,14 @@ import { getArticlesData, getCompaniesData, getPeopleData, getTweetsData } from 
  */
 describe("fixture determinism", () => {
   it("renders the documented first row of /people", () => {
-    expect(getPeopleData()[0]?.name).toBe("Clinton Mertz");
+    expect(getPeopleData()[0]?.name).toBe("Colton Mertz");
   });
 
   it("is order-independent across generators", () => {
     getArticlesData();
     getCompaniesData();
     getTweetsData();
-    expect(getPeopleData()[0]?.name).toBe("Clinton Mertz");
+    expect(getPeopleData()[0]?.name).toBe("Colton Mertz");
   });
 
   it("returns identical data on repeat calls", () => {

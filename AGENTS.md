@@ -41,7 +41,7 @@ Everything an agent needs is committed except `node_modules` and `.env.local`. T
 
 ## There is no login
 
-No auth, no database, no seeded user — nothing to sign in to. The known state is the **in-memory fixtures** in `src/data/seed.tsx`, pinned by `faker.seed(12345)`, so every route renders identical data on every boot and is directly assertable — regardless of which routes were visited first. Example: the first row of `/people` is always `Clinton Mertz`.
+No auth, no database, no seeded user — nothing to sign in to. The known state is the **in-memory fixtures** in `src/data/seed.tsx`, pinned by `faker.seed(12345)`, so every route renders identical data on every boot and is directly assertable — regardless of which routes were visited first. Example: the first row of `/people` is always `Colton Mertz`.
 
 Two invariants keep that true, and both are load-bearing:
 
@@ -64,7 +64,7 @@ Runtime — drive the real UI with [agent-browser](https://github.com/vercel-lab
 agent-browser open http://localhost:3000/people
 agent-browser snapshot -i -c        # accessibility tree with @eN refs
 agent-browser get count '[data-slot="grid-cell-content"]'
-agent-browser eval 'document.querySelector("[data-slot=grid-cell-content]").textContent'  # "Clinton Mertz"
+agent-browser eval 'document.querySelector("[data-slot=grid-cell-content]").textContent'  # "Colton Mertz"
 ```
 
 Full AI round-trip. `/generate-demo` and `/filter-sort-demo` preseed the chat composer with a fixed prompt (`initialChatInput`), which makes them repeatable smoke tests — submit the prompt already in the box and assert the grid changed:

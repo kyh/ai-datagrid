@@ -1,6 +1,7 @@
 "use client";
 
-import type { ColumnDef, TableMeta } from "@tanstack/react-table";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { ColumnDef, TableMeta, RowData } from "@tanstack/react-table";
 import { CopyIcon, EraserIcon, ScissorsIcon, Trash2Icon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -16,9 +17,9 @@ import { parseCellKey } from "@/lib/data-grid";
 import type { CellUpdate, ContextMenuState } from "@/lib/data-grid-types";
 import { genericMemo } from "@/lib/generic-memo";
 
-interface DataGridContextMenuProps<TData> {
-  tableMeta: TableMeta<TData>;
-  columns: Array<ColumnDef<TData>>;
+interface DataGridContextMenuProps<TData extends RowData> {
+  tableMeta: TableMeta<DataGridFeatures, TData>;
+  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
   contextMenu: ContextMenuState;
 }
 
@@ -53,10 +54,10 @@ export function DataGridContextMenu<TData extends Record<string, unknown>>({
   );
 }
 
-interface ContextMenuProps<TData>
+interface ContextMenuProps<TData extends RowData>
   extends
     Pick<
-      TableMeta<TData>,
+      TableMeta<DataGridFeatures, TData>,
       | "dataGridRef"
       | "onContextMenuOpenChange"
       | "selectionState"
@@ -66,9 +67,9 @@ interface ContextMenuProps<TData>
       | "onCellsCut"
       | "readOnly"
     >,
-    Required<Pick<TableMeta<TData>, "contextMenu">> {
-  tableMeta: TableMeta<TData>;
-  columns: Array<ColumnDef<TData>>;
+    Required<Pick<TableMeta<DataGridFeatures, TData>, "contextMenu">> {
+  tableMeta: TableMeta<DataGridFeatures, TData>;
+  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
 }
 
 const ContextMenu = genericMemo(ContextMenuImpl, (prev, next) => {

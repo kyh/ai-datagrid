@@ -1,6 +1,7 @@
 "use client";
 
-import type { ColumnDef, Table } from "@tanstack/react-table";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { ColumnDef, RowData, Table } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
@@ -11,11 +12,13 @@ import {
   type ColumnFormValues,
 } from "@/components/data-grid/column-form";
 
-interface DataGridAddColumnHeaderProps<TData> {
-  table: Table<TData>;
+interface DataGridAddColumnHeaderProps<TData extends RowData> {
+  table: Table<DataGridFeatures, TData>;
 }
 
-function DataGridAddColumnHeader<TData>({ table }: DataGridAddColumnHeaderProps<TData>) {
+function DataGridAddColumnHeader<TData extends RowData>({
+  table,
+}: DataGridAddColumnHeaderProps<TData>) {
   const onColumnAdd = table.options.meta?.onColumnAdd;
   const [open, setOpen] = React.useState(false);
   const formRef = React.useRef<ColumnFormRef>(null);
@@ -82,19 +85,19 @@ function DataGridAddColumnHeader<TData>({ table }: DataGridAddColumnHeaderProps<
   );
 }
 
-interface GetDataGridAddColumnOptions<TData> extends Omit<
-  Partial<ColumnDef<TData>>,
+interface GetDataGridAddColumnOptions<TData extends RowData> extends Omit<
+  Partial<ColumnDef<DataGridFeatures, TData>>,
   "id" | "header" | "cell"
 > {}
 
-export function getDataGridAddColumn<TData>({
+export function getDataGridAddColumn<TData extends RowData>({
   size = 40,
   enableHiding = false,
   enableResizing = false,
   enableSorting = false,
   enablePinning = false,
   ...props
-}: GetDataGridAddColumnOptions<TData> = {}): ColumnDef<TData> {
+}: GetDataGridAddColumnOptions<TData> = {}): ColumnDef<DataGridFeatures, TData> {
   return {
     id: "add-column",
     header: ({ table }) => <DataGridAddColumnHeader table={table} />,
