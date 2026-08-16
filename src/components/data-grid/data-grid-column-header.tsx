@@ -197,14 +197,14 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
               <>
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
-                  onSelect={() => onSortingChange("asc")}
+                  onClick={() => onSortingChange("asc")}
                 >
                   <ArrowUpIcon />
                   Sort ascending
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
-                  onSelect={() => onSortingChange("desc")}
+                  onClick={() => onSortingChange("desc")}
                 >
                   <ArrowDownIcon />
                   Sort descending
@@ -212,7 +212,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                 {column.getIsSorted() && (
                   <DropdownMenuItem
                     className="[&_svg]:text-muted-foreground"
-                    onSelect={onSortRemove}
+                    onClick={onSortRemove}
                   >
                     <XIcon />
                     Remove sort
@@ -225,14 +225,14 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
               <>
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
-                  onSelect={() => onColumnInsert(column.id, "left")}
+                  onClick={() => onColumnInsert(column.id, "left")}
                 >
                   <TableColumnsSplitIcon />
                   Insert column left
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
-                  onSelect={() => onColumnInsert(column.id, "right")}
+                  onClick={() => onColumnInsert(column.id, "right")}
                 >
                   <TableColumnsSplitIcon />
                   Insert column right
@@ -251,7 +251,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                     {isPinnedLeft ? (
                       <DropdownMenuItem
                         className="[&_svg]:text-muted-foreground"
-                        onSelect={onUnpin}
+                        onClick={onUnpin}
                       >
                         <PinOffIcon />
                         Unpin from left
@@ -259,7 +259,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                     ) : (
                       <DropdownMenuItem
                         className="[&_svg]:text-muted-foreground"
-                        onSelect={onLeftPin}
+                        onClick={onLeftPin}
                       >
                         <PinIcon />
                         Pin to left
@@ -268,7 +268,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                     {isPinnedRight ? (
                       <DropdownMenuItem
                         className="[&_svg]:text-muted-foreground"
-                        onSelect={onUnpin}
+                        onClick={onUnpin}
                       >
                         <PinOffIcon />
                         Unpin from right
@@ -276,7 +276,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                     ) : (
                       <DropdownMenuItem
                         className="[&_svg]:text-muted-foreground"
-                        onSelect={onRightPin}
+                        onClick={onRightPin}
                       >
                         <PinIcon />
                         Pin to right
@@ -291,7 +291,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
-                  onSelect={() => column.toggleVisibility(false)}
+                  onClick={() => column.toggleVisibility(false)}
                 >
                   <EyeOffIcon />
                   Hide column
@@ -301,7 +301,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
             {table.options.meta?.onColumnDelete && (
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-                onSelect={() => table.options.meta?.onColumnDelete?.(column.id)}
+                onClick={() => table.options.meta?.onColumnDelete?.(column.id)}
               >
                 <TrashIcon />
                 Remove column
