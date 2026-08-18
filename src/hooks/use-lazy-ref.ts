@@ -5,9 +5,10 @@ function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   if (ref.current === null) {
     ref.current = fn();
   }
-  // `current` is filled in above on the first render and never reset, so the ref
-  // is non-null for every read — but it is declared nullable to allow that first
-  // assignment, and TS cannot carry the invariant across the boundary.
+  // SAFETY: `current` is filled in above on the first render and never reset,
+  // so the ref is non-null for every read — it is declared nullable only to
+  // allow that first assignment, and TS cannot carry the invariant across the
+  // boundary.
   // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
   return ref as React.RefObject<T>;
 }

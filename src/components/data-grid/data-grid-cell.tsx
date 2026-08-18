@@ -13,7 +13,7 @@ import {
   ShortTextCell,
   UrlCell,
 } from "@/components/data-grid/data-grid-cell-variants";
-import type { DataGridCellProps } from "@/lib/data-grid-types";
+import type { DataGridCellProps, DataGridRowData } from "@/lib/data-grid-types";
 import { genericMemo } from "@/lib/generic-memo";
 
 export const DataGridCell = genericMemo(DataGridCellImpl, (prev, next) => {
@@ -49,7 +49,7 @@ export const DataGridCell = genericMemo(DataGridCellImpl, (prev, next) => {
   return true;
 });
 
-function DataGridCellImpl<TData extends Record<string, unknown>>({
+function DataGridCellImpl<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,

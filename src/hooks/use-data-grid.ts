@@ -4,6 +4,7 @@ import { useDirection } from "@base-ui/react/direction-provider";
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  functionalUpdate,
   type Row,
   type RowSelectionState,
   type SortingState,
@@ -13,6 +14,7 @@ import {
   type Updater,
   useTable,
 } from "@tanstack/react-table";
+import { z } from "zod";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
@@ -24,7 +26,6 @@ import { dataGridFeatures, type DataGridFeatures } from "@/lib/data-grid-feature
 import {
   formatDateForDisplay,
   getCellKey,
-  getIsFileCellData,
   getIsInPopover,
   getRowHeightValue,
   getScrollDirection,
@@ -33,9 +34,12 @@ import {
   parseTsv,
   scrollCellIntoView,
 } from "@/lib/data-grid";
+import { fileCellDataSchema } from "@/lib/data-grid-schema";
 import type {
   CellPosition,
   CellUpdate,
+  CellValue,
+  DataGridRowData,
   Direction,
   FileCellData,
   NavigationDirection,
@@ -60,7 +64,7 @@ const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
 const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
 const VALID_BOOLEANS = new Set(["true", "false", "1", "0", "yes", "no", "checked", "unchecked"]);
 
-interface UseDataGridProps<TData extends Record<string, unknown>> extends Omit<
+interface UseDataGridProps<TData extends DataGridRowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   // `features` is supplied by the hook, not the caller: every grid shares one
   // feature set, and the hook's own type annotations depend on it.
@@ -114,15 +118,18 @@ interface UseDataGridProps<TData extends Record<string, unknown>> extends Omit<
 /**
  * The grid addresses cells by column id, so a row it has generated or edited is
  * assembled from a runtime column set and cannot be proven to still satisfy the
- * caller's nominal row type. `TData extends Record<string, unknown>` gets the
+ * caller's nominal row type. `TData extends DataGridRowData` gets the
  * reads type-checked; this is the single place the dynamic writes are widened
  * back to `TData`.
  */
-const asRow = <TRow extends Record<string, unknown>>(row: Record<string, unknown>): TRow =>
+const asRow = <TRow extends DataGridRowData>(row: DataGridRowData): TRow =>
+  // SAFETY: the grid addresses cells only through string column ids, so every
+  // read and write on `TRow` goes through the same open-dictionary contract the
+  // input satisfies; the nominal row type adds no fields the grid could miss.
   // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
   row as TRow;
 
-function useDataGrid<TData extends Record<string, unknown>>({
+function useDataGrid<TData extends DataGridRowData>({
   data,
   columns,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
@@ -365,7 +372,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
 
         if (updates) {
           const baseRow = existingRow ?? tableRow?.original ?? asRow<TData>({});
-          const updatedRow: Record<string, unknown> = { ...baseRow };
+          const updatedRow: DataGridRowData = { ...baseRow };
           for (const { columnId, value } of updates) {
             updatedRow[columnId] = value;
           }
@@ -795,7 +802,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
             const cellOpts = column?.columnDef?.meta?.cell;
             const cellVariant = cellOpts?.variant;
 
-            let processedValue: unknown = pastedValue;
+            let processedValue: CellValue = pastedValue;
             let shouldSkip = false;
 
             switch (cellVariant) {
@@ -853,7 +860,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
                 try {
                   const parsed = JSON.parse(pastedValue);
                   if (Array.isArray(parsed)) {
-                    values = parsed.filter((v): v is string => typeof v === "string");
+                    values = parsed.filter((v): v is string => z.string().safeParse(v).success);
                   }
                 } catch {
                   values = pastedValue ? pastedValue.split(",").map((v) => v.trim()) : [];
@@ -880,7 +887,11 @@ function useDataGrid<TData extends Record<string, unknown>>({
                     if (!Array.isArray(parsed)) {
                       shouldSkip = true;
                     } else {
-                      const validFiles = parsed.filter(getIsFileCellData);
+                      const validFiles: FileCellData[] = [];
+                      for (const item of parsed) {
+                        const file = fileCellDataSchema.safeParse(item);
+                        if (file.success) validFiles.push(file.data);
+                      }
                       if (parsed.length > 0 && validFiles.length === 0) {
                         shouldSkip = true;
                       } else {
@@ -942,13 +953,17 @@ function useDataGrid<TData extends Record<string, unknown>>({
                     const parsed = JSON.parse(pastedValue);
 
                     if (Array.isArray(parsed)) {
-                      if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
-                        processedValue = parsed.map((f) => f.name).join(", ");
-                      } else if (parsed.every((v) => typeof v === "string")) {
+                      const files = z.array(fileCellDataSchema).safeParse(parsed);
+                      if (parsed.length > 0 && files.success) {
+                        processedValue = files.data.map((f) => f.name).join(", ");
+                      } else if (z.array(z.string()).safeParse(parsed).success) {
                         processedValue = parsed.join(", ");
                       }
-                    } else if (typeof parsed === "boolean") {
-                      processedValue = parsed ? "Checked" : "Unchecked";
+                    } else {
+                      const bool = z.boolean().safeParse(parsed);
+                      if (bool.success) {
+                        processedValue = bool.data ? "Checked" : "Unchecked";
+                      }
                     }
                   } catch {
                     const lower = pastedValue.toLowerCase();
@@ -993,7 +1008,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
               const column = tableColumns.find((c) => c.id === columnId);
               const cellVariant = column?.columnDef?.meta?.cell?.variant;
 
-              let emptyValue: unknown = "";
+              let emptyValue: CellValue = "";
               if (cellVariant === "multi-select" || cellVariant === "file") {
                 emptyValue = [];
               } else if (cellVariant === "number" || cellVariant === "date") {
@@ -1816,7 +1831,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
   const onSortingChange = React.useCallback(
     (updater: Updater<SortingState>) => {
       const currentState = store.getState();
-      const newSorting = typeof updater === "function" ? updater(currentState.sorting) : updater;
+      const newSorting = functionalUpdate(updater, currentState.sorting);
       store.setState("sorting", newSorting);
 
       propsRef.current.onSortingChange?.(newSorting);
@@ -1827,8 +1842,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
   const onColumnFiltersChange = React.useCallback(
     (updater: Updater<ColumnFiltersState>) => {
       const currentState = store.getState();
-      const newColumnFilters =
-        typeof updater === "function" ? updater(currentState.columnFilters) : updater;
+      const newColumnFilters = functionalUpdate(updater, currentState.columnFilters);
       store.setState("columnFilters", newColumnFilters);
 
       propsRef.current.onColumnFiltersChange?.(newColumnFilters);
@@ -1839,8 +1853,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
   const onRowSelectionChange = React.useCallback(
     (updater: Updater<RowSelectionState>) => {
       const currentState = store.getState();
-      const newRowSelection =
-        typeof updater === "function" ? updater(currentState.rowSelection) : updater;
+      const newRowSelection = functionalUpdate(updater, currentState.rowSelection);
 
       const selectedRows = Object.keys(newRowSelection).filter((key) => newRowSelection[key]);
 
@@ -1920,8 +1933,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
   const onRowHeightChange = React.useCallback(
     (updater: Updater<RowHeightValue>) => {
       const currentState = store.getState();
-      const newRowHeight =
-        typeof updater === "function" ? updater(currentState.rowHeight) : updater;
+      const newRowHeight = functionalUpdate(updater, currentState.rowHeight);
       store.setState("rowHeight", newRowHeight);
       propsRef.current.onRowHeightChange?.(newRowHeight);
     },
@@ -2379,11 +2391,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
         if (cellsToClear.length > 0) {
           event.preventDefault();
 
-          const updates: Array<{
-            rowIndex: number;
-            columnId: string;
-            value: unknown;
-          }> = [];
+          const updates: Array<CellUpdate> = [];
 
           const currentTable = tableRef.current;
           const tableColumns = currentTable?.getAllColumns() ?? [];
@@ -2394,7 +2402,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
             const column = tableColumns.find((c) => c.id === columnId);
             const cellVariant = column?.columnDef?.meta?.cell?.variant;
 
-            let emptyValue: unknown = "";
+            let emptyValue: CellValue = "";
             if (cellVariant === "multi-select" || cellVariant === "file") {
               emptyValue = [];
             } else if (cellVariant === "number" || cellVariant === "date") {
@@ -2892,7 +2900,7 @@ function useDataGrid<TData extends Record<string, unknown>>({
     if (autoFocus && data.length > 0 && columns.length > 0 && !currentState.focusedCell) {
       if (navigableColumnIds.length > 0) {
         const rafId = requestAnimationFrame(() => {
-          if (typeof autoFocus === "object") {
+          if (autoFocus !== true) {
             const { rowIndex, columnId } = autoFocus;
             if (columnId) {
               focusCell(rowIndex ?? 0, columnId);

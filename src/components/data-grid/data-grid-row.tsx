@@ -21,7 +21,12 @@ import {
   getRowHeightValue,
 } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { CellPosition, Direction, RowHeightValue } from "@/lib/data-grid-types";
+import type {
+  CellPosition,
+  DataGridRowData,
+  Direction,
+  RowHeightValue,
+} from "@/lib/data-grid-types";
 import { genericMemo } from "@/lib/generic-memo";
 
 interface DataGridRowProps<TData extends RowData> extends React.ComponentProps<"div"> {
@@ -160,7 +165,7 @@ export const DataGridRow = genericMemo(DataGridRowImpl, (prev, next) => {
   return true;
 });
 
-function DataGridRowImpl<TData extends Record<string, unknown>>({
+function DataGridRowImpl<TData extends DataGridRowData>({
   row,
   tableMeta,
   virtualItem,
@@ -189,8 +194,6 @@ function DataGridRowImpl<TData extends Record<string, unknown>>({
 
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
-      if (typeof virtualRowIndex === "undefined") return;
-
       if (node) {
         measureElement(node);
         rowMapRef.current?.set(virtualRowIndex, node);
@@ -280,7 +283,7 @@ function DataGridRowImpl<TData extends Record<string, unknown>>({
               width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >
-            {typeof cell.column.columnDef.header === "function" ? (
+            {cell.column.columnDef.header instanceof Function ? (
               <div
                 className={cn("size-full px-3 py-1.5", {
                   "bg-primary/10": isRowSelected,

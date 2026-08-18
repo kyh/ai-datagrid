@@ -40,9 +40,9 @@ import {
   parseLocalDate,
 } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
+import type { DataGridCellProps, DataGridRowData, FileCellData } from "@/lib/data-grid-types";
 
-export function ShortTextCell<TData extends Record<string, unknown>>({
+export function ShortTextCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -191,7 +191,7 @@ export function ShortTextCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function LongTextCell<TData extends Record<string, unknown>>({
+export function LongTextCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -380,7 +380,7 @@ export function LongTextCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function NumberCell<TData extends Record<string, unknown>>({
+export function NumberCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -506,7 +506,7 @@ export function NumberCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function UrlCell<TData extends Record<string, unknown>>({
+export function UrlCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -707,7 +707,7 @@ export function UrlCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function CheckboxCell<TData extends Record<string, unknown>>({
+export function CheckboxCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -808,7 +808,7 @@ export function CheckboxCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function SelectCell<TData extends Record<string, unknown>>({
+export function SelectCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -937,7 +937,7 @@ export function SelectCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function MultiSelectCell<TData extends Record<string, unknown>>({
+export function MultiSelectCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -1199,7 +1199,7 @@ export function MultiSelectCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function DateCell<TData extends Record<string, unknown>>({
+export function DateCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -1308,7 +1308,7 @@ export function DateCell<TData extends Record<string, unknown>>({
   );
 }
 
-export function FileCell<TData extends Record<string, unknown>>({
+export function FileCell<TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,

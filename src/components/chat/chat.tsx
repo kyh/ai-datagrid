@@ -2,6 +2,7 @@
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { MessageStreamEvent } from "eve/client";
 import { useEveAgent } from "eve/react";
 import { KeyIcon, SparklesIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,7 +27,7 @@ import {
   updateColumnsInputSchema,
 } from "@/lib/assistant-schemas";
 import { columnDefinitionToColumnDef } from "@/lib/column-mapping";
-import type { CellUpdate, FilterValue } from "@/lib/data-grid-types";
+import type { CellUpdate, DataGridRowData, FilterValue } from "@/lib/data-grid-types";
 import { buildGridContext } from "@/lib/grid-context";
 import type { SelectionContext } from "@/lib/selection-context";
 import { useDataGridStore } from "@/stores/data-grid-store";
@@ -89,7 +90,7 @@ const isAuthError = (error: Error): boolean =>
   /unauthorized|forbidden|authentication|api.?key|credential|401|403/i.test(error.message);
 
 interface ChatProps {
-  onColumnsGenerated?: (columns: ColumnDef<DataGridFeatures, Record<string, unknown>>[]) => void;
+  onColumnsGenerated?: (columns: ColumnDef<DataGridFeatures, DataGridRowData>[]) => void;
   onColumnsUpdated?: (updates: ColumnUpdate[]) => void;
   onColumnsDeleted?: (columnIds: string[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
@@ -134,13 +135,16 @@ export const Chat = ({
   const [apiKey, , removeApiKey] = useLocalStorage(GATEWAY_API_KEY_STORAGE_KEY, "");
 
   const applyToolResult = useCallback(
-    (event: unknown): void => {
+    (incoming: MessageStreamEvent): void => {
       // Delegation is forbidden by the instructions, but if the model strays,
       // unwrap the child's events so its tool results still reach the grid.
-      const wrapped = subagentEventSchema.safeParse(event);
-      if (wrapped.success) {
-        applyToolResult(wrapped.data.data.event);
-        return;
+      let event: unknown = incoming;
+      for (
+        let wrapped = subagentEventSchema.safeParse(event);
+        wrapped.success;
+        wrapped = subagentEventSchema.safeParse(event)
+      ) {
+        event = wrapped.data.data.event;
       }
       const parsed = toolResultEventSchema.safeParse(event);
       if (!parsed.success) return;

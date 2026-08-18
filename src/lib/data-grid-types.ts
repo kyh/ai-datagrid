@@ -51,77 +51,32 @@ export type CellOpts =
       multiple?: boolean;
     };
 
+/**
+ * Every value a grid cell can hold at runtime. Dates are stored as ISO
+ * strings by the date editor, but the paste path stores `Date` instances
+ * directly, so the union carries both representations.
+ */
+export type CellValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | string[]
+  | FileCellData[]
+  | null
+  | undefined;
+
+/**
+ * A grid row: cell values keyed by a runtime column id. Columns are created
+ * and deleted at runtime (by the user or the assistant), so rows are open
+ * dictionaries over the cell-value domain rather than closed nominal types.
+ */
+export type DataGridRowData = Record<string, CellValue>;
+
 export interface CellUpdate {
   rowIndex: number;
   columnId: string;
-  value: unknown;
-}
-
-/**
- * Discriminated union for type-safe cell values.
- * Use this for internal operations where type safety is needed.
- * CellUpdate keeps `value: unknown` for runtime boundaries.
- */
-export type TypedCellValue =
-  | { variant: "short-text"; value: string }
-  | { variant: "long-text"; value: string }
-  | { variant: "number"; value: number }
-  | { variant: "date"; value: string }
-  | { variant: "checkbox"; value: boolean }
-  | { variant: "select"; value: string }
-  | { variant: "multi-select"; value: string[] }
-  | { variant: "url"; value: string }
-  | { variant: "file"; value: FileCellData[] };
-
-/**
- * Validates that a value matches the expected type for a given cell variant.
- * Returns true if the value is valid for the variant, false otherwise.
- */
-export function validateCellValue(variant: CellOpts["variant"], value: unknown): boolean {
-  if (value === null || value === undefined) {
-    return true; // Allow null/undefined for all variants
-  }
-
-  switch (variant) {
-    case "short-text":
-    case "long-text":
-    case "date":
-    case "url":
-      return typeof value === "string";
-
-    case "number":
-      return typeof value === "number" && !Number.isNaN(value);
-
-    case "checkbox":
-      return typeof value === "boolean";
-
-    case "select":
-      return typeof value === "string";
-
-    case "multi-select":
-      return Array.isArray(value) && value.every((item) => typeof item === "string");
-
-    case "file":
-      return (
-        Array.isArray(value) &&
-        value.every(
-          (item) =>
-            typeof item === "object" &&
-            item !== null &&
-            typeof item.id === "string" &&
-            typeof item.name === "string" &&
-            typeof item.size === "number" &&
-            typeof item.type === "string",
-        )
-      );
-
-    default: {
-      // oxlint-disable-next-line eslint/no-underscore-dangle -- exhaustiveness sentinel: a new `CellOpts` variant makes this assignment fail
-      const _exhaustive: never = variant;
-      void _exhaustive;
-      return false;
-    }
-  }
+  value: CellValue;
 }
 
 /**
@@ -152,7 +107,10 @@ export function isCellVariant(value: string | undefined): value is CellOpts["var
  * a runtime column set and cannot be proven to satisfy the caller's nominal row
  * type. This is the single place that widening happens.
  */
-export function asRow<TRow extends Record<string, unknown>>(row: Record<string, unknown>): TRow {
+export function asRow<TRow extends DataGridRowData>(row: DataGridRowData): TRow {
+  // SAFETY: the grid addresses cells only through string column ids, so every
+  // read and write on `TRow` goes through the same open-dictionary contract the
+  // input satisfies; the nominal row type adds no fields the grid could miss.
   // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
   return row as TRow;
 }
@@ -296,7 +254,7 @@ export interface SearchState {
   onNavigateToPrevMatch: () => void;
 }
 
-export interface DataGridCellProps<TData extends Record<string, unknown>> {
+export interface DataGridCellProps<TData extends DataGridRowData> {
   cell: Cell<DataGridFeatures, TData, unknown>;
   tableMeta: TableMeta<DataGridFeatures, TData>;
   rowIndex: number;

@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { useCallbackRef } from "@/hooks/use-callback-ref";
 
-export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
+export function useDebouncedCallback<T extends (...args: never[]) => void>(
   callback: T,
   delay: number,
 ) {

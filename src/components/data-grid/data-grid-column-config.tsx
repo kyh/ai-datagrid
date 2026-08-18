@@ -30,6 +30,8 @@ interface ColumnConfigState {
   prompt: string;
 }
 
+type ColumnConfigUpdates = Partial<ColumnConfigState>;
+
 interface DataGridColumnConfigProps<TData extends RowData> {
   column: Column<DataGridFeatures, TData, unknown>;
   table: DataGridTable<TData>;
@@ -57,9 +59,9 @@ export function DataGridColumnConfig<TData extends RowData>({
 
   const meta = column.columnDef.meta;
   const currentVariant = meta?.cell?.variant ?? "short-text";
+  const header = column.columnDef.header;
   const currentLabel =
-    meta?.label ??
-    (typeof column.columnDef.header === "string" ? column.columnDef.header : column.id);
+    meta?.label ?? (header === undefined || header instanceof Function ? column.id : header);
   const currentPrompt = meta?.prompt ?? "";
 
   const [config, setConfig] = React.useState<ColumnConfigState>({
@@ -88,11 +90,7 @@ export function DataGridColumnConfig<TData extends RowData>({
   };
 
   const handleSave = () => {
-    const updates: Partial<{
-      label: string;
-      variant: CellOpts["variant"];
-      prompt: string;
-    }> = {};
+    const updates: ColumnConfigUpdates = {};
 
     if (config.label !== currentLabel) {
       updates.label = config.label;

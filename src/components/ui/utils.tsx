@@ -12,7 +12,7 @@ type PossibleRef<T> = React.Ref<T> | undefined;
  * This utility takes care of different types of refs: callback refs and RefObject(s)
  */
 function setRef<T>(ref: PossibleRef<T>, value: T) {
-  if (typeof ref === "function") {
+  if (ref instanceof Function) {
     ref(value);
   } else if (ref !== null && ref !== undefined) {
     ref.current = value;
@@ -51,7 +51,7 @@ export function useDebounce<T>(value: T, delay?: number): T {
   return debouncedValue;
 }
 
-export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
+export function useDebouncedCallback<T extends (...args: never[]) => void>(
   callback: T,
   delay: number,
 ) {

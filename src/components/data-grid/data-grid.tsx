@@ -11,12 +11,12 @@ import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getColumnBorderVisibility, getColumnPinningStyle } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { Direction } from "@/lib/data-grid-types";
+import type { DataGridRowData, Direction } from "@/lib/data-grid-types";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 const EMPTY_GENERATING_CELLS_SET = new Set<string>();
 
-interface DataGridProps<TData extends Record<string, unknown>>
+interface DataGridProps<TData extends DataGridRowData>
   extends
     Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
@@ -25,7 +25,7 @@ interface DataGridProps<TData extends Record<string, unknown>>
   stretchColumns?: boolean;
 }
 
-export function DataGrid<TData extends Record<string, unknown>>({
+export function DataGrid<TData extends DataGridRowData>({
   dataGridRef,
   headerRef,
   rowMapRef,
@@ -165,8 +165,8 @@ export function DataGrid<TData extends Record<string, unknown>>({
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >
-                    {header.isPlaceholder ? null : typeof header.column.columnDef.header ===
-                      "function" ? (
+                    {header.isPlaceholder ? null : header.column.columnDef.header instanceof
+                      Function ? (
                       <div className="size-full px-3 py-1.5">
                         {flexRender(header.column.columnDef.header, header.getContext())}
                       </div>

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAsRef } from "@/hooks/use-as-ref";
 import { cn } from "@/lib/utils";
-import type { PasteDialogState } from "@/lib/data-grid-types";
+import type { DataGridRowData, PasteDialogState } from "@/lib/data-grid-types";
 
 interface DataGridPasteDialogProps<TData extends RowData> {
   tableMeta: TableMeta<DataGridFeatures, TData>;
@@ -41,11 +41,8 @@ export function DataGridPasteDialog<TData extends RowData>({
 
 interface PasteDialogProps
   extends
-    Pick<
-      TableMeta<DataGridFeatures, Record<string, unknown>>,
-      "onPasteDialogOpenChange" | "onCellsPaste"
-    >,
-    Required<Pick<TableMeta<DataGridFeatures, Record<string, unknown>>, "pasteDialog">> {}
+    Pick<TableMeta<DataGridFeatures, DataGridRowData>, "onPasteDialogOpenChange" | "onCellsPaste">,
+    Required<Pick<TableMeta<DataGridFeatures, DataGridRowData>, "pasteDialog">> {}
 
 const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
   if (prev.pasteDialog.open !== next.pasteDialog.open) return false;

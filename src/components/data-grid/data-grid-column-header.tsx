@@ -60,11 +60,12 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
   ...props
 }: DataGridColumnHeaderProps<TData, TValue>) {
   const column = header.column;
+  const headerDef = column.columnDef.header;
   const label = column.columnDef.meta?.label
     ? column.columnDef.meta.label
-    : typeof column.columnDef.header === "string"
-      ? column.columnDef.header
-      : column.id;
+    : headerDef === undefined || headerDef instanceof Function
+      ? column.id
+      : headerDef;
 
   const currentPrompt = column.columnDef.meta?.prompt ?? "";
   const currentOptions: CellSelectOption[] = getCellOptions(column.columnDef.meta?.cell) ?? [];
@@ -249,10 +250,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     {isPinnedLeft ? (
-                      <DropdownMenuItem
-                        className="[&_svg]:text-muted-foreground"
-                        onClick={onUnpin}
-                      >
+                      <DropdownMenuItem className="[&_svg]:text-muted-foreground" onClick={onUnpin}>
                         <PinOffIcon />
                         Unpin from left
                       </DropdownMenuItem>
@@ -266,10 +264,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                       </DropdownMenuItem>
                     )}
                     {isPinnedRight ? (
-                      <DropdownMenuItem
-                        className="[&_svg]:text-muted-foreground"
-                        onClick={onUnpin}
-                      >
+                      <DropdownMenuItem className="[&_svg]:text-muted-foreground" onClick={onUnpin}>
                         <PinOffIcon />
                         Unpin from right
                       </DropdownMenuItem>

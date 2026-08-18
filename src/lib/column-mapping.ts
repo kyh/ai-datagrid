@@ -4,11 +4,11 @@ import type { z } from "zod";
 
 import type { columnDefinitionSchema } from "@/lib/assistant-schemas";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { CellOpts } from "@/lib/data-grid-types";
+import type { CellOpts, DataGridRowData } from "@/lib/data-grid-types";
 
 type ColumnDefinition = z.infer<typeof columnDefinitionSchema>;
 
-const filterFn = getFilterFn<Record<string, unknown>>();
+const filterFn = getFilterFn<DataGridRowData>();
 
 /**
  * Maps an AI-generated column definition (the zod contract in
@@ -17,7 +17,7 @@ const filterFn = getFilterFn<Record<string, unknown>>();
  */
 export function columnDefinitionToColumnDef(
   col: ColumnDefinition,
-): ColumnDef<DataGridFeatures, Record<string, unknown>> {
+): ColumnDef<DataGridFeatures, DataGridRowData> {
   let cell: CellOpts;
   switch (col.variant) {
     case "number":

@@ -38,6 +38,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { z } from "zod";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { useComposedRefs } from "@/components/ui/utils";
@@ -141,10 +142,11 @@ function SortableRoot<T>(props: SortableRootProps<T>) {
       if (getItemValueProp) {
         return getItemValueProp(item);
       }
-      if (typeof item !== "string" && typeof item !== "number") {
+      const identifier = z.union([z.string(), z.number()]).safeParse(item);
+      if (!identifier.success) {
         throw new Error("getItemValue is required when using array of objects");
       }
-      return item;
+      return identifier.data;
     },
     [getItemValueProp],
   );
@@ -292,7 +294,7 @@ function SortableRoot<T>(props: SortableRootProps<T>) {
   );
 
   return (
-    // `SortableRootContextValue<T>` is contravariant in `T` through
+    // SAFETY: `SortableRootContextValue<T>` is contravariant in `T` through
     // `getItemValue: (item: T) => …`, so no instantiation is assignable to the
     // `<unknown>` the context is declared with. Consumers re-narrow via
     // `useSortableRoot<T>()`; the item type is fixed per provider tree, so the
@@ -458,8 +460,8 @@ function SortableItem(props: SortableItemProps) {
       "data-dragging": isDragging ? "" : undefined,
       "data-slot": "sortable-item",
       ...mergedProps,
-      ...(asHandle && !disabled ? attributes : {}),
-      ...(asHandle && !disabled ? listeners : {}),
+      ...(asHandle && !disabled ? attributes : undefined),
+      ...(asHandle && !disabled ? listeners : undefined),
     },
     render,
   });
@@ -504,8 +506,8 @@ function SortableItemHandle(props: SortableItemHandleProps) {
       "data-dragging": itemContext.isDragging ? "" : undefined,
       "data-slot": "sortable-item-handle",
       ...mergedProps,
-      ...(isDisabled ? {} : itemContext.attributes),
-      ...(isDisabled ? {} : itemContext.listeners),
+      ...(isDisabled ? undefined : itemContext.attributes),
+      ...(isDisabled ? undefined : itemContext.listeners),
       disabled: isDisabled,
     },
     render,
@@ -550,7 +552,7 @@ function SortableOverlay(props: SortableOverlayProps) {
     >
       <SortableOverlayContext.Provider value={true}>
         {context.activeId
-          ? typeof children === "function"
+          ? children instanceof Function
             ? children({ value: context.activeId })
             : children
           : null}

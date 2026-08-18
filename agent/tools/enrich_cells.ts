@@ -27,11 +27,13 @@ import type { ColumnInfo } from "../../src/lib/selection-context";
 type EnrichCellsInput = z.infer<typeof enrichCellsInputSchema>;
 type EnrichCellsPayload = z.infer<typeof enrichCellsPayloadSchema>;
 
+type EnrichCellsRow = EnrichCellsInput["rows"][number];
+
 type CellTask = {
   rowIndex: number;
   columnId: string;
   column: ColumnInfo;
-  rowData?: Record<string, unknown>;
+  rowData?: EnrichCellsRow["rowData"];
 };
 
 // -----------------------------------------------------------------------------
@@ -159,7 +161,7 @@ async function enrichCells(
         rowIndex: row.rowIndex,
         columnId: column.id,
         column,
-        ...(row.rowData !== undefined ? { rowData: row.rowData } : {}),
+        ...(row.rowData !== undefined ? { rowData: row.rowData } : undefined),
       });
     }
   }
@@ -218,9 +220,8 @@ Each cell is generated individually (respecting the column's type, options, and 
     // Same BYO-key mechanism as the agent's dynamic model resolver: the
     // channel verifier stashed the caller's gateway key in session auth.
     const auth = ctx.session.auth.current ?? ctx.session.auth.initiator;
-    const attribute = auth?.attributes["gatewayApiKey"];
-    const gatewayApiKey =
-      typeof attribute === "string" && attribute.length > 0 ? attribute : undefined;
+    const attribute = z.string().min(1).safeParse(auth?.attributes["gatewayApiKey"]);
+    const gatewayApiKey = attribute.success ? attribute.data : undefined;
     return enrichCells(input, gatewayApiKey, ctx.abortSignal);
   },
   toModelOutput: (output) => ({

@@ -1,5 +1,6 @@
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { FilterFn, Row, RowData } from "@tanstack/react-table";
+import type { FilterFn, RowData } from "@tanstack/react-table";
+import { z } from "zod";
 import type {
   BooleanFilterOperator,
   DateFilterOperator,
@@ -109,26 +110,53 @@ export function getOperatorsForVariant(variant: string): ReadonlyArray<{
   }
 }
 
+const filterOperatorSchema = z.enum([
+  "contains",
+  "notContains",
+  "equals",
+  "notEquals",
+  "startsWith",
+  "endsWith",
+  "isEmpty",
+  "isNotEmpty",
+  "lessThan",
+  "lessThanOrEqual",
+  "greaterThan",
+  "greaterThanOrEqual",
+  "isBetween",
+  "before",
+  "after",
+  "onOrBefore",
+  "onOrAfter",
+  "is",
+  "isNot",
+  "isAnyOf",
+  "isNoneOf",
+  "isTrue",
+  "isFalse",
+]) satisfies z.ZodType<FilterOperator>;
+
 /**
  * TanStack stores column filter state as `unknown`, so every read of it is a
- * boundary. This is the one check that turns it into a `FilterValue`.
+ * boundary. This is the one schema that turns it into a `FilterValue`.
  */
-export function isFilterValue(value: unknown): value is FilterValue {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "operator" in value &&
-    typeof value.operator === "string"
-  );
-}
+export const filterValueSchema = z.object({
+  operator: filterOperatorSchema,
+  value: z.union([z.string(), z.number(), z.array(z.string())]).optional(),
+  endValue: z.union([z.string(), z.number()]).optional(),
+}) satisfies z.ZodType<FilterValue>;
+
+const numberSchema = z.number();
+const stringSchema = z.string();
 
 export function getFilterFn<TData extends RowData>(): FilterFn<DataGridFeatures, TData> {
-  return (row: Row<DataGridFeatures, TData>, columnId: string, filterValue: unknown): boolean => {
-    if (!isFilterValue(filterValue)) {
+  return (row, columnId, filterValue): boolean => {
+    const parsedFilter = filterValueSchema.safeParse(filterValue);
+    if (!parsedFilter.success) {
       return true;
     }
 
-    const { operator, value, endValue } = filterValue;
+    const { operator, value, endValue } = parsedFilter.data;
 
     const cellValue = row.getValue(columnId);
 
@@ -162,8 +190,13 @@ export function getFilterFn<TData extends RowData>(): FilterFn<DataGridFeatures,
       return true;
     }
 
+    const cellNumber = numberSchema.safeParse(cellValue);
+    const cellString = stringSchema.safeParse(cellValue);
+    const filterNumber = numberSchema.safeParse(value);
+    const filterString = stringSchema.safeParse(value);
+
     const cellValueStr = String(cellValue ?? "").toLowerCase();
-    const filterValueStr = typeof value === "string" ? value.toLowerCase() : String(value);
+    const filterValueStr = filterString.success ? filterString.data.toLowerCase() : String(value);
 
     if (operator === "contains") {
       return cellValueStr.includes(filterValueStr);
@@ -174,24 +207,24 @@ export function getFilterFn<TData extends RowData>(): FilterFn<DataGridFeatures,
     }
 
     if (operator === "equals") {
-      if (typeof cellValue === "number" && typeof value === "number") {
-        return cellValue === value;
+      if (cellNumber.success && filterNumber.success) {
+        return cellNumber.data === filterNumber.data;
       }
-      if (cellValue instanceof Date && typeof value === "string") {
+      if (cellValue instanceof Date && filterString.success) {
         const cellDate = new Date(cellValue);
-        const filterDate = new Date(value);
+        const filterDate = new Date(filterString.data);
         return cellDate.toDateString() === filterDate.toDateString();
       }
       return cellValueStr === filterValueStr;
     }
 
     if (operator === "notEquals") {
-      if (typeof cellValue === "number" && typeof value === "number") {
-        return cellValue !== value;
+      if (cellNumber.success && filterNumber.success) {
+        return cellNumber.data !== filterNumber.data;
       }
-      if (cellValue instanceof Date && typeof value === "string") {
+      if (cellValue instanceof Date && filterString.success) {
         const cellDate = new Date(cellValue);
-        const filterDate = new Date(value);
+        const filterDate = new Date(filterString.data);
         return cellDate.toDateString() !== filterDate.toDateString();
       }
       return cellValueStr !== filterValueStr;
@@ -205,32 +238,38 @@ export function getFilterFn<TData extends RowData>(): FilterFn<DataGridFeatures,
       return cellValueStr.endsWith(filterValueStr);
     }
 
-    if (typeof cellValue === "number" && typeof value === "number") {
+    if (cellNumber.success && filterNumber.success) {
+      const cellNum = cellNumber.data;
+      const filterNum = filterNumber.data;
+
       if (operator === "greaterThan") {
-        return cellValue > value;
+        return cellNum > filterNum;
       }
 
       if (operator === "greaterThanOrEqual") {
-        return cellValue >= value;
+        return cellNum >= filterNum;
       }
 
       if (operator === "lessThan") {
-        return cellValue < value;
+        return cellNum < filterNum;
       }
 
       if (operator === "lessThanOrEqual") {
-        return cellValue <= value;
+        return cellNum <= filterNum;
       }
 
-      if (operator === "isBetween" && typeof endValue === "number") {
-        return cellValue >= value && cellValue <= endValue;
+      const endNumber = numberSchema.safeParse(endValue);
+      if (operator === "isBetween" && endNumber.success) {
+        return cellNum >= filterNum && cellNum <= endNumber.data;
       }
     }
 
-    if (cellValue instanceof Date || typeof cellValue === "string") {
-      const cellDate = new Date(cellValue);
-      if (!Number.isNaN(cellDate.getTime()) && typeof value === "string") {
-        const filterDate = new Date(value);
+    const cellDateSource =
+      cellValue instanceof Date ? cellValue : cellString.success ? cellString.data : null;
+    if (cellDateSource !== null) {
+      const cellDate = new Date(cellDateSource);
+      if (!Number.isNaN(cellDate.getTime()) && filterString.success) {
+        const filterDate = new Date(filterString.data);
 
         if (operator === "before") {
           return cellDate < filterDate;
@@ -248,8 +287,9 @@ export function getFilterFn<TData extends RowData>(): FilterFn<DataGridFeatures,
           return cellDate >= filterDate;
         }
 
-        if (operator === "isBetween" && typeof endValue === "string") {
-          const filterDate2 = new Date(endValue);
+        const endString = stringSchema.safeParse(endValue);
+        if (operator === "isBetween" && endString.success) {
+          const filterDate2 = new Date(endString.data);
           return cellDate >= filterDate && cellDate <= filterDate2;
         }
       }

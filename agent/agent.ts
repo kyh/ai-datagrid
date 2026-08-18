@@ -1,5 +1,6 @@
 import { createGateway } from "ai";
 import { defineAgent, defineDynamic } from "eve";
+import { z } from "zod";
 
 // Relative import: agent/ is compiled by eve, which resolves plain relative
 // paths but not tsconfig `@/*` aliases.
@@ -23,11 +24,11 @@ export default defineAgent({
     events: {
       "step.started": (_event, ctx) => {
         const auth = ctx.session.auth.current ?? ctx.session.auth.initiator;
-        const gatewayApiKey = auth?.attributes["gatewayApiKey"];
-        if (typeof gatewayApiKey !== "string" || gatewayApiKey.length === 0) {
+        const gatewayApiKey = z.string().min(1).safeParse(auth?.attributes["gatewayApiKey"]);
+        if (!gatewayApiKey.success) {
           return MODEL_ID; // fall back to the server-credentialed model
         }
-        return createGateway({ apiKey: gatewayApiKey })(MODEL_ID);
+        return createGateway({ apiKey: gatewayApiKey.data })(MODEL_ID);
       },
     },
   }),

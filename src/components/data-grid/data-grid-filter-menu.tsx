@@ -40,8 +40,14 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/components/ui/sortable";
+import { z } from "zod";
+
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getDefaultOperator, getOperatorsForVariant, isFilterValue } from "@/lib/data-grid-filters";
+import {
+  filterValueSchema,
+  getDefaultOperator,
+  getOperatorsForVariant,
+} from "@/lib/data-grid-filters";
 import { formatDate } from "@/components/ui/utils";
 import { cn } from "@/lib/utils";
 import type { FilterOperator } from "@/lib/data-grid-types";
@@ -50,6 +56,26 @@ const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = new Set(["backspace", "delete"]);
 const FILTER_DEBOUNCE_MS = 300;
 const OPERATORS_WITHOUT_VALUE = new Set(["isEmpty", "isNotEmpty", "isTrue", "isFalse"]);
+
+type FilterInputValue = string | number | string[] | undefined;
+
+/** A filter value as a number input can display it: numbers pass, everything else clears. */
+function toNumberInputValue(value: FilterInputValue): number | "" {
+  const parsed = z.number().safeParse(value);
+  return parsed.success ? parsed.data : "";
+}
+
+/** A filter value as a text input can display it: strings pass, everything else clears. */
+function toTextInputValue(value: FilterInputValue): string {
+  const parsed = z.string().safeParse(value);
+  return parsed.success ? parsed.data : "";
+}
+
+/** A filter value as a calendar can display it: non-empty date strings parse, everything else clears. */
+function toDateInputValue(value: FilterInputValue): Date | undefined {
+  const parsed = z.string().min(1).safeParse(value);
+  return parsed.success ? new Date(parsed.data) : undefined;
+}
 
 interface DataGridFilterMenuProps<TData extends RowData> extends React.ComponentProps<
   typeof PopoverContent
@@ -321,7 +347,8 @@ function DataGridFilterItem<TData extends RowData>({
   const [showOperatorSelector, setShowOperatorSelector] = React.useState(false);
 
   const variant = columnVariants.get(filter.id) ?? "short-text";
-  const filterValue = isFilterValue(filter.value) ? filter.value : undefined;
+  const parsedFilterValue = filterValueSchema.safeParse(filter.value);
+  const filterValue = parsedFilterValue.success ? parsedFilterValue.data : undefined;
   const operator = filterValue?.operator ?? getDefaultOperator(variant);
 
   const operators = getOperatorsForVariant(variant);
@@ -592,7 +619,7 @@ function DataGridFilterInput<TData extends RowData>({
             type="number"
             inputMode="numeric"
             placeholder="Start"
-            value={typeof localValue === "number" ? localValue : ""}
+            value={toNumberInputValue(localValue)}
             onChange={(event) => {
               const val = event.target.value;
               const newValue = val === "" ? undefined : Number(val);
@@ -606,7 +633,7 @@ function DataGridFilterInput<TData extends RowData>({
             type="number"
             inputMode="numeric"
             placeholder="End"
-            value={typeof localEndValue === "number" ? localEndValue : ""}
+            value={toNumberInputValue(localEndValue)}
             onChange={(event) => {
               const val = event.target.value;
               const newValue = val === "" ? undefined : Number(val);
@@ -625,7 +652,7 @@ function DataGridFilterInput<TData extends RowData>({
         type="number"
         inputMode="numeric"
         placeholder={placeholder}
-        value={typeof localValue === "number" ? localValue : ""}
+        value={toNumberInputValue(localValue)}
         onChange={(event) => {
           const val = event.target.value;
           const newValue = val === "" ? undefined : Number(val);
@@ -641,10 +668,8 @@ function DataGridFilterInput<TData extends RowData>({
     const inputListboxId = `${inputId}-listbox`;
 
     if (isBetween) {
-      const startDate =
-        localValue && typeof localValue === "string" ? new Date(localValue) : undefined;
-      const endDate =
-        localEndValue && typeof localEndValue === "string" ? new Date(localEndValue) : undefined;
+      const startDate = toDateInputValue(localValue);
+      const endDate = toDateInputValue(localEndValue);
 
       const isSameDate =
         startDate && endDate && startDate.toDateString() === endDate.toDateString();
@@ -705,8 +730,7 @@ function DataGridFilterInput<TData extends RowData>({
       );
     }
 
-    const dateValue =
-      localValue && typeof localValue === "string" ? new Date(localValue) : undefined;
+    const dateValue = toDateInputValue(localValue);
 
     return (
       <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
@@ -913,7 +937,7 @@ function DataGridFilterInput<TData extends RowData>({
           type="text"
           placeholder="Start"
           className="h-8 w-full flex-1 rounded"
-          value={typeof localValue === "string" ? localValue : ""}
+          value={toTextInputValue(localValue)}
           onChange={(event) => {
             const val = event.target.value;
             const newValue = val === "" ? undefined : val;
@@ -926,7 +950,7 @@ function DataGridFilterInput<TData extends RowData>({
           type="text"
           placeholder="End"
           className="h-8 w-full flex-1 rounded"
-          value={typeof localEndValue === "string" ? localEndValue : ""}
+          value={toTextInputValue(localEndValue)}
           onChange={(event) => {
             const val = event.target.value;
             const newValue = val === "" ? undefined : val;
@@ -944,7 +968,7 @@ function DataGridFilterInput<TData extends RowData>({
       type="text"
       placeholder={placeholder}
       className="h-8 w-full rounded"
-      value={typeof localValue === "string" ? localValue : ""}
+      value={toTextInputValue(localValue)}
       onChange={(event) => {
         const val = event.target.value;
         const newValue = val === "" ? undefined : val;

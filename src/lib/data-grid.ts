@@ -21,33 +21,19 @@ import {
   TextInitialIcon,
 } from "lucide-react";
 import type * as React from "react";
-import type {
-  CellOpts,
-  CellPosition,
-  Direction,
-  FileCellData,
-  RowHeightValue,
-} from "@/lib/data-grid-types";
+import type { CellOpts, CellPosition, Direction, RowHeightValue } from "@/lib/data-grid-types";
 
 export function flexRender<TProps extends object>(
   Comp: ((props: TProps) => React.ReactNode) | string | undefined,
   props: TProps,
 ): React.ReactNode {
-  if (typeof Comp === "string") {
-    return Comp;
+  if (Comp === undefined) {
+    return undefined;
   }
-  return Comp?.(props);
-}
-
-export function getIsFileCellData(item: unknown): item is FileCellData {
-  return (
-    !!item &&
-    typeof item === "object" &&
-    "id" in item &&
-    "name" in item &&
-    "size" in item &&
-    "type" in item
-  );
+  if (Comp instanceof Function) {
+    return Comp(props);
+  }
+  return Comp;
 }
 
 export function matchSelectOption(
@@ -80,23 +66,23 @@ export function parseCellKey(cellKey: string): Required<CellPosition> {
 }
 
 export function getRowHeightValue(rowHeight: RowHeightValue): number {
-  const rowHeightMap: Record<RowHeightValue, number> = {
+  const rowHeightMap = {
     short: 36,
     medium: 56,
     tall: 76,
     "extra-tall": 96,
-  };
+  } satisfies Record<RowHeightValue, number>;
 
   return rowHeightMap[rowHeight];
 }
 
 export function getLineCount(rowHeight: RowHeightValue): number {
-  const lineCountMap: Record<RowHeightValue, number> = {
+  const lineCountMap = {
     short: 1,
     medium: 2,
     tall: 3,
     "extra-tall": 4,
-  };
+  } satisfies Record<RowHeightValue, number>;
 
   return lineCountMap[rowHeight];
 }
@@ -105,10 +91,7 @@ export function getColumnBorderVisibility<TData extends RowData>(params: {
   column: Column<DataGridFeatures, TData>;
   nextColumn?: Column<DataGridFeatures, TData>;
   isLastColumn: boolean;
-}): {
-  showEndBorder: boolean;
-  showStartBorder: boolean;
-} {
+}) {
   const { column, nextColumn, isLastColumn } = params;
 
   const isPinned = column.getIsPinned();
@@ -329,7 +312,7 @@ export function parseTsv(text: string): string[][] {
     .map((line) => line.split("\t"));
 }
 
-export function getIsInPopover(element: unknown): boolean {
+export function getIsInPopover(element: EventTarget | null): boolean {
   return (
     element instanceof Element &&
     (element.closest("[data-grid-cell-editor]") ||
@@ -383,10 +366,9 @@ export function getUrlHref(urlString: string): string {
   return `http://${trimmed}`;
 }
 
-export function parseLocalDate(dateStr: unknown): Date | null {
+export function parseLocalDate(dateStr: string | Date | null | undefined): Date | null {
   if (!dateStr) return null;
   if (dateStr instanceof Date) return dateStr;
-  if (typeof dateStr !== "string") return null;
   const [year, month, day] = dateStr.split("-").map(Number);
   if (!year || !month || !day) return null;
   const date = new Date(year, month - 1, day);
@@ -415,10 +397,10 @@ const dateCellFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-export function formatDateForDisplay(dateStr: unknown): string {
+export function formatDateForDisplay(dateStr: string | Date | null | undefined): string {
   if (!dateStr) return "";
   const date = parseLocalDate(dateStr);
-  if (!date) return typeof dateStr === "string" ? dateStr : "";
+  if (!date) return dateStr instanceof Date ? "" : dateStr;
   // parseLocalDate returns a *local* midnight Date, so hand the formatter the
   // calendar parts rebased to UTC — formatting the raw instant in a fixed zone
   // would shift the day for anyone east of UTC.

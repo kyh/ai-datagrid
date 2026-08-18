@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAsRef } from "@/hooks/use-as-ref";
 import { parseCellKey } from "@/lib/data-grid";
-import type { CellUpdate, ContextMenuState } from "@/lib/data-grid-types";
+import type {
+  CellUpdate,
+  CellValue,
+  ContextMenuState,
+  DataGridRowData,
+} from "@/lib/data-grid-types";
 import { genericMemo } from "@/lib/generic-memo";
 
 interface DataGridContextMenuProps<TData extends RowData> {
@@ -23,7 +28,7 @@ interface DataGridContextMenuProps<TData extends RowData> {
   contextMenu: ContextMenuState;
 }
 
-export function DataGridContextMenu<TData extends Record<string, unknown>>({
+export function DataGridContextMenu<TData extends DataGridRowData>({
   tableMeta,
   columns,
   contextMenu,
@@ -85,7 +90,7 @@ const ContextMenu = genericMemo(ContextMenuImpl, (prev, next) => {
   return true;
 });
 
-function ContextMenuImpl<TData extends Record<string, unknown>>({
+function ContextMenuImpl<TData extends DataGridRowData>({
   tableMeta,
   columns,
   dataGridRef,
@@ -154,7 +159,7 @@ function ContextMenuImpl<TData extends Record<string, unknown>>({
       });
       const cellVariant = column?.meta?.cell?.variant;
 
-      let emptyValue: unknown = "";
+      let emptyValue: CellValue = "";
       if (cellVariant === "multi-select" || cellVariant === "file") {
         emptyValue = [];
       } else if (cellVariant === "number" || cellVariant === "date") {

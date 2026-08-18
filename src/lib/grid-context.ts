@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { ExistingColumn, ExistingFilter, ExistingSort } from "./assistant-schemas";
 import type { SelectionContext } from "./selection-context";
 
@@ -17,43 +19,39 @@ type JsonValue =
   | readonly JsonValue[]
   | { readonly [key: string]: JsonValue };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 /**
- * Narrows arbitrary cell values to JSON. Non-serializable leaves (functions,
- * symbols, non-finite numbers) are dropped — eve's client-context boundary
+ * Parses arbitrary cell values into JSON. `z.number()` (zod 4) admits only
+ * finite numbers, so non-serializable leaves (functions, symbols, non-finite
+ * numbers) fail the parse and are dropped — eve's client-context boundary
  * rejects lossy values outright, so sanitize instead of throwing.
  */
-const toJsonValue = (value: unknown): JsonValue | undefined => {
-  if (value === null) return null;
-  switch (typeof value) {
-    case "string":
-      return value;
-    case "boolean":
-      return value;
-    case "number":
-      return Number.isFinite(value) ? value : undefined;
-    default:
-      break;
-  }
-  if (Array.isArray(value)) {
-    const items: JsonValue[] = [];
-    for (const item of value) {
-      const json = toJsonValue(item);
-      if (json !== undefined) items.push(json);
+const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.boolean(),
+    z.number(),
+    z.null(),
+    z.array(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
+  ]),
+);
+
+/** A selection row as the schema types it: raw values keyed by column id. */
+type ContextRowSource = NonNullable<SelectionContext["rowData"]>[string];
+
+const toContextRow = (row: ContextRowSource) => {
+  const entries: Record<string, JsonValue> = {};
+  for (const [key, item] of Object.entries(row)) {
+    if (item instanceof Date) {
+      // A pasted `Date` cell has no JSON contract; ship the empty object the
+      // serializer always produced for it rather than inventing one.
+      entries[key] = {};
+      continue;
     }
-    return items;
+    const json = jsonValueSchema.safeParse(item);
+    if (json.success) entries[key] = json.data;
   }
-  if (isRecord(value)) {
-    const entries: Record<string, JsonValue> = {};
-    for (const [key, item] of Object.entries(value)) {
-      const json = toJsonValue(item);
-      if (json !== undefined) entries[key] = json;
-    }
-    return entries;
-  }
-  return undefined;
+  return entries;
 };
 
 /** Strips column options to their serializable `{label, value}` core (grid
@@ -62,17 +60,16 @@ const toContextColumn = (column: ExistingColumn) => ({
   id: column.id,
   label: column.label,
   variant: column.variant,
-  ...(column.prompt !== undefined ? { prompt: column.prompt } : {}),
+  ...(column.prompt !== undefined ? { prompt: column.prompt } : undefined),
   ...(column.options !== undefined
     ? { options: column.options.map((o) => ({ label: o.label, value: o.value })) }
-    : {}),
+    : undefined),
 });
 
 const toContextSelection = (selection: SelectionContext) => {
   const rowData: Record<string, JsonValue> = {};
   for (const [rowIndex, row] of Object.entries(selection.rowData ?? {})) {
-    const json = toJsonValue(row);
-    if (json !== undefined) rowData[rowIndex] = json;
+    rowData[rowIndex] = toContextRow(row);
   }
   return {
     selectedCells: selection.selectedCells,
