@@ -36,6 +36,7 @@ import {
   getCellKey,
   getFileIcon,
   getLineCount,
+  getRowHeightValue,
   getUrlHref,
   parseLocalDate,
 } from "@/lib/data-grid";
@@ -60,13 +61,10 @@ export function ShortTextCell<TData extends DataGridRowData>({
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
+  const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+  if (initialValue !== prevInitialValue) {
+    setPrevInitialValue(initialValue);
     setValue(initialValue);
-    if (cellRef.current && !isEditing) {
-      cellRef.current.textContent = initialValue;
-    }
   }
 
   const onBlur = React.useCallback(() => {
@@ -209,11 +207,11 @@ export function LongTextCell<TData extends DataGridRowData>({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const pendingCharRef = React.useRef<string | null>(null);
-  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
+  const sideOffset = -getRowHeightValue(rowHeight);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
+  const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+  if (initialValue !== prevInitialValue) {
+    setPrevInitialValue(initialValue);
     setValue(initialValue ?? "");
   }
 
@@ -406,9 +404,9 @@ export function NumberCell<TData extends DataGridRowData>({
 
   const prevIsEditingRef = React.useRef(isEditing);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
+  const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+  if (initialValue !== prevInitialValue) {
+    setPrevInitialValue(initialValue);
     setValue(String(initialValue ?? ""));
   }
 
@@ -524,13 +522,10 @@ export function UrlCell<TData extends DataGridRowData>({
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
+  const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+  if (initialValue !== prevInitialValue) {
+    setPrevInitialValue(initialValue);
     setValue(initialValue ?? "");
-    if (cellRef.current && !isEditing) {
-      cellRef.current.textContent = initialValue ?? "";
-    }
   }
 
   const onBlur = React.useCallback(() => {
@@ -723,9 +718,9 @@ export function CheckboxCell<TData extends DataGridRowData>({
   const [value, setValue] = React.useState(Boolean(initialValue));
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
+  const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+  if (initialValue !== prevInitialValue) {
+    setPrevInitialValue(initialValue);
     setValue(Boolean(initialValue));
   }
 
@@ -827,9 +822,9 @@ export function SelectCell<TData extends DataGridRowData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
+  const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+  if (initialValue !== prevInitialValue) {
+    setPrevInitialValue(initialValue);
     setValue(initialValue);
   }
 
@@ -956,7 +951,7 @@ export function MultiSelectCell<TData extends DataGridRowData>({
   }, [cell]);
 
   const cellKey = getCellKey(rowIndex, columnId);
-  const prevCellKeyRef = React.useRef(cellKey);
+  const [prevCellKey, setPrevCellKey] = React.useState(cellKey);
 
   const [selectedValues, setSelectedValues] = React.useState<string[]>(cellValue);
   const [searchValue, setSearchValue] = React.useState("");
@@ -964,16 +959,16 @@ export function MultiSelectCell<TData extends DataGridRowData>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
-  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
+  const sideOffset = -getRowHeightValue(rowHeight);
 
-  const prevCellValueRef = React.useRef(cellValue);
-  if (cellValue !== prevCellValueRef.current) {
-    prevCellValueRef.current = cellValue;
+  const [prevCellValue, setPrevCellValue] = React.useState(cellValue);
+  if (cellValue !== prevCellValue) {
+    setPrevCellValue(cellValue);
     setSelectedValues(cellValue);
   }
 
-  if (prevCellKeyRef.current !== cellKey) {
-    prevCellKeyRef.current = cellKey;
+  if (prevCellKey !== cellKey) {
+    setPrevCellKey(cellKey);
     setSearchValue("");
   }
 
@@ -1216,9 +1211,9 @@ export function DateCell<TData extends DataGridRowData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
+  const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+  if (initialValue !== prevInitialValue) {
+    setPrevInitialValue(initialValue);
     setValue(initialValue ?? "");
   }
 
@@ -1324,7 +1319,7 @@ export function FileCell<TData extends DataGridRowData>({
   const cellValue = React.useMemo(() => cell.getValue<FileCellData[]>() ?? [], [cell]);
 
   const cellKey = getCellKey(rowIndex, columnId);
-  const prevCellKeyRef = React.useRef(cellKey);
+  const [prevCellKey, setPrevCellKey] = React.useState(cellKey);
 
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -1343,7 +1338,7 @@ export function FileCell<TData extends DataGridRowData>({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dropzoneRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
+  const sideOffset = -getRowHeightValue(rowHeight);
 
   const fileCellOpts = cellOpts?.variant === "file" ? cellOpts : null;
   const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
@@ -1356,9 +1351,9 @@ export function FileCell<TData extends DataGridRowData>({
     [accept],
   );
 
-  const prevCellValueRef = React.useRef(cellValue);
-  if (cellValue !== prevCellValueRef.current) {
-    prevCellValueRef.current = cellValue;
+  const [prevCellValue, setPrevCellValue] = React.useState(cellValue);
+  if (cellValue !== prevCellValue) {
+    setPrevCellValue(cellValue);
     for (const file of files) {
       if (file.url) {
         URL.revokeObjectURL(file.url);
@@ -1368,8 +1363,8 @@ export function FileCell<TData extends DataGridRowData>({
     setError(null);
   }
 
-  if (prevCellKeyRef.current !== cellKey) {
-    prevCellKeyRef.current = cellKey;
+  if (prevCellKey !== cellKey) {
+    setPrevCellKey(cellKey);
     setError(null);
   }
 

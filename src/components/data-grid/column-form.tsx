@@ -2,7 +2,7 @@
 
 import { PlusIcon, XIcon } from "lucide-react";
 import * as React from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +73,8 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
   const [newOptionLabel, setNewOptionLabel] = React.useState("");
   const newOptionInputRef = React.useRef<HTMLInputElement>(null);
 
-  const variant = form.watch("variant");
+  const variant = useWatch({ control: form.control, name: "variant" });
+  const label = useWatch({ control: form.control, name: "label" });
   const columnVariant = getColumnVariant(variant);
   const isSelectType = variant === "select" || variant === "multi-select";
 
@@ -296,7 +297,7 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
       </div>
 
       {submitLabel && (
-        <Button type="submit" size="sm" className="w-full" disabled={!form.watch("label").trim()}>
+        <Button type="submit" size="sm" className="w-full" disabled={!label.trim()}>
           {submitLabel}
         </Button>
       )}

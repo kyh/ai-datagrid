@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { MessageStreamEvent } from "eve/client";
 import { useEveAgent } from "eve/react";
 import { KeyIcon, SparklesIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -305,8 +305,14 @@ export const Chat = ({
   const agent = useEveAgent({
     headers: resolveAuthHeaders,
     onEvent: applyToolResult,
-    onError: (error) => {
+    // The turn is over (success, failure or cancellation): drop the shimmer and
+    // any cell spinners the enrich flow left behind (e.g. the model never called
+    // enrich_cells, or the turn errored mid-flight).
+    onFinish: () => {
       setProgress(null);
+      setGeneratingCells(new Set());
+    },
+    onError: (error) => {
       if (isAuthError(error)) {
         removeApiKey();
         toast.error("Invalid API key. Please enter a valid Vercel Gateway API key.");
@@ -320,16 +326,6 @@ export const Chat = ({
 
   const isLoading = status === "submitted" || status === "streaming";
 
-  // The turn is over (success or failure): drop the shimmer and any cell
-  // spinners the enrich flow left behind (e.g. the model never called
-  // enrich_cells, or the turn errored mid-flight).
-  useEffect(() => {
-    if (status === "ready" || status === "error") {
-      setProgress(null);
-      setGeneratingCells(new Set());
-    }
-  }, [status, setGeneratingCells]);
-
   const needsKey = !apiKey && process.env.NODE_ENV !== "development";
 
   const handleTextareaFocus = () => {
@@ -338,16 +334,6 @@ export const Chat = ({
       setShowApiKeyModal(true);
     }
   };
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [input]);
 
   const handleSubmit = useCallback(
     (e: { preventDefault: () => void }) => {
@@ -424,7 +410,6 @@ export const Chat = ({
         <form onSubmit={handleSubmit}>
           <InputGroup className="border border-border/50 supports-backdrop-filter:bg-background/80 bg-background/95 backdrop-blur shadow rounded-[1.25rem]">
             <InputGroupTextarea
-              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onFocus={handleTextareaFocus}

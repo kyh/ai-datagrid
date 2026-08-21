@@ -2,11 +2,10 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
-import { type CSSProperties, type ElementType, memo, useMemo } from "react";
+import { type CSSProperties, memo, useMemo } from "react";
 
 export interface TextShimmerProps {
   children: string;
-  as?: ElementType;
   className?: string;
   duration?: number;
   spread?: number;
@@ -15,19 +14,17 @@ export interface TextShimmerProps {
 /** CSS custom properties aren't in `CSSProperties`; widen by annotation, not a cast. */
 type StyleWithVars = CSSProperties & Record<`--${string}`, string>;
 
-const ShimmerComponent = ({
-  children,
-  as: Component = "p",
-  className,
-  duration = 2,
-  spread = 2,
-}: TextShimmerProps) => {
-  const MotionComponent = motion.create(Component);
-
+const ShimmerComponent = ({ children, className, duration = 2, spread = 2 }: TextShimmerProps) => {
   const dynamicSpread = useMemo(() => (children?.length ?? 0) * spread, [children, spread]);
 
+  const style: StyleWithVars = {
+    "--spread": `${dynamicSpread}px`,
+    backgroundImage:
+      "var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))",
+  };
+
   return (
-    <MotionComponent
+    <motion.p
       animate={{ backgroundPosition: "0% center" }}
       className={cn(
         "relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent",
@@ -35,13 +32,7 @@ const ShimmerComponent = ({
         className,
       )}
       initial={{ backgroundPosition: "100% center" }}
-      style={
-        {
-          "--spread": `${dynamicSpread}px`,
-          backgroundImage:
-            "var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))",
-        } satisfies StyleWithVars
-      }
+      style={style}
       transition={{
         repeat: Number.POSITIVE_INFINITY,
         duration,
@@ -49,7 +40,7 @@ const ShimmerComponent = ({
       }}
     >
       {children}
-    </MotionComponent>
+    </motion.p>
   );
 };
 

@@ -347,9 +347,14 @@ function DataGridFilterItem<TData extends RowData>({
   const [showOperatorSelector, setShowOperatorSelector] = React.useState(false);
 
   const variant = columnVariants.get(filter.id) ?? "short-text";
-  const parsedFilterValue = filterValueSchema.safeParse(filter.value);
-  const filterValue = parsedFilterValue.success ? parsedFilterValue.data : undefined;
-  const operator = filterValue?.operator ?? getDefaultOperator(variant);
+  const filterValue = React.useMemo(() => {
+    const parsed = filterValueSchema.safeParse(filter.value);
+    return parsed.success ? parsed.data : undefined;
+  }, [filter.value]);
+  const operator = React.useMemo(
+    () => filterValue?.operator ?? getDefaultOperator(variant),
+    [filterValue?.operator, variant],
+  );
 
   const operators = getOperatorsForVariant(variant);
   const needsValue = !OPERATORS_WITHOUT_VALUE.has(operator);

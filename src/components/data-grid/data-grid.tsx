@@ -224,7 +224,7 @@ export function DataGrid<TData extends DataGridRowData>({
             );
           })}
         </div>
-        {!readOnly && onRowAdd && (
+        {!readOnly && onRowAddProp && (
           <div
             role="rowgroup"
             data-slot="grid-footer"

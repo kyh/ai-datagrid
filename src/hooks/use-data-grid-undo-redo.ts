@@ -111,6 +111,12 @@ function useDataGridUndoRedo<TData>({
   const batchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const store = React.useMemo<Store<TData>>(() => {
+    function notify() {
+      for (const listener of listenersRef.current) {
+        listener();
+      }
+    }
+
     return {
       subscribe: (callback) => {
         listenersRef.current.add(callback);
@@ -131,7 +137,7 @@ function useDataGridUndoRedo<TData>({
           redoStack: [],
           hasPendingChanges: false,
         };
-        store.notify();
+        notify();
       },
       undo: () => {
         const state = stateRef.current;
@@ -143,7 +149,7 @@ function useDataGridUndoRedo<TData>({
           redoStack: [...state.redoStack, entry],
           hasPendingChanges: state.hasPendingChanges,
         };
-        store.notify();
+        notify();
         return entry;
       },
       redo: () => {
@@ -156,7 +162,7 @@ function useDataGridUndoRedo<TData>({
           redoStack: state.redoStack.slice(0, -1),
           hasPendingChanges: state.hasPendingChanges,
         };
-        store.notify();
+        notify();
         return entry;
       },
       clear: () => {
@@ -165,7 +171,7 @@ function useDataGridUndoRedo<TData>({
           redoStack: [],
           hasPendingChanges: false,
         };
-        store.notify();
+        notify();
       },
       setPendingChanges: (value: boolean) => {
         if (stateRef.current.hasPendingChanges !== value) {
@@ -173,14 +179,10 @@ function useDataGridUndoRedo<TData>({
             ...stateRef.current,
             hasPendingChanges: value,
           };
-          store.notify();
+          notify();
         }
       },
-      notify: () => {
-        for (const listener of listenersRef.current) {
-          listener();
-        }
-      },
+      notify,
     };
   }, [listenersRef, stateRef, propsRef]);
 

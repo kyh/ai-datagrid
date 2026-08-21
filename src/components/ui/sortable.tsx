@@ -531,13 +531,31 @@ interface SortableOverlayProps extends Omit<React.ComponentProps<typeof DragOver
   children?: ((params: { value: UniqueIdentifier }) => React.ReactNode) | React.ReactNode;
 }
 
+// The overlay portals into `document.body`, which only exists once hydration has happened
+function subscribeToHydration() {
+  return () => {
+    // hydration is a one-shot transition, so there is nothing to unsubscribe from
+  };
+}
+
+function getHydratedSnapshot() {
+  return true;
+}
+
+function getHydratedServerSnapshot() {
+  return false;
+}
+
 function SortableOverlay(props: SortableOverlayProps) {
   const { container: containerProp, children, ...overlayProps } = props;
 
   const context = useSortableContext(OVERLAY_NAME);
 
-  const [mounted, setMounted] = React.useState(false);
-  React.useLayoutEffect(() => setMounted(true), []);
+  const mounted = React.useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getHydratedServerSnapshot,
+  );
 
   const container = containerProp ?? (mounted ? globalThis.document?.body : null);
 
