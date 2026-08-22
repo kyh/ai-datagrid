@@ -43,7 +43,7 @@ pnpm verify       # the gate: typecheck · lint · format · test — run before
 pnpm typecheck    # tsc --noEmit
 pnpm lint         # oxlint (warnings are errors)
 pnpm format:fix   # oxfmt --write (`pnpm format` only checks)
-pnpm test         # vitest (grid unit tests)
+pnpm test         # node:test via tsx (grid unit tests)
 ```
 
 There is no CI in this repo, so `pnpm verify` is the only gate that ever runs.

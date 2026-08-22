@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
 import { getArticlesData, getCompaniesData, getPeopleData, getTweetsData } from "@/data/seed";
 
@@ -10,20 +11,20 @@ import { getArticlesData, getCompaniesData, getPeopleData, getTweetsData } from 
  * `/people` would silently shift every row.
  */
 describe("fixture determinism", () => {
-  it("renders the documented first row of /people", () => {
-    expect(getPeopleData()[0]?.name).toBe("Colton Mertz");
+  test("renders the documented first row of /people", () => {
+    assert.strictEqual(getPeopleData()[0]?.name, "Colton Mertz");
   });
 
-  it("is order-independent across generators", () => {
+  test("is order-independent across generators", () => {
     getArticlesData();
     getCompaniesData();
     getTweetsData();
-    expect(getPeopleData()[0]?.name).toBe("Colton Mertz");
+    assert.strictEqual(getPeopleData()[0]?.name, "Colton Mertz");
   });
 
-  it("returns identical data on repeat calls", () => {
-    expect(getArticlesData()).toStrictEqual(getArticlesData());
-    expect(getCompaniesData()).toStrictEqual(getCompaniesData());
-    expect(getTweetsData()).toStrictEqual(getTweetsData());
+  test("returns identical data on repeat calls", () => {
+    assert.deepEqual(getArticlesData(), getArticlesData());
+    assert.deepEqual(getCompaniesData(), getCompaniesData());
+    assert.deepEqual(getTweetsData(), getTweetsData());
   });
 });
