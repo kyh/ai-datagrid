@@ -20,7 +20,7 @@ import {
   getColumnPinningStyle,
   getRowHeightValue,
 } from "@/lib/data-grid";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type {
   CellPosition,
   DataGridRowData,

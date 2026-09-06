@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAsRef } from "@/hooks/use-as-ref";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type { DataGridRowData, PasteDialogState } from "@/lib/data-grid-types";
 
 interface DataGridPasteDialogProps<TData extends RowData> {

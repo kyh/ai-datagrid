@@ -4,7 +4,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellContext, ColumnDef, HeaderContext, RowData } from "@tanstack/react-table";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 
 type HitboxSize = "default" | "sm" | "lg";
 

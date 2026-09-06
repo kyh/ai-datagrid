@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useComposedRefs } from "@/components/ui/utils";
 import { getCellKey } from "@/lib/data-grid";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type { DataGridCellProps, DataGridRowData } from "@/lib/data-grid-types";
 
 interface DataGridCellWrapperProps<TData extends DataGridRowData>

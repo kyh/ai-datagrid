@@ -42,7 +42,7 @@ import { z } from "zod";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { useComposedRefs } from "@/components/ui/utils";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 
 const orientationConfig = {
   vertical: {

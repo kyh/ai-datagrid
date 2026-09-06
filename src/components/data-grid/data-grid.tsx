@@ -10,7 +10,7 @@ import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getColumnBorderVisibility, getColumnPinningStyle } from "@/lib/data-grid";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type { DataGridRowData, Direction } from "@/lib/data-grid-types";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();

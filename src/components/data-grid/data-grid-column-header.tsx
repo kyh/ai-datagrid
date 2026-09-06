@@ -36,7 +36,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellSelectOption } from "@/lib/data-grid-types";
 import { getCellOptions } from "@/lib/data-grid-types";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import { ColumnForm, type ColumnFormValues } from "@/components/data-grid/column-form";
 import { genericMemo } from "@/lib/generic-memo";
 
