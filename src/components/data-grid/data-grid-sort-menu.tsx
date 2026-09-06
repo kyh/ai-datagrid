@@ -31,7 +31,7 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/components/ui/sortable";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = new Set(["backspace", "delete"]);

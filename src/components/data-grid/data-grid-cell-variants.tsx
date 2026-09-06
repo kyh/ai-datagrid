@@ -40,7 +40,7 @@ import {
   getUrlHref,
   parseLocalDate,
 } from "@/lib/data-grid";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type { DataGridCellProps, DataGridRowData, FileCellData } from "@/lib/data-grid-types";
 
 export function ShortTextCell<TData extends DataGridRowData>({

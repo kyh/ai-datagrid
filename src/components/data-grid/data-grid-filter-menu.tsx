@@ -49,7 +49,7 @@ import {
   getOperatorsForVariant,
 } from "@/lib/data-grid-filters";
 import { formatDate } from "@/components/ui/utils";
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
 import type { FilterOperator } from "@/lib/data-grid-types";
 
 const FILTER_SHORTCUT_KEY = "f";
