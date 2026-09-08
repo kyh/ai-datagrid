@@ -24,12 +24,12 @@ interface DataGridViewMenuProps<TData extends RowData> extends React.ComponentPr
   disabled?: boolean;
 }
 
-export function DataGridViewMenu<TData extends RowData>({
+export const DataGridViewMenu = <TData extends RowData>({
   table,
   disabled,
   className,
   ...props
-}: DataGridViewMenuProps<TData>) {
+}: DataGridViewMenuProps<TData>) => {
   const dir = useDirection();
 
   const columns = React.useMemo(
@@ -83,4 +83,4 @@ export function DataGridViewMenu<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
-}
+};

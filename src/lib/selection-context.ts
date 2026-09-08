@@ -7,9 +7,9 @@ import { z } from "zod";
 export const columnInfoSchema = z.object({
   id: z.string(),
   label: z.string(),
-  variant: z.string(),
-  prompt: z.string().optional(),
   options: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+  prompt: z.string().optional(),
+  variant: z.string(),
 });
 
 export type ColumnInfo = z.infer<typeof columnInfoSchema>;
@@ -20,11 +20,10 @@ export type ColumnInfo = z.infer<typeof columnInfoSchema>;
  * Zod schema doubles as the request-body validator in the chat route.
  */
 export const selectionContextSchema = z.object({
-  selectedCells: z.array(z.object({ rowIndex: z.number(), columnId: z.string() })),
   bounds: z.object({
-    minRow: z.number(),
-    maxRow: z.number(),
     columns: z.array(z.string()),
+    maxRow: z.number(),
+    minRow: z.number(),
   }),
   currentColumns: z.array(columnInfoSchema),
   /**
@@ -32,6 +31,7 @@ export const selectionContextSchema = z.object({
    * Maps row index to column values (columnId -> value).
    */
   rowData: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
+  selectedCells: z.array(z.object({ columnId: z.string(), rowIndex: z.number() })),
 });
 
 export type SelectionContext = z.infer<typeof selectionContextSchema>;

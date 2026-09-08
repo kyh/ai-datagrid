@@ -21,7 +21,7 @@ interface ApiKeyDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
+export const ApiKeyDialog = ({ open, onOpenChange }: ApiKeyDialogProps) => {
   const [apiKey, setApiKey, removeApiKey] = useLocalStorage(GATEWAY_API_KEY_STORAGE_KEY, "");
   const [apiKeyInput, setApiKeyInput] = React.useState(apiKey);
 
@@ -71,7 +71,6 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
                 handleSaveApiKey();
               }
             }}
-            // oxlint-disable-next-line jsx-a11y/no-autofocus -- opened by explicit user action
             autoFocus
           />
         </div>
@@ -84,4 +83,4 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
       </DialogContent>
     </Dialog>
   );
-}
+};

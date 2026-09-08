@@ -48,7 +48,9 @@ import { ApiKeyDialog, GATEWAY_API_KEY_STORAGE_KEY } from "./api-key-dialog";
  * state would go stale.
  */
 const resolveAuthHeaders = (): Readonly<Record<string, string>> => {
-  if (typeof window === "undefined") return {};
+  if (typeof window === "undefined") {
+    return {};
+  }
   const key = window.localStorage.getItem(GATEWAY_API_KEY_STORAGE_KEY);
   return key !== null && key.length > 0 ? { authorization: `Bearer ${key}` } : {};
 };
@@ -63,22 +65,22 @@ const resolveAuthHeaders = (): Readonly<Record<string, string>> => {
 // -----------------------------------------------------------------------------
 
 const toolResultEventSchema = z.object({
-  type: z.literal("action.result"),
   data: z.object({
-    status: z.enum(["completed", "failed", "rejected"]),
     result: z.object({
-      kind: z.literal("tool-result"),
-      toolName: z.string(),
-      output: z.unknown(),
       isError: z.boolean().optional(),
+      kind: z.literal("tool-result"),
+      output: z.unknown(),
+      toolName: z.string(),
     }),
+    status: z.enum(["completed", "failed", "rejected"]),
   }),
+  type: z.literal("action.result"),
 });
 
 /** `subagent.event` wraps a child session's stream event under `data.event`. */
 const subagentEventSchema = z.object({
-  type: z.literal("subagent.event"),
   data: z.object({ event: z.unknown() }),
+  type: z.literal("subagent.event"),
 });
 
 /**
@@ -87,17 +89,17 @@ const subagentEventSchema = z.object({
  * All of them route back to the key dialog.
  */
 const isAuthError = (error: Error): boolean =>
-  /unauthorized|forbidden|authentication|api.?key|credential|401|403/i.test(error.message);
+  /unauthorized|forbidden|authentication|api.?key|credential|401|403/iu.test(error.message);
 
 interface ChatProps {
   onColumnsGenerated?: (columns: ColumnDef<DataGridFeatures, DataGridRowData>[]) => void;
   onColumnsUpdated?: (updates: ColumnUpdate[]) => void;
   onColumnsDeleted?: (columnIds: string[]) => void;
   onDataEnriched?: (updates: CellUpdate[]) => void;
-  onFiltersAdded?: (filters: Array<{ columnId: string; value: FilterValue }>) => void;
+  onFiltersAdded?: (filters: { columnId: string; value: FilterValue }[]) => void;
   onFiltersRemoved?: (columnIds: string[]) => void;
   onFiltersCleared?: () => void;
-  onSortsAdded?: (sorts: Array<{ columnId: string; desc: boolean }>) => void;
+  onSortsAdded?: (sorts: { columnId: string; desc: boolean }[]) => void;
   onSortsRemoved?: (columnIds: string[]) => void;
   onSortsCleared?: () => void;
   getSelectionContext?: () => SelectionContext | null;
@@ -107,6 +109,244 @@ interface ChatProps {
   hasSelection?: boolean;
   initialInput?: string;
 }
+
+type ToolResult = z.infer<typeof toolResultEventSchema>["data"]["result"];
+
+/** Unwrap subagent envelopes and keep only completed, non-error tool results. */
+const parseCompletedToolResult = (incoming: MessageStreamEvent): ToolResult | null => {
+  // Delegation is forbidden by the instructions, but if the model strays,
+  // unwrap the child's events so its tool results still reach the grid.
+  let event: unknown = incoming;
+  for (
+    let wrapped = subagentEventSchema.safeParse(event);
+    wrapped.success;
+    wrapped = subagentEventSchema.safeParse(event)
+  ) {
+    const { event: inner } = wrapped.data.data;
+    event = inner;
+  }
+  const parsed = toolResultEventSchema.safeParse(event);
+  if (!parsed.success) {
+    return null;
+  }
+  const { status, result } = parsed.data.data;
+  if (status !== "completed" || result.isError === true) {
+    return null;
+  }
+  return result;
+};
+
+const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? "" : "s"}`;
+
+type ToolResultHandlers = Pick<
+  ChatProps,
+  | "onColumnsGenerated"
+  | "onColumnsUpdated"
+  | "onColumnsDeleted"
+  | "onDataEnriched"
+  | "onFiltersAdded"
+  | "onFiltersRemoved"
+  | "onFiltersCleared"
+  | "onSortsAdded"
+  | "onSortsRemoved"
+  | "onSortsCleared"
+> & {
+  clearProgress: () => void;
+  removeGeneratingCell: (cellKey: string) => void;
+};
+
+const applyGenerateColumns = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  const payload = generateColumnsInputSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { columns } = payload.data;
+  if (handlers.onColumnsGenerated) {
+    handlers.onColumnsGenerated(columns.map(columnDefinitionToColumnDef));
+    toast.success(`Generated ${plural(columns.length, "column")}`);
+  }
+};
+
+const applyUpdateColumns = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  const payload = updateColumnsInputSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { updates } = payload.data;
+  if (updates.length > 0 && handlers.onColumnsUpdated) {
+    handlers.onColumnsUpdated(updates);
+    toast.success(`Updated ${plural(updates.length, "column")}`);
+  }
+};
+
+const applyDeleteColumns = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  const payload = deleteColumnsInputSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { columnIds } = payload.data;
+  if (columnIds.length > 0 && handlers.onColumnsDeleted) {
+    handlers.onColumnsDeleted(columnIds);
+    toast.success(`Deleted ${plural(columnIds.length, "column")}`);
+  }
+};
+
+const applyEnrichCells = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  const payload = enrichCellsPayloadSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { updates, failures } = payload.data;
+  if (updates.length > 0 && handlers.onDataEnriched) {
+    handlers.onDataEnriched(
+      updates.map((update) => ({
+        columnId: update.columnId,
+        rowIndex: update.rowIndex,
+        value: update.value,
+      })),
+    );
+    toast.success(`Updated ${plural(updates.length, "cell")}`);
+  }
+  // Clear the spinner state for every cell the tool reported on
+  for (const cell of [...updates, ...failures]) {
+    handlers.removeGeneratingCell(`${cell.rowIndex}:${cell.columnId}`);
+  }
+  if (failures.length > 0) {
+    toast.error(`Failed to enrich ${plural(failures.length, "cell")}`);
+  }
+};
+
+const applyAddFilters = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  // Parse through schema to apply transforms (cleans malformed values)
+  const payload = addFiltersPayloadSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { filters } = payload.data;
+  if (filters.length > 0 && handlers.onFiltersAdded) {
+    handlers.onFiltersAdded(
+      filters.map((f) => ({
+        columnId: f.columnId,
+        value: {
+          endValue: f.endValue,
+          operator: f.operator,
+          value: f.value,
+        },
+      })),
+    );
+    toast.success(`Added ${plural(filters.length, "filter")}`);
+  }
+};
+
+const applyRemoveFilters = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  const payload = removeFiltersInputSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { columnIds } = payload.data;
+  if (columnIds.length > 0 && handlers.onFiltersRemoved) {
+    handlers.onFiltersRemoved(columnIds);
+    toast.success(`Removed ${plural(columnIds.length, "filter")}`);
+  }
+};
+
+const applyClearFilters = (handlers: ToolResultHandlers): void => {
+  handlers.clearProgress();
+  if (handlers.onFiltersCleared) {
+    handlers.onFiltersCleared();
+    toast.success("Cleared all filters");
+  }
+};
+
+const applyAddSorts = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  const payload = addSortsInputSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { sorts } = payload.data;
+  if (sorts.length > 0 && handlers.onSortsAdded) {
+    handlers.onSortsAdded(
+      sorts.map((sort) => ({ columnId: sort.columnId, desc: sort.direction === "desc" })),
+    );
+    toast.success(`Added ${plural(sorts.length, "sort")}`);
+  }
+};
+
+const applyRemoveSorts = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  const payload = removeSortsInputSchema.safeParse(result.output);
+  if (!payload.success) {
+    return;
+  }
+  handlers.clearProgress();
+  const { columnIds } = payload.data;
+  if (columnIds.length > 0 && handlers.onSortsRemoved) {
+    handlers.onSortsRemoved(columnIds);
+    toast.success(`Removed sorting from ${plural(columnIds.length, "column")}`);
+  }
+};
+
+const applyClearSorts = (handlers: ToolResultHandlers): void => {
+  handlers.clearProgress();
+  if (handlers.onSortsCleared) {
+    handlers.onSortsCleared();
+    toast.success("Cleared all sorting");
+  }
+};
+
+const applyToolResultToGrid = (result: ToolResult, handlers: ToolResultHandlers): void => {
+  switch (result.toolName) {
+    case "generate_columns": {
+      applyGenerateColumns(result, handlers);
+      break;
+    }
+    case "update_columns": {
+      applyUpdateColumns(result, handlers);
+      break;
+    }
+    case "delete_columns": {
+      applyDeleteColumns(result, handlers);
+      break;
+    }
+    case "enrich_cells": {
+      applyEnrichCells(result, handlers);
+      break;
+    }
+    case "add_filters": {
+      applyAddFilters(result, handlers);
+      break;
+    }
+    case "remove_filters": {
+      applyRemoveFilters(result, handlers);
+      break;
+    }
+    case "clear_filters": {
+      applyClearFilters(handlers);
+      break;
+    }
+    case "add_sorts": {
+      applyAddSorts(result, handlers);
+      break;
+    }
+    case "remove_sorts": {
+      applyRemoveSorts(result, handlers);
+      break;
+    }
+    case "clear_sorts": {
+      applyClearSorts(handlers);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+};
 
 export const Chat = ({
   onColumnsGenerated,
@@ -136,156 +376,24 @@ export const Chat = ({
 
   const applyToolResult = useCallback(
     (incoming: MessageStreamEvent): void => {
-      // Delegation is forbidden by the instructions, but if the model strays,
-      // unwrap the child's events so its tool results still reach the grid.
-      let event: unknown = incoming;
-      for (
-        let wrapped = subagentEventSchema.safeParse(event);
-        wrapped.success;
-        wrapped = subagentEventSchema.safeParse(event)
-      ) {
-        event = wrapped.data.data.event;
+      const result = parseCompletedToolResult(incoming);
+      if (result === null) {
+        return;
       }
-      const parsed = toolResultEventSchema.safeParse(event);
-      if (!parsed.success) return;
-      const { status, result } = parsed.data.data;
-      if (status !== "completed" || result.isError === true) return;
-
-      switch (result.toolName) {
-        case "generate_columns": {
-          const payload = generateColumnsInputSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { columns } = payload.data;
-          if (onColumnsGenerated) {
-            onColumnsGenerated(columns.map(columnDefinitionToColumnDef));
-            toast.success(`Generated ${columns.length} column${columns.length !== 1 ? "s" : ""}`);
-          }
-          break;
-        }
-        case "update_columns": {
-          const payload = updateColumnsInputSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { updates } = payload.data;
-          if (updates.length > 0 && onColumnsUpdated) {
-            onColumnsUpdated(updates);
-            toast.success(`Updated ${updates.length} column${updates.length !== 1 ? "s" : ""}`);
-          }
-          break;
-        }
-        case "delete_columns": {
-          const payload = deleteColumnsInputSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { columnIds } = payload.data;
-          if (columnIds.length > 0 && onColumnsDeleted) {
-            onColumnsDeleted(columnIds);
-            toast.success(`Deleted ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`);
-          }
-          break;
-        }
-        case "enrich_cells": {
-          const payload = enrichCellsPayloadSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { updates, failures } = payload.data;
-          if (updates.length > 0 && onDataEnriched) {
-            onDataEnriched(
-              updates.map((update) => ({
-                rowIndex: update.rowIndex,
-                columnId: update.columnId,
-                value: update.value,
-              })),
-            );
-            toast.success(`Updated ${updates.length} cell${updates.length !== 1 ? "s" : ""}`);
-          }
-          // Clear the spinner state for every cell the tool reported on
-          for (const cell of [...updates, ...failures]) {
-            removeGeneratingCell(`${cell.rowIndex}:${cell.columnId}`);
-          }
-          if (failures.length > 0) {
-            toast.error(
-              `Failed to enrich ${failures.length} cell${failures.length !== 1 ? "s" : ""}`,
-            );
-          }
-          break;
-        }
-        case "add_filters": {
-          // Parse through schema to apply transforms (cleans malformed values)
-          const payload = addFiltersPayloadSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { filters } = payload.data;
-          if (filters.length > 0 && onFiltersAdded) {
-            onFiltersAdded(
-              filters.map((f) => ({
-                columnId: f.columnId,
-                value: {
-                  operator: f.operator,
-                  value: f.value,
-                  endValue: f.endValue,
-                },
-              })),
-            );
-            toast.success(`Added ${filters.length} filter${filters.length !== 1 ? "s" : ""}`);
-          }
-          break;
-        }
-        case "remove_filters": {
-          const payload = removeFiltersInputSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { columnIds } = payload.data;
-          if (columnIds.length > 0 && onFiltersRemoved) {
-            onFiltersRemoved(columnIds);
-            toast.success(`Removed ${columnIds.length} filter${columnIds.length !== 1 ? "s" : ""}`);
-          }
-          break;
-        }
-        case "clear_filters": {
-          setProgress(null);
-          if (onFiltersCleared) {
-            onFiltersCleared();
-            toast.success("Cleared all filters");
-          }
-          break;
-        }
-        case "add_sorts": {
-          const payload = addSortsInputSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { sorts } = payload.data;
-          if (sorts.length > 0 && onSortsAdded) {
-            onSortsAdded(
-              sorts.map((s) => ({ columnId: s.columnId, desc: s.direction === "desc" })),
-            );
-            toast.success(`Added ${sorts.length} sort${sorts.length !== 1 ? "s" : ""}`);
-          }
-          break;
-        }
-        case "remove_sorts": {
-          const payload = removeSortsInputSchema.safeParse(result.output);
-          if (!payload.success) return;
-          setProgress(null);
-          const { columnIds } = payload.data;
-          if (columnIds.length > 0 && onSortsRemoved) {
-            onSortsRemoved(columnIds);
-            toast.success(
-              `Removed sorting from ${columnIds.length} column${columnIds.length !== 1 ? "s" : ""}`,
-            );
-          }
-          break;
-        }
-        case "clear_sorts": {
-          setProgress(null);
-          if (onSortsCleared) {
-            onSortsCleared();
-            toast.success("Cleared all sorting");
-          }
-          break;
-        }
-      }
+      applyToolResultToGrid(result, {
+        clearProgress: () => setProgress(null),
+        onColumnsDeleted,
+        onColumnsGenerated,
+        onColumnsUpdated,
+        onDataEnriched,
+        onFiltersAdded,
+        onFiltersCleared,
+        onFiltersRemoved,
+        onSortsAdded,
+        onSortsCleared,
+        onSortsRemoved,
+        removeGeneratingCell,
+      });
     },
     [
       onColumnsGenerated,
@@ -304,14 +412,6 @@ export const Chat = ({
 
   const agent = useEveAgent({
     headers: resolveAuthHeaders,
-    onEvent: applyToolResult,
-    // The turn is over (success, failure or cancellation): drop the shimmer and
-    // any cell spinners the enrich flow left behind (e.g. the model never called
-    // enrich_cells, or the turn errored mid-flight).
-    onFinish: () => {
-      setProgress(null);
-      setGeneratingCells(new Set());
-    },
     onError: (error) => {
       if (isAuthError(error)) {
         removeApiKey();
@@ -320,6 +420,14 @@ export const Chat = ({
       } else {
         toast.error(error.message || "Something went wrong");
       }
+    },
+    onEvent: applyToolResult,
+    // The turn is over (success, failure or cancellation): drop the shimmer and
+    // any cell spinners the enrich flow left behind (e.g. the model never called
+    // enrich_cells, or the turn errored mid-flight).
+    onFinish: () => {
+      setProgress(null);
+      setGeneratingCells(new Set());
     },
   });
   const { status } = agent;
@@ -338,8 +446,12 @@ export const Chat = ({
   const handleSubmit = useCallback(
     (e: { preventDefault: () => void }) => {
       e.preventDefault();
-      if (isLoading) return;
-      if (!input.trim() && !hasSelection) return;
+      if (isLoading) {
+        return;
+      }
+      if (!input.trim() && !hasSelection) {
+        return;
+      }
       if (needsKey) {
         setShowApiKeyModal(true);
         return;
@@ -353,7 +465,7 @@ export const Chat = ({
       if (selection) {
         const cellKeys = new Set(selection.selectedCells.map((c) => `${c.rowIndex}:${c.columnId}`));
         setGeneratingCells(cellKeys);
-        setProgress(`Enriching ${cellKeys.size} cell${cellKeys.size !== 1 ? "s" : ""}...`);
+        setProgress(`Enriching ${cellKeys.size} cell${cellKeys.size === 1 ? "" : "s"}...`);
       } else {
         setProgress("Processing...");
       }
@@ -361,16 +473,21 @@ export const Chat = ({
       // Single-turn semantics (the old `setMessages([])`): every submit
       // starts a fresh session; state arrives via clientContext anyway.
       agent.reset();
-      agent
-        .send(input.trim() || "Enrich selected cells", {
-          clientContext: buildGridContext({
-            columns: getExistingColumns?.() ?? [],
-            filters: getExistingFilters?.() ?? [],
-            sorts: getExistingSorts?.() ?? [],
-            selection,
-          }),
-        })
-        .catch(() => undefined); // failures surface via status/error/onError
+      const send = async () => {
+        try {
+          await agent.send(input.trim() || "Enrich selected cells", {
+            clientContext: buildGridContext({
+              columns: getExistingColumns?.() ?? [],
+              filters: getExistingFilters?.() ?? [],
+              selection,
+              sorts: getExistingSorts?.() ?? [],
+            }),
+          });
+        } catch {
+          // failures surface via status/error/onError
+        }
+      };
+      void send();
       setInput("");
     },
     [

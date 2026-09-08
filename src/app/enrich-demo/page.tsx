@@ -2,20 +2,18 @@
 
 import { DataGridContainer } from "@/components/data-grid/data-grid-container";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getEmailContactsColumns, getEmailContactsData, type EmailContact } from "@/data/seed";
+import { getEmailContactsColumns, getEmailContactsData } from "@/data/seed";
+import type { EmailContact } from "@/data/seed";
 
-function createContact(): EmailContact {
-  return { id: `contact-${Date.now()}`, email: "" };
-}
+const createContact = (): EmailContact => ({ email: "", id: `contact-${Date.now()}` });
 
-function createContacts(count: number): EmailContact[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `contact-${Date.now()}-${i}`,
+const createContacts = (count: number): EmailContact[] =>
+  Array.from({ length: count }, (_, i) => ({
     email: "",
+    id: `contact-${Date.now()}-${i}`,
   }));
-}
 
-export default function EnrichDemoPage() {
+const EnrichDemoPage = () => {
   const data = getEmailContactsData();
   const columns = getEmailContactsColumns(getFilterFn());
 
@@ -30,4 +28,6 @@ export default function EnrichDemoPage() {
       defaultColumnId="email"
     />
   );
-}
+};
+
+export default EnrichDemoPage;

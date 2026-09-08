@@ -27,24 +27,22 @@ const cellVariantSchema = z.enum([
 export const columnDefinitionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  variant: cellVariantSchema,
-  // Reuse cellSelectOptionSchema for options
-  options: z.array(cellSelectOptionSchema).optional(),
-  // Reuse number cell schema fields
-  min: z.number().optional(),
   max: z.number().optional(),
-  step: z.number().optional(),
+  min: z.number().optional(),
+  options: z.array(cellSelectOptionSchema).optional(),
   // Optional AI prompt for enriching column data
   prompt: z.string().optional(),
+  step: z.number().optional(),
+  variant: cellVariantSchema,
 });
 
 // Schema for column updates (partial - only id required)
 export const columnUpdateSchema = z.object({
   columnId: z.string(),
   label: z.string().optional(),
-  variant: cellVariantSchema.optional(),
   options: z.array(cellSelectOptionSchema).optional(),
   prompt: z.string().optional(),
+  variant: cellVariantSchema.optional(),
 });
 
 // Filter operator schemas by variant type
@@ -104,7 +102,7 @@ const filterOperatorSchema = z.union([
 ]);
 
 // Helper to clean malformed string values from LLM (e.g., "Engineering},{" -> "Engineering")
-const cleanStringValue = z.string().transform((val) => val.replace(/[,{}[\]]+$/, "").trim());
+const cleanStringValue = z.string().transform((val) => val.replace(/[,{}[\]]+$/u, "").trim());
 
 // Schema for filter value that cleans up malformed strings
 const filterValueSchema = z.union([cleanStringValue, z.number(), z.array(cleanStringValue)]);
@@ -117,17 +115,17 @@ const filterValueSchema = z.union([cleanStringValue, z.number(), z.array(cleanSt
  */
 export const filterSchema = z.object({
   columnId: z.string(),
+  endValue: z.union([cleanStringValue, z.number()]).optional(),
   operator: filterOperatorSchema,
   value: filterValueSchema.optional(),
-  endValue: z.union([cleanStringValue, z.number()]).optional(),
 });
 
 /** Filter definition on the wire (tool input/output): transform-free. */
 const filterWireSchema = z.object({
   columnId: z.string(),
+  endValue: z.union([z.string(), z.number()]).optional(),
   operator: filterOperatorSchema,
   value: z.union([z.string(), z.number(), z.array(z.string())]).optional(),
-  endValue: z.union([z.string(), z.number()]).optional(),
 });
 
 // Schema for a sort definition
@@ -141,8 +139,8 @@ export type ColumnUpdate = z.infer<typeof columnUpdateSchema>;
 
 // Schema for a single failed enrichment cell
 const enrichFailureSchema = z.object({
-  rowIndex: z.number(),
   columnId: z.string(),
+  rowIndex: z.number(),
 });
 
 // -----------------------------------------------------------------------------
@@ -198,28 +196,28 @@ export const clearSortsInputSchema = z.object({});
  * values) must arrive through this input.
  */
 export const enrichCellsInputSchema = z.object({
-  context: z
-    .string()
-    .describe(
-      "The user's request or intent, used as generation context for every cell (e.g. 'Fill in realistic contact info')",
-    ),
   columns: z
     .array(columnInfoSchema)
     .describe(
       "Columns to fill. Copy the matching entries from the per-turn context's selection.currentColumns verbatim — id, label, variant, options, prompt — for every column id in selection.bounds.columns.",
     ),
+  context: z
+    .string()
+    .describe(
+      "The user's request or intent, used as generation context for every cell (e.g. 'Fill in realistic contact info')",
+    ),
   rows: z
     .array(
       z.object({
-        rowIndex: z
-          .number()
-          .describe("Zero-based row index from selection.bounds (minRow..maxRow)"),
         rowData: z
           .record(z.string(), z.unknown())
           .optional()
           .describe(
             "Existing values in this row keyed by column id — copy selection.rowData[rowIndex] verbatim when present",
           ),
+        rowIndex: z
+          .number()
+          .describe("Zero-based row index from selection.bounds (minRow..maxRow)"),
       }),
     )
     .describe("Rows to fill, one entry per selected row"),
@@ -230,8 +228,8 @@ export const enrichCellsInputSchema = z.object({
  * returned in one batch when the whole fan-out completes.
  */
 export const enrichCellsPayloadSchema = z.object({
-  updates: z.array(updateCellSchema),
   failures: z.array(enrichFailureSchema),
+  updates: z.array(updateCellSchema),
 });
 
 // -----------------------------------------------------------------------------
@@ -241,9 +239,9 @@ export const enrichCellsPayloadSchema = z.object({
 export const existingColumnSchema = z.object({
   id: z.string(),
   label: z.string(),
-  variant: z.string(),
-  prompt: z.string().optional(),
   options: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+  prompt: z.string().optional(),
+  variant: z.string(),
 });
 
 export const existingFilterSchema = z.object({

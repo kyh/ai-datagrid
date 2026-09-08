@@ -17,9 +17,9 @@ Use Clear Filters when:
 User: Clear all filters
 *Uses Clear Filters*
 </example>`,
+  execute: (input) => input,
   inputSchema: clearFiltersInputSchema,
   outputSchema: clearFiltersInputSchema,
-  execute: (input) => input,
   toModelOutput: () => ({
     type: "text",
     value: "Successfully cleared all filters.",

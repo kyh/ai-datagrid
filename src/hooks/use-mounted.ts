@@ -1,19 +1,13 @@
 import * as React from "react";
 
-function subscribe() {
-  return () => {};
-}
+const subscribe = () => () => {
+  /* empty */
+};
 
-function getSnapshot() {
-  return true;
-}
+const getSnapshot = () => true;
 
-function getServerSnapshot() {
-  return false;
-}
+const getServerSnapshot = () => false;
 
-function useMounted() {
-  return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-}
+const useMounted = () => React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
 export { useMounted };

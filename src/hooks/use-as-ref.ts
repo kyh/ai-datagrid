@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
-function useAsRef<T>(props: T) {
+const useAsRef = <T>(props: T) => {
   const ref = React.useRef<T>(props);
 
   useIsomorphicLayoutEffect(() => {
@@ -10,6 +10,6 @@ function useAsRef<T>(props: T) {
   });
 
   return ref;
-}
+};
 
 export { useAsRef };

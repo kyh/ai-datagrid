@@ -1,12 +1,11 @@
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { faker } from "@faker-js/faker";
-import type { ColumnDef } from "@tanstack/react-table";
-import type { FilterFn } from "@tanstack/react-table";
+import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { FileCellData } from "@/lib/data-grid-types";
+import type { DataGridRowData, FileCellData } from "@/lib/data-grid-types";
 
-export type Person = {
+export interface Person extends DataGridRowData {
   id: string;
   name?: string;
   age?: number;
@@ -20,9 +19,9 @@ export type Person = {
   isActive?: boolean;
   startDate?: string;
   attachments?: FileCellData[];
-};
+}
 
-const FIXTURE_SEED = 12345;
+const FIXTURE_SEED = 12_345;
 
 /**
  * `faker` is a module singleton, so its RNG position depends on how many
@@ -32,9 +31,9 @@ const FIXTURE_SEED = 12345;
  * `/articles`. Without this, in-app `<Link>` navigation silently shifts every
  * fixture and assertions stop reproducing.
  */
-function resetFixtureRng() {
+const resetFixtureRng = () => {
   faker.seed(FIXTURE_SEED);
-}
+};
 
 resetFixtureRng();
 
@@ -106,45 +105,45 @@ This team member is a valuable asset to the organization. Their dedication and w
 ];
 
 const sampleFiles = [
-  { name: "Resume.pdf", type: "application/pdf", sizeRange: [50, 500] },
-  { name: "Contract.pdf", type: "application/pdf", sizeRange: [100, 300] },
-  { name: "ID_Document.pdf", type: "application/pdf", sizeRange: [200, 400] },
-  { name: "Profile_Photo.jpg", type: "image/jpeg", sizeRange: [500, 2000] },
+  { name: "Resume.pdf", sizeRange: [50, 500], type: "application/pdf" },
+  { name: "Contract.pdf", sizeRange: [100, 300], type: "application/pdf" },
+  { name: "ID_Document.pdf", sizeRange: [200, 400], type: "application/pdf" },
+  { name: "Profile_Photo.jpg", sizeRange: [500, 2000], type: "image/jpeg" },
   {
     name: "Presentation.pptx",
-    type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     sizeRange: [1000, 5000],
+    type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   },
   {
     name: "Report.docx",
-    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     sizeRange: [100, 800],
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   },
   {
     name: "Timesheet.xlsx",
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     sizeRange: [50, 200],
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   },
-  { name: "Certificate.pdf", type: "application/pdf", sizeRange: [200, 500] },
+  { name: "Certificate.pdf", sizeRange: [200, 500], type: "application/pdf" },
   {
     name: "Background_Check.pdf",
-    type: "application/pdf",
     sizeRange: [300, 600],
+    type: "application/pdf",
   },
-  { name: "Training_Video.mp4", type: "video/mp4", sizeRange: [5000, 15000] },
+  { name: "Training_Video.mp4", sizeRange: [5000, 15_000], type: "video/mp4" },
 ] as const;
 
-function generatePerson(id: number): Person {
+const generatePerson = (id: number): Person => {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
 
-  const fileCount = faker.number.int({ min: 0, max: 3 });
+  const fileCount = faker.number.int({ max: 3, min: 0 });
   const selectedFiles = faker.helpers.arrayElements(sampleFiles, fileCount);
 
   const attachments: FileCellData[] = selectedFiles.map((file, index) => {
     const sizeKB = faker.number.int({
-      min: file.sizeRange[0],
       max: file.sizeRange[1],
+      min: file.sizeRange[0],
     });
     return {
       id: `${id}-file-${index}`,
@@ -155,32 +154,33 @@ function generatePerson(id: number): Person {
     };
   });
 
+  // oxlint-disable-next-line sort-keys -- faker draws are consumed in property order; reordering changes the seeded fixtures
   return {
     id: faker.string.nanoid(8),
     name: `${firstName} ${lastName}`,
-    age: faker.number.int({ min: 22, max: 65 }),
+    age: faker.number.int({ max: 65, min: 22 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-    website: faker.internet.url().replace(/\/$/, ""),
+    website: faker.internet.url().replace(/\/$/u, ""),
     notes: faker.helpers.arrayElement(notes),
-    salary: faker.number.int({ min: 40000, max: 150000 }),
+    salary: faker.number.int({ max: 150_000, min: 40_000 }),
     department: faker.helpers.arrayElement(departments),
     status: faker.helpers.arrayElement(statuses),
     isActive: faker.datatype.boolean(),
     startDate:
       faker.date.between({ from: "2018-01-01", to: "2024-01-01" }).toISOString().split("T")[0] ??
       "",
-    skills: faker.helpers.arrayElements(skills, { min: 1, max: 5 }),
+    skills: faker.helpers.arrayElements(skills, { max: 5, min: 1 }),
     attachments,
   };
-}
+};
 
-export function getPeopleData(): Person[] {
+export const getPeopleData = (): Person[] => {
   resetFixtureRng();
   return Array.from({ length: 50 }, (_, i) => generatePerson(i + 1));
-}
+};
 
 // Company data
-export type Company = {
+export interface Company extends DataGridRowData {
   id: string;
   name?: string;
   industry?: string;
@@ -192,7 +192,7 @@ export type Company = {
   headquarters?: string;
   status?: string;
   isPublic?: boolean;
-};
+}
 
 export const industries = [
   "Technology",
@@ -215,216 +215,215 @@ const companyDescriptions = [
   "Global corporation with operations in over 50 countries, serving millions of customers worldwide.",
 ];
 
-function generateCompany(): Company {
+const generateCompany = (): Company => {
   const companyName = faker.company.name();
 
+  // oxlint-disable-next-line sort-keys -- faker draws are consumed in property order; reordering changes the seeded fixtures
   return {
     id: faker.string.nanoid(8),
     name: companyName,
     industry: faker.helpers.arrayElement(industries),
-    employees: faker.number.int({ min: 10, max: 50000 }),
-    website: `https://${companyName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+    employees: faker.number.int({ max: 50_000, min: 10 }),
+    website: `https://${companyName.toLowerCase().replaceAll(/[^a-z0-9]/gu, "")}.com`,
     description: faker.helpers.arrayElement(companyDescriptions),
-    revenue: faker.number.int({ min: 100000, max: 10000000000 }),
+    revenue: faker.number.int({ max: 10_000_000_000, min: 100_000 }),
     founded: faker.date.between({ from: "1950-01-01", to: "2023-01-01" }).getFullYear().toString(),
     headquarters: `${faker.location.city()}, ${faker.location.country()}`,
     status: faker.helpers.arrayElement(companyStatuses),
     isPublic: faker.datatype.boolean(),
   };
-}
+};
 
-export function getCompaniesData(): Company[] {
+export const getCompaniesData = (): Company[] => {
   resetFixtureRng();
   return Array.from({ length: 50 }, () => generateCompany());
-}
+};
 
-export function getCompaniesColumns(
+export const getCompaniesColumns = (
   filterFn: FilterFn<DataGridFeatures, Company>,
-): ColumnDef<DataGridFeatures, Company>[] {
-  return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={table.getIsAllPageRowsSelected()}
-          indeterminate={table.getIsSomePageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        />
-      ),
-      cell: ({ row, table }) => (
-        <Checkbox
-          aria-label="Select row"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => {
+): ColumnDef<DataGridFeatures, Company>[] => [
+  {
+    cell: ({ row, table }) => (
+      <Checkbox
+        aria-label="Select row"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => {
+          const onRowSelect = table.options.meta?.onRowSelect;
+          if (onRowSelect) {
+            onRowSelect(row.index, !!value, false);
+          } else {
+            row.toggleSelected(!!value);
+          }
+        }}
+        onClick={(event: React.MouseEvent) => {
+          if (event.shiftKey) {
+            event.preventDefault();
             const onRowSelect = table.options.meta?.onRowSelect;
             if (onRowSelect) {
-              onRowSelect(row.index, !!value, false);
-            } else {
-              row.toggleSelected(!!value);
+              onRowSelect(row.index, !row.getIsSelected(), true);
             }
-          }}
-          onClick={(event: React.MouseEvent) => {
-            if (event.shiftKey) {
-              event.preventDefault();
-              const onRowSelect = table.options.meta?.onRowSelect;
-              if (onRowSelect) {
-                onRowSelect(row.index, !row.getIsSelected(), true);
-              }
-            }
-          }}
-        />
-      ),
-      size: 40,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
-    },
-    {
-      id: "name",
-      accessorKey: "name",
-      header: "Company Name",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "Company Name",
-        cell: {
-          variant: "short-text",
-        },
+          }
+        }}
+      />
+    ),
+    enableHiding: false,
+    enableResizing: false,
+    enableSorting: false,
+    header: ({ table }) => (
+      <Checkbox
+        aria-label="Select all"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={table.getIsAllPageRowsSelected()}
+        indeterminate={table.getIsSomePageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    id: "select",
+    size: 40,
+  },
+  {
+    accessorKey: "name",
+    filterFn,
+    header: "Company Name",
+    id: "name",
+    meta: {
+      cell: {
+        variant: "short-text",
       },
+      label: "Company Name",
     },
-    {
-      id: "industry",
-      accessorKey: "industry",
-      header: "Industry",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Industry",
-        cell: {
-          variant: "select",
-          options: industries.map((i) => ({ label: i, value: i })),
-        },
+    minSize: 200,
+  },
+  {
+    accessorKey: "industry",
+    filterFn,
+    header: "Industry",
+    id: "industry",
+    meta: {
+      cell: {
+        options: industries.map((i) => ({ label: i, value: i })),
+        variant: "select",
       },
+      label: "Industry",
     },
-    {
-      id: "employees",
-      accessorKey: "employees",
-      header: "Employees",
-      minSize: 120,
-      filterFn,
-      meta: {
-        label: "Employees",
-        cell: {
-          variant: "number",
-          min: 1,
-          max: 1000000,
-        },
+    minSize: 150,
+  },
+  {
+    accessorKey: "employees",
+    filterFn,
+    header: "Employees",
+    id: "employees",
+    meta: {
+      cell: {
+        max: 1_000_000,
+        min: 1,
+        variant: "number",
       },
+      label: "Employees",
     },
-    {
-      id: "website",
-      accessorKey: "website",
-      header: "Website",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "Website",
-        cell: {
-          variant: "url",
-        },
+    minSize: 120,
+  },
+  {
+    accessorKey: "website",
+    filterFn,
+    header: "Website",
+    id: "website",
+    meta: {
+      cell: {
+        variant: "url",
       },
+      label: "Website",
     },
-    {
-      id: "description",
-      accessorKey: "description",
-      header: "Description",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "Description",
-        cell: {
-          variant: "long-text",
-        },
+    minSize: 200,
+  },
+  {
+    accessorKey: "description",
+    filterFn,
+    header: "Description",
+    id: "description",
+    meta: {
+      cell: {
+        variant: "long-text",
       },
+      label: "Description",
     },
-    {
-      id: "revenue",
-      accessorKey: "revenue",
-      header: "Revenue",
-      minSize: 140,
-      filterFn,
-      meta: {
-        label: "Revenue",
-        cell: {
-          variant: "number",
-        },
+    minSize: 200,
+  },
+  {
+    accessorKey: "revenue",
+    filterFn,
+    header: "Revenue",
+    id: "revenue",
+    meta: {
+      cell: {
+        variant: "number",
       },
+      label: "Revenue",
     },
-    {
-      id: "founded",
-      accessorKey: "founded",
-      header: "Founded",
-      minSize: 100,
-      filterFn,
-      meta: {
-        label: "Founded",
-        cell: {
-          variant: "short-text",
-        },
+    minSize: 140,
+  },
+  {
+    accessorKey: "founded",
+    filterFn,
+    header: "Founded",
+    id: "founded",
+    meta: {
+      cell: {
+        variant: "short-text",
       },
+      label: "Founded",
     },
-    {
-      id: "headquarters",
-      accessorKey: "headquarters",
-      header: "Headquarters",
-      minSize: 180,
-      filterFn,
-      meta: {
-        label: "Headquarters",
-        cell: {
-          variant: "short-text",
-        },
+    minSize: 100,
+  },
+  {
+    accessorKey: "headquarters",
+    filterFn,
+    header: "Headquarters",
+    id: "headquarters",
+    meta: {
+      cell: {
+        variant: "short-text",
       },
+      label: "Headquarters",
     },
-    {
-      id: "status",
-      accessorKey: "status",
-      header: "Status",
-      minSize: 120,
-      filterFn,
-      meta: {
-        label: "Status",
-        cell: {
-          variant: "select",
-          options: companyStatuses.map((s) => ({ label: s, value: s })),
-        },
+    minSize: 180,
+  },
+  {
+    accessorKey: "status",
+    filterFn,
+    header: "Status",
+    id: "status",
+    meta: {
+      cell: {
+        options: companyStatuses.map((s) => ({ label: s, value: s })),
+        variant: "select",
       },
+      label: "Status",
     },
-    {
-      id: "isPublic",
-      accessorKey: "isPublic",
-      header: "Public",
-      minSize: 100,
-      filterFn,
-      meta: {
-        label: "Public",
-        cell: {
-          variant: "checkbox",
-        },
+    minSize: 120,
+  },
+  {
+    accessorKey: "isPublic",
+    filterFn,
+    header: "Public",
+    id: "isPublic",
+    meta: {
+      cell: {
+        variant: "checkbox",
       },
+      label: "Public",
     },
-  ];
-}
+    minSize: 100,
+  },
+];
 
 export interface SpreadsheetRow {
   [key: string]: string;
 }
 
-export function getSpreadsheetData(): SpreadsheetRow[] {
-  const columns = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)); // A-Z
+export const getSpreadsheetData = (): SpreadsheetRow[] => {
+  const columns = Array.from({ length: 26 }, (_, i) => String.fromCodePoint(65 + i));
   return Array.from({ length: 1001 }, () => {
     const row: SpreadsheetRow = {};
     for (const col of columns) {
@@ -432,273 +431,271 @@ export function getSpreadsheetData(): SpreadsheetRow[] {
     }
     return row;
   });
-}
+};
 
-export function getSpreadsheetColumns(
+export const getSpreadsheetColumns = (
   filterFn: FilterFn<DataGridFeatures, SpreadsheetRow>,
-): ColumnDef<DataGridFeatures, SpreadsheetRow>[] {
-  const columns = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)); // A-Z
+): ColumnDef<DataGridFeatures, SpreadsheetRow>[] => {
+  const columns = Array.from({ length: 26 }, (_, i) => String.fromCodePoint(65 + i));
 
   return [
     {
-      id: "index",
-      header: () => (
-        <div className="flex h-full items-center justify-center text-muted-foreground text-sm" />
-      ),
       cell: ({ row }) => (
         <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
           {row.index + 1}
         </div>
       ),
-      size: 60,
-      enableSorting: false,
       enableHiding: false,
-      enableResizing: false,
       enablePinning: false,
+      enableResizing: false,
+      enableSorting: false,
+      header: () => (
+        <div className="flex h-full items-center justify-center text-muted-foreground text-sm" />
+      ),
+      id: "index",
+      size: 60,
     },
     ...columns.map((col) => ({
-      id: col,
       accessorKey: col,
-      header: col,
-      minSize: 180,
       filterFn,
+      header: col,
+      id: col,
       meta: {
-        label: col,
         cell: {
           variant: "short-text" as const,
         },
         hideVariantLabel: true,
+        label: col,
       },
+      minSize: 180,
     })),
   ];
-}
+};
 
-export function getPeopleColumns(
+export const getPeopleColumns = (
   filterFn: FilterFn<DataGridFeatures, Person>,
-): ColumnDef<DataGridFeatures, Person>[] {
-  return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={table.getIsAllPageRowsSelected()}
-          indeterminate={table.getIsSomePageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        />
-      ),
-      cell: ({ row, table }) => (
-        <Checkbox
-          aria-label="Select row"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => {
+): ColumnDef<DataGridFeatures, Person>[] => [
+  {
+    cell: ({ row, table }) => (
+      <Checkbox
+        aria-label="Select row"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => {
+          const onRowSelect = table.options.meta?.onRowSelect;
+          if (onRowSelect) {
+            onRowSelect(row.index, !!value, false);
+          } else {
+            row.toggleSelected(!!value);
+          }
+        }}
+        onClick={(event: React.MouseEvent) => {
+          if (event.shiftKey) {
+            event.preventDefault();
             const onRowSelect = table.options.meta?.onRowSelect;
             if (onRowSelect) {
-              onRowSelect(row.index, !!value, false);
-            } else {
-              row.toggleSelected(!!value);
+              onRowSelect(row.index, !row.getIsSelected(), true);
             }
-          }}
-          onClick={(event: React.MouseEvent) => {
-            if (event.shiftKey) {
-              event.preventDefault();
-              const onRowSelect = table.options.meta?.onRowSelect;
-              if (onRowSelect) {
-                onRowSelect(row.index, !row.getIsSelected(), true);
-              }
-            }
-          }}
-        />
-      ),
-      size: 40,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
-    },
-    {
-      id: "name",
-      accessorKey: "name",
-      header: "Name",
-      minSize: 180,
-      filterFn,
-      meta: {
-        label: "Name",
-        cell: {
-          variant: "short-text",
-        },
+          }
+        }}
+      />
+    ),
+    enableHiding: false,
+    enableResizing: false,
+    enableSorting: false,
+    header: ({ table }) => (
+      <Checkbox
+        aria-label="Select all"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={table.getIsAllPageRowsSelected()}
+        indeterminate={table.getIsSomePageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    id: "select",
+    size: 40,
+  },
+  {
+    accessorKey: "name",
+    filterFn,
+    header: "Name",
+    id: "name",
+    meta: {
+      cell: {
+        variant: "short-text",
       },
+      label: "Name",
     },
-    {
-      id: "age",
-      accessorKey: "age",
-      header: "Age",
-      minSize: 100,
-      filterFn,
-      meta: {
-        label: "Age",
-        cell: {
-          variant: "number",
-          min: 18,
-          max: 100,
-          step: 1,
-        },
+    minSize: 180,
+  },
+  {
+    accessorKey: "age",
+    filterFn,
+    header: "Age",
+    id: "age",
+    meta: {
+      cell: {
+        max: 100,
+        min: 18,
+        step: 1,
+        variant: "number",
       },
+      label: "Age",
     },
-    {
-      id: "email",
-      accessorKey: "email",
-      header: "Email",
-      minSize: 240,
-      filterFn,
-      meta: {
-        label: "Email",
-        cell: {
-          variant: "short-text",
-        },
+    minSize: 100,
+  },
+  {
+    accessorKey: "email",
+    filterFn,
+    header: "Email",
+    id: "email",
+    meta: {
+      cell: {
+        variant: "short-text",
       },
+      label: "Email",
     },
-    {
-      id: "website",
-      accessorKey: "website",
-      header: "Website",
-      minSize: 240,
-      filterFn,
-      meta: {
-        label: "Website",
-        cell: {
-          variant: "url",
-        },
+    minSize: 240,
+  },
+  {
+    accessorKey: "website",
+    filterFn,
+    header: "Website",
+    id: "website",
+    meta: {
+      cell: {
+        variant: "url",
       },
+      label: "Website",
     },
-    {
-      id: "notes",
-      accessorKey: "notes",
-      header: "Notes",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "Notes",
-        cell: {
-          variant: "long-text",
-        },
+    minSize: 240,
+  },
+  {
+    accessorKey: "notes",
+    filterFn,
+    header: "Notes",
+    id: "notes",
+    meta: {
+      cell: {
+        variant: "long-text",
       },
+      label: "Notes",
     },
-    {
-      id: "salary",
-      accessorKey: "salary",
-      header: "Salary",
-      minSize: 180,
-      filterFn,
-      meta: {
-        label: "Salary",
-        cell: {
-          variant: "number",
-          min: 0,
-          step: 1000,
-        },
+    minSize: 200,
+  },
+  {
+    accessorKey: "salary",
+    filterFn,
+    header: "Salary",
+    id: "salary",
+    meta: {
+      cell: {
+        min: 0,
+        step: 1000,
+        variant: "number",
       },
+      label: "Salary",
     },
-    {
-      id: "department",
-      accessorKey: "department",
-      header: "Department",
-      minSize: 180,
-      filterFn,
-      meta: {
-        label: "Department",
-        cell: {
-          variant: "select",
-          options: departments.map((dept) => ({
-            label: dept,
-            value: dept,
-          })),
-        },
+    minSize: 180,
+  },
+  {
+    accessorKey: "department",
+    filterFn,
+    header: "Department",
+    id: "department",
+    meta: {
+      cell: {
+        options: departments.map((dept) => ({
+          label: dept,
+          value: dept,
+        })),
+        variant: "select",
       },
+      label: "Department",
     },
-    {
-      id: "status",
-      accessorKey: "status",
-      header: "Status",
-      minSize: 180,
-      filterFn,
-      meta: {
-        label: "Status",
-        cell: {
-          variant: "select",
-          options: statuses.map((status) => ({
-            label: status,
-            value: status,
-          })),
-        },
+    minSize: 180,
+  },
+  {
+    accessorKey: "status",
+    filterFn,
+    header: "Status",
+    id: "status",
+    meta: {
+      cell: {
+        options: statuses.map((status) => ({
+          label: status,
+          value: status,
+        })),
+        variant: "select",
       },
+      label: "Status",
     },
-    {
-      id: "skills",
-      accessorKey: "skills",
-      header: "Skills",
-      minSize: 240,
-      filterFn,
-      meta: {
-        label: "Skills",
-        cell: {
-          variant: "multi-select",
-          options: skills.map((skill) => ({
-            label: skill,
-            value: skill,
-          })),
-        },
+    minSize: 180,
+  },
+  {
+    accessorKey: "skills",
+    filterFn,
+    header: "Skills",
+    id: "skills",
+    meta: {
+      cell: {
+        options: skills.map((skill) => ({
+          label: skill,
+          value: skill,
+        })),
+        variant: "multi-select",
       },
+      label: "Skills",
     },
-    {
-      id: "isActive",
-      accessorKey: "isActive",
-      header: "Active",
-      minSize: 140,
-      filterFn,
-      meta: {
-        label: "Active",
-        cell: {
-          variant: "checkbox",
-        },
+    minSize: 240,
+  },
+  {
+    accessorKey: "isActive",
+    filterFn,
+    header: "Active",
+    id: "isActive",
+    meta: {
+      cell: {
+        variant: "checkbox",
       },
+      label: "Active",
     },
-    {
-      id: "startDate",
-      accessorKey: "startDate",
-      header: "Start Date",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Start Date",
-        cell: {
-          variant: "date",
-        },
+    minSize: 140,
+  },
+  {
+    accessorKey: "startDate",
+    filterFn,
+    header: "Start Date",
+    id: "startDate",
+    meta: {
+      cell: {
+        variant: "date",
       },
+      label: "Start Date",
     },
-    {
-      id: "attachments",
-      accessorKey: "attachments",
-      header: "Attachments",
-      minSize: 240,
-      filterFn,
-      meta: {
-        label: "Attachments",
-        cell: {
-          variant: "file",
-          maxFileSize: 10 * 1024 * 1024, // 10MB
-          maxFiles: 5,
-          accept: "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
-          multiple: true,
-        },
+    minSize: 150,
+  },
+  {
+    accessorKey: "attachments",
+    filterFn,
+    header: "Attachments",
+    id: "attachments",
+    meta: {
+      cell: {
+        accept: "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
+        maxFileSize: 10 * 1024 * 1024,
+        maxFiles: 5,
+        multiple: true,
+        variant: "file",
       },
+      label: "Attachments",
     },
-  ];
-}
+    minSize: 240,
+  },
+];
 
 // Article data
-export type Article = {
+export interface Article extends DataGridRowData {
   id: string;
   title?: string;
   author?: string;
@@ -709,7 +706,7 @@ export type Article = {
   excerpt?: string;
   url?: string;
   isFeatured?: boolean;
-};
+}
 
 export const articleCategories = [
   "Technology",
@@ -733,8 +730,9 @@ export const articleTags = [
   "Feature",
 ] as const;
 
-function generateArticle(): Article {
-  const title = faker.lorem.sentence({ min: 4, max: 8 }).slice(0, -1);
+const generateArticle = (): Article => {
+  const title = faker.lorem.sentence({ max: 8, min: 4 }).slice(0, -1);
+  // oxlint-disable-next-line sort-keys -- faker draws are consumed in property order; reordering changes the seeded fixtures
   return {
     id: faker.string.nanoid(8),
     title,
@@ -747,179 +745,177 @@ function generateArticle(): Article {
       .between({ from: "2025-01-01", to: "2026-01-01" })
       .toISOString()
       .split("T")[0],
-    readTime: faker.number.int({ min: 2, max: 15 }),
+    readTime: faker.number.int({ max: 15, min: 2 }),
     tags: faker.helpers.arrayElements(articleTags, {
-      min: 1,
       max: 3,
+      min: 1,
     }),
     excerpt: faker.lorem.paragraph(),
     url: `https://example.com/articles/${faker.helpers.slugify(title).toLowerCase()}`,
     isFeatured: faker.datatype.boolean({ probability: 0.2 }),
   };
-}
+};
 
-export function getArticlesData(): Article[] {
+export const getArticlesData = (): Article[] => {
   resetFixtureRng();
   return Array.from({ length: 50 }, () => generateArticle());
-}
+};
 
-export function getArticlesColumns(
+export const getArticlesColumns = (
   filterFn: FilterFn<DataGridFeatures, Article>,
-): ColumnDef<DataGridFeatures, Article>[] {
-  return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={table.getIsAllPageRowsSelected()}
-          indeterminate={table.getIsSomePageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        />
-      ),
-      cell: ({ row, table }) => (
-        <Checkbox
-          aria-label="Select row"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => {
+): ColumnDef<DataGridFeatures, Article>[] => [
+  {
+    cell: ({ row, table }) => (
+      <Checkbox
+        aria-label="Select row"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => {
+          const onRowSelect = table.options.meta?.onRowSelect;
+          if (onRowSelect) {
+            onRowSelect(row.index, !!value, false);
+          } else {
+            row.toggleSelected(!!value);
+          }
+        }}
+        onClick={(event: React.MouseEvent) => {
+          if (event.shiftKey) {
+            event.preventDefault();
             const onRowSelect = table.options.meta?.onRowSelect;
             if (onRowSelect) {
-              onRowSelect(row.index, !!value, false);
-            } else {
-              row.toggleSelected(!!value);
+              onRowSelect(row.index, !row.getIsSelected(), true);
             }
-          }}
-          onClick={(event: React.MouseEvent) => {
-            if (event.shiftKey) {
-              event.preventDefault();
-              const onRowSelect = table.options.meta?.onRowSelect;
-              if (onRowSelect) {
-                onRowSelect(row.index, !row.getIsSelected(), true);
-              }
-            }
-          }}
-        />
-      ),
-      size: 40,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
+          }
+        }}
+      />
+    ),
+    enableHiding: false,
+    enableResizing: false,
+    enableSorting: false,
+    header: ({ table }) => (
+      <Checkbox
+        aria-label="Select all"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={table.getIsAllPageRowsSelected()}
+        indeterminate={table.getIsSomePageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    id: "select",
+    size: 40,
+  },
+  {
+    accessorKey: "title",
+    filterFn,
+    header: "Title",
+    id: "title",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Title",
     },
-    {
-      id: "title",
-      accessorKey: "title",
-      header: "Title",
-      minSize: 250,
-      filterFn,
-      meta: {
-        label: "Title",
-        cell: { variant: "short-text" },
+    minSize: 250,
+  },
+  {
+    accessorKey: "author",
+    filterFn,
+    header: "Author",
+    id: "author",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Author",
+    },
+    minSize: 150,
+  },
+  {
+    accessorKey: "category",
+    filterFn,
+    header: "Category",
+    id: "category",
+    meta: {
+      cell: {
+        options: articleCategories.map((c) => ({ label: c, value: c })),
+        variant: "select",
       },
+      label: "Category",
     },
-    {
-      id: "author",
-      accessorKey: "author",
-      header: "Author",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Author",
-        cell: { variant: "short-text" },
+    minSize: 130,
+  },
+  {
+    accessorKey: "publishDate",
+    filterFn,
+    header: "Published",
+    id: "publishDate",
+    meta: {
+      cell: { variant: "date" },
+      label: "Published",
+    },
+    minSize: 130,
+  },
+  {
+    accessorKey: "readTime",
+    filterFn,
+    header: "Read Time (min)",
+    id: "readTime",
+    meta: {
+      cell: { max: 60, min: 1, variant: "number" },
+      label: "Read Time",
+    },
+    minSize: 120,
+  },
+  {
+    accessorKey: "tags",
+    filterFn,
+    header: "Tags",
+    id: "tags",
+    meta: {
+      cell: {
+        options: articleTags.map((t) => ({ label: t, value: t })),
+        variant: "multi-select",
       },
+      label: "Tags",
     },
-    {
-      id: "category",
-      accessorKey: "category",
-      header: "Category",
-      minSize: 130,
-      filterFn,
-      meta: {
-        label: "Category",
-        cell: {
-          variant: "select",
-          options: articleCategories.map((c) => ({ label: c, value: c })),
-        },
-      },
+    minSize: 200,
+  },
+  {
+    accessorKey: "excerpt",
+    filterFn,
+    header: "Excerpt",
+    id: "excerpt",
+    meta: {
+      cell: { variant: "long-text" },
+      label: "Excerpt",
     },
-    {
-      id: "publishDate",
-      accessorKey: "publishDate",
-      header: "Published",
-      minSize: 130,
-      filterFn,
-      meta: {
-        label: "Published",
-        cell: { variant: "date" },
-      },
+    minSize: 200,
+  },
+  {
+    accessorKey: "url",
+    filterFn,
+    header: "URL",
+    id: "url",
+    meta: {
+      cell: { variant: "url" },
+      label: "URL",
     },
-    {
-      id: "readTime",
-      accessorKey: "readTime",
-      header: "Read Time (min)",
-      minSize: 120,
-      filterFn,
-      meta: {
-        label: "Read Time",
-        cell: { variant: "number", min: 1, max: 60 },
-      },
+    minSize: 200,
+  },
+  {
+    accessorKey: "isFeatured",
+    filterFn,
+    header: "Featured",
+    id: "isFeatured",
+    meta: {
+      cell: { variant: "checkbox" },
+      label: "Featured",
     },
-    {
-      id: "tags",
-      accessorKey: "tags",
-      header: "Tags",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "Tags",
-        cell: {
-          variant: "multi-select",
-          options: articleTags.map((t) => ({ label: t, value: t })),
-        },
-      },
-    },
-    {
-      id: "excerpt",
-      accessorKey: "excerpt",
-      header: "Excerpt",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "Excerpt",
-        cell: { variant: "long-text" },
-      },
-    },
-    {
-      id: "url",
-      accessorKey: "url",
-      header: "URL",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "URL",
-        cell: { variant: "url" },
-      },
-    },
-    {
-      id: "isFeatured",
-      accessorKey: "isFeatured",
-      header: "Featured",
-      minSize: 100,
-      filterFn,
-      meta: {
-        label: "Featured",
-        cell: { variant: "checkbox" },
-      },
-    },
-  ];
-}
+    minSize: 100,
+  },
+];
 
 // Recipe Demo - Generate columns demo
-export type Recipe = {
+export interface Recipe extends DataGridRowData {
   id: string;
   name: string;
-};
+}
 
 const recipeNames = [
   "Spaghetti Carbonara",
@@ -934,58 +930,55 @@ const recipeNames = [
   "Chocolate Lava Cake",
 ];
 
-export function getRecipesData(): Recipe[] {
-  return recipeNames.map((name, i) => ({
+export const getRecipesData = (): Recipe[] =>
+  recipeNames.map((name, i) => ({
     id: `recipe-${i}`,
     name,
   }));
-}
 
-export function getRecipesColumns(
+export const getRecipesColumns = (
   filterFn: FilterFn<DataGridFeatures, Recipe>,
-): ColumnDef<DataGridFeatures, Recipe>[] {
-  return [
-    {
-      id: "index",
-      header: () => (
-        <div className="flex h-full items-center justify-center text-muted-foreground text-sm" />
-      ),
-      cell: ({ row }) => (
-        <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-          {row.index + 1}
-        </div>
-      ),
-      size: 60,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
-      enablePinning: false,
+): ColumnDef<DataGridFeatures, Recipe>[] => [
+  {
+    cell: ({ row }) => (
+      <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+        {row.index + 1}
+      </div>
+    ),
+    enableHiding: false,
+    enablePinning: false,
+    enableResizing: false,
+    enableSorting: false,
+    header: () => (
+      <div className="flex h-full items-center justify-center text-muted-foreground text-sm" />
+    ),
+    id: "index",
+    size: 60,
+  },
+  {
+    accessorKey: "name",
+    filterFn,
+    header: "Recipe Name",
+    id: "name",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Recipe Name",
     },
-    {
-      id: "name",
-      accessorKey: "name",
-      header: "Recipe Name",
-      minSize: 200,
-      filterFn,
-      meta: {
-        label: "Recipe Name",
-        cell: { variant: "short-text" },
-      },
-    },
-  ];
-}
+    minSize: 200,
+  },
+];
 
 export const recipeDemoPrompt =
   "Add columns for cuisine type, difficulty level, prep time (minutes), cooking time (minutes), and calories";
 
 // Tweet data
-export type Tweet = {
+export interface Tweet extends DataGridRowData {
   id: string;
   url?: string;
   author?: string;
   banger?: boolean;
   createdAt?: string;
-};
+}
 
 const tweetAuthors = [
   "@elonmusk",
@@ -1000,9 +993,10 @@ const tweetAuthors = [
   "@patrickc",
 ] as const;
 
-function generateTweet(): Tweet {
+const generateTweet = (): Tweet => {
   const author = faker.helpers.arrayElement(tweetAuthors);
   const tweetId = faker.string.numeric(19);
+  // oxlint-disable-next-line sort-keys -- faker draws are consumed in property order; reordering changes the seeded fixtures
   return {
     id: faker.string.nanoid(8),
     url: `https://x.com/${author.slice(1)}/status/${tweetId}`,
@@ -1013,138 +1007,136 @@ function generateTweet(): Tweet {
       .toISOString()
       .split("T")[0],
   };
-}
+};
 
-export function getTweetsData(): Tweet[] {
+export const getTweetsData = (): Tweet[] => {
   resetFixtureRng();
   // Ensure @levelsio has 3 bangers
   const levelsioBangers: Tweet[] = [
     {
-      id: "lvls-001",
-      url: "https://x.com/levelsio/status/1234567890123456789",
       author: "@levelsio",
       banger: true,
       createdAt: "2024-03-15",
+      id: "lvls-001",
+      url: "https://x.com/levelsio/status/1234567890123456789",
     },
     {
-      id: "lvls-002",
-      url: "https://x.com/levelsio/status/1234567890123456790",
       author: "@levelsio",
       banger: true,
       createdAt: "2024-06-22",
+      id: "lvls-002",
+      url: "https://x.com/levelsio/status/1234567890123456790",
     },
     {
-      id: "lvls-003",
-      url: "https://x.com/levelsio/status/1234567890123456791",
       author: "@levelsio",
       banger: true,
       createdAt: "2024-09-10",
+      id: "lvls-003",
+      url: "https://x.com/levelsio/status/1234567890123456791",
     },
   ];
   const randomTweets = Array.from({ length: 47 }, () => generateTweet());
   return faker.helpers.shuffle([...levelsioBangers, ...randomTweets]);
-}
+};
 
-export function getTweetsColumns(
+export const getTweetsColumns = (
   filterFn: FilterFn<DataGridFeatures, Tweet>,
-): ColumnDef<DataGridFeatures, Tweet>[] {
-  return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={table.getIsAllPageRowsSelected()}
-          indeterminate={table.getIsSomePageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        />
-      ),
-      cell: ({ row, table }) => (
-        <Checkbox
-          aria-label="Select row"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => {
+): ColumnDef<DataGridFeatures, Tweet>[] => [
+  {
+    cell: ({ row, table }) => (
+      <Checkbox
+        aria-label="Select row"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => {
+          const onRowSelect = table.options.meta?.onRowSelect;
+          if (onRowSelect) {
+            onRowSelect(row.index, !!value, false);
+          } else {
+            row.toggleSelected(!!value);
+          }
+        }}
+        onClick={(event: React.MouseEvent) => {
+          if (event.shiftKey) {
+            event.preventDefault();
             const onRowSelect = table.options.meta?.onRowSelect;
             if (onRowSelect) {
-              onRowSelect(row.index, !!value, false);
-            } else {
-              row.toggleSelected(!!value);
+              onRowSelect(row.index, !row.getIsSelected(), true);
             }
-          }}
-          onClick={(event: React.MouseEvent) => {
-            if (event.shiftKey) {
-              event.preventDefault();
-              const onRowSelect = table.options.meta?.onRowSelect;
-              if (onRowSelect) {
-                onRowSelect(row.index, !row.getIsSelected(), true);
-              }
-            }
-          }}
-        />
-      ),
-      size: 40,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
+          }
+        }}
+      />
+    ),
+    enableHiding: false,
+    enableResizing: false,
+    enableSorting: false,
+    header: ({ table }) => (
+      <Checkbox
+        aria-label="Select all"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={table.getIsAllPageRowsSelected()}
+        indeterminate={table.getIsSomePageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    id: "select",
+    size: 40,
+  },
+  {
+    accessorKey: "url",
+    filterFn,
+    header: "URL",
+    id: "url",
+    meta: {
+      cell: { variant: "url" },
+      label: "URL",
     },
-    {
-      id: "url",
-      accessorKey: "url",
-      header: "URL",
-      minSize: 300,
-      filterFn,
-      meta: {
-        label: "URL",
-        cell: { variant: "url" },
-      },
+    minSize: 300,
+  },
+  {
+    accessorKey: "author",
+    filterFn,
+    header: "Author",
+    id: "author",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Author",
     },
-    {
-      id: "author",
-      accessorKey: "author",
-      header: "Author",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Author",
-        cell: { variant: "short-text" },
-      },
+    minSize: 150,
+  },
+  {
+    accessorKey: "banger",
+    filterFn,
+    header: "Banger",
+    id: "banger",
+    meta: {
+      cell: { variant: "checkbox" },
+      label: "Banger",
     },
-    {
-      id: "banger",
-      accessorKey: "banger",
-      header: "Banger",
-      minSize: 100,
-      filterFn,
-      meta: {
-        label: "Banger",
-        cell: { variant: "checkbox" },
-      },
+    minSize: 100,
+  },
+  {
+    accessorKey: "createdAt",
+    filterFn,
+    header: "Created At",
+    id: "createdAt",
+    meta: {
+      cell: { variant: "date" },
+      label: "Created At",
     },
-    {
-      id: "createdAt",
-      accessorKey: "createdAt",
-      header: "Created At",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Created At",
-        cell: { variant: "date" },
-      },
-    },
-  ];
-}
+    minSize: 150,
+  },
+];
 
 // Email Demo - Enrich cells demo
-export type EmailContact = {
+export interface EmailContact extends DataGridRowData {
   id: string;
   email: string;
   name?: string;
   company?: string;
   role?: string;
   location?: string;
-};
+}
 
 const emailContacts = [
   "sarah.chen@techcorp.io",
@@ -1159,115 +1151,112 @@ const emailContacts = [
   "j.anderson@media.net",
 ];
 
-export function getEmailContactsData(): EmailContact[] {
-  return emailContacts.map((email, i) => ({
-    id: `contact-${i}`,
+export const getEmailContactsData = (): EmailContact[] =>
+  emailContacts.map((email, i) => ({
     email,
+    id: `contact-${i}`,
   }));
-}
 
-export function getEmailContactsColumns(
+export const getEmailContactsColumns = (
   filterFn: FilterFn<DataGridFeatures, EmailContact>,
-): ColumnDef<DataGridFeatures, EmailContact>[] {
-  return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={table.getIsAllPageRowsSelected()}
-          indeterminate={table.getIsSomePageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        />
-      ),
-      cell: ({ row, table }) => (
-        <Checkbox
-          aria-label="Select row"
-          className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => {
+): ColumnDef<DataGridFeatures, EmailContact>[] => [
+  {
+    cell: ({ row, table }) => (
+      <Checkbox
+        aria-label="Select row"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => {
+          const onRowSelect = table.options.meta?.onRowSelect;
+          if (onRowSelect) {
+            onRowSelect(row.index, !!value, false);
+          } else {
+            row.toggleSelected(!!value);
+          }
+        }}
+        onClick={(event: React.MouseEvent) => {
+          if (event.shiftKey) {
+            event.preventDefault();
             const onRowSelect = table.options.meta?.onRowSelect;
             if (onRowSelect) {
-              onRowSelect(row.index, !!value, false);
-            } else {
-              row.toggleSelected(!!value);
+              onRowSelect(row.index, !row.getIsSelected(), true);
             }
-          }}
-          onClick={(event: React.MouseEvent) => {
-            if (event.shiftKey) {
-              event.preventDefault();
-              const onRowSelect = table.options.meta?.onRowSelect;
-              if (onRowSelect) {
-                onRowSelect(row.index, !row.getIsSelected(), true);
-              }
-            }
-          }}
-        />
-      ),
-      size: 40,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
+          }
+        }}
+      />
+    ),
+    enableHiding: false,
+    enableResizing: false,
+    enableSorting: false,
+    header: ({ table }) => (
+      <Checkbox
+        aria-label="Select all"
+        className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+        checked={table.getIsAllPageRowsSelected()}
+        indeterminate={table.getIsSomePageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      />
+    ),
+    id: "select",
+    size: 40,
+  },
+  {
+    accessorKey: "email",
+    filterFn,
+    header: "Email",
+    id: "email",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Email",
     },
-    {
-      id: "email",
-      accessorKey: "email",
-      header: "Email",
-      minSize: 220,
-      filterFn,
-      meta: {
-        label: "Email",
-        cell: { variant: "short-text" },
-      },
+    minSize: 220,
+  },
+  {
+    accessorKey: "name",
+    filterFn,
+    header: "Name",
+    id: "name",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Name",
+      prompt: "Extract the full name from the email address pattern",
     },
-    {
-      id: "name",
-      accessorKey: "name",
-      header: "Name",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Name",
-        cell: { variant: "short-text" },
-        prompt: "Extract the full name from the email address pattern",
-      },
+    minSize: 150,
+  },
+  {
+    accessorKey: "company",
+    filterFn,
+    header: "Company",
+    id: "company",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Company",
+      prompt: "Infer the company name from the email domain",
     },
-    {
-      id: "company",
-      accessorKey: "company",
-      header: "Company",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Company",
-        cell: { variant: "short-text" },
-        prompt: "Infer the company name from the email domain",
-      },
+    minSize: 150,
+  },
+  {
+    accessorKey: "role",
+    filterFn,
+    header: "Role",
+    id: "role",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Role",
+      prompt: "Guess a likely job role based on the email and company",
     },
-    {
-      id: "role",
-      accessorKey: "role",
-      header: "Role",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Role",
-        cell: { variant: "short-text" },
-        prompt: "Guess a likely job role based on the email and company",
-      },
+    minSize: 150,
+  },
+  {
+    accessorKey: "location",
+    filterFn,
+    header: "Location",
+    id: "location",
+    meta: {
+      cell: { variant: "short-text" },
+      label: "Location",
+      prompt: "Guess a likely location based on the company type",
     },
-    {
-      id: "location",
-      accessorKey: "location",
-      header: "Location",
-      minSize: 150,
-      filterFn,
-      meta: {
-        label: "Location",
-        cell: { variant: "short-text" },
-        prompt: "Guess a likely location based on the company type",
-      },
-    },
-  ];
-}
+    minSize: 150,
+  },
+];

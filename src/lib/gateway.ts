@@ -13,10 +13,10 @@ export const MODEL_ID = "openai/gpt-5.1-instant";
  * back to the ambient server credential (`AI_GATEWAY_API_KEY` env or
  * Vercel OIDC), matching the agent's fallback model routing.
  */
-export function createModel(gatewayApiKey?: string) {
+export const createModel = (gatewayApiKey?: string) => {
   const gateway =
     gatewayApiKey !== undefined && gatewayApiKey.length > 0
       ? createGateway({ apiKey: gatewayApiKey })
       : createGateway();
   return gateway(MODEL_ID);
-}
+};

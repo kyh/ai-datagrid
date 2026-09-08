@@ -3,19 +3,17 @@
 import { faker } from "@faker-js/faker";
 import { DataGridContainer } from "@/components/data-grid/data-grid-container";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getPeopleColumns, getPeopleData, type Person } from "@/data/seed";
+import { getPeopleColumns, getPeopleData } from "@/data/seed";
+import type { Person } from "@/data/seed";
 
-function createPerson(): Person {
-  return { id: faker.string.nanoid(8) };
-}
+const createPerson = (): Person => ({ id: faker.string.nanoid(8) });
 
-function createPeople(count: number): Person[] {
-  return Array.from({ length: count }, () => ({
+const createPeople = (count: number): Person[] =>
+  Array.from({ length: count }, () => ({
     id: faker.string.nanoid(8),
   }));
-}
 
-export default function PeoplePage() {
+const PeoplePage = () => {
   const data = getPeopleData();
   const columns = getPeopleColumns(getFilterFn());
 
@@ -30,4 +28,6 @@ export default function PeoplePage() {
       defaultColumnId="name"
     />
   );
-}
+};
+
+export default PeoplePage;

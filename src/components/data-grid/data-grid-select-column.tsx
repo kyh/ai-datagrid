@@ -15,28 +15,26 @@ interface DataGridSelectHitboxProps {
   debug?: boolean;
 }
 
-function DataGridSelectHitbox({ htmlFor, children, size, debug }: DataGridSelectHitboxProps) {
-  return (
-    <div
+const DataGridSelectHitbox = ({ htmlFor, children, size, debug }: DataGridSelectHitboxProps) => (
+  <div
+    className={cn(
+      "group relative -my-1.5 h-[calc(100%+0.75rem)] py-1.5",
+      size === "default" && "-ms-3 -me-2 ps-3 pe-2",
+      size === "sm" && "-ms-3 -me-1.5 ps-3 pe-1.5",
+      size === "lg" && "-mx-3 px-3",
+    )}
+  >
+    {children}
+    <label
+      htmlFor={htmlFor}
+      aria-label="Select row"
       className={cn(
-        "group relative -my-1.5 h-[calc(100%+0.75rem)] py-1.5",
-        size === "default" && "-ms-3 -me-2 ps-3 pe-2",
-        size === "sm" && "-ms-3 -me-1.5 ps-3 pe-1.5",
-        size === "lg" && "-mx-3 px-3",
+        "absolute inset-0 cursor-pointer",
+        debug && "border border-red-500 border-dashed bg-red-500/20",
       )}
-    >
-      {children}
-      <label
-        htmlFor={htmlFor}
-        aria-label="Select row"
-        className={cn(
-          "absolute inset-0 cursor-pointer",
-          debug && "border border-red-500 border-dashed bg-red-500/20",
-        )}
-      />
-    </div>
-  );
-}
+    />
+  </div>
+);
 
 interface DataGridSelectCheckboxProps extends Omit<React.ComponentProps<typeof Checkbox>, "id"> {
   rowNumber?: number;
@@ -44,14 +42,14 @@ interface DataGridSelectCheckboxProps extends Omit<React.ComponentProps<typeof C
   debug?: boolean;
 }
 
-function DataGridSelectCheckbox({
+const DataGridSelectCheckbox = ({
   rowNumber,
   hitboxSize,
   debug,
   checked,
   className,
   ...props
-}: DataGridSelectCheckboxProps) {
+}: DataGridSelectCheckboxProps) => {
   const id = React.useId();
 
   const checkbox = (
@@ -94,7 +92,7 @@ function DataGridSelectCheckbox({
   }
 
   return checkbox;
-}
+};
 
 interface DataGridSelectHeaderProps<TData extends RowData> extends Pick<
   HeaderContext<DataGridFeatures, TData, unknown>,
@@ -105,12 +103,12 @@ interface DataGridSelectHeaderProps<TData extends RowData> extends Pick<
   debug?: boolean;
 }
 
-function DataGridSelectHeader<TData extends RowData>({
+const DataGridSelectHeader = <TData extends RowData>({
   table,
   hitboxSize,
   readOnly,
   debug,
-}: DataGridSelectHeaderProps<TData>) {
+}: DataGridSelectHeaderProps<TData>) => {
   const onCheckedChange = React.useCallback(
     (value: boolean) => table.toggleAllPageRowsSelected(value),
     [table],
@@ -130,7 +128,7 @@ function DataGridSelectHeader<TData extends RowData>({
       debug={debug}
     />
   );
-}
+};
 
 interface DataGridSelectCellProps<TData extends RowData> extends Pick<
   CellContext<DataGridFeatures, TData, unknown>,
@@ -142,15 +140,15 @@ interface DataGridSelectCellProps<TData extends RowData> extends Pick<
   debug?: boolean;
 }
 
-function DataGridSelectCell<TData extends RowData>({
+const DataGridSelectCell = <TData extends RowData>({
   row,
   table,
   enableRowMarkers,
   hitboxSize,
   readOnly,
   debug,
-}: DataGridSelectCellProps<TData>) {
-  const meta = table.options.meta;
+}: DataGridSelectCellProps<TData>) => {
+  const { meta } = table.options;
   const onRowSelect = meta?.onRowSelect;
 
   const rowNumber = enableRowMarkers
@@ -197,7 +195,7 @@ function DataGridSelectCell<TData extends RowData>({
       debug={debug}
     />
   );
-}
+};
 
 interface GetDataGridSelectColumnOptions<TData extends RowData> extends Omit<
   Partial<ColumnDef<DataGridFeatures, TData>>,
@@ -209,7 +207,7 @@ interface GetDataGridSelectColumnOptions<TData extends RowData> extends Omit<
   debug?: boolean;
 }
 
-export function getDataGridSelectColumn<TData extends RowData>({
+export const getDataGridSelectColumn = <TData extends RowData>({
   size = 40,
   enableHiding = false,
   enableResizing = false,
@@ -219,31 +217,24 @@ export function getDataGridSelectColumn<TData extends RowData>({
   readOnly = false,
   debug = false,
   ...props
-}: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<DataGridFeatures, TData> {
-  return {
-    id: "select",
-    header: ({ table }) => (
-      <DataGridSelectHeader
-        table={table}
-        hitboxSize={hitboxSize}
-        readOnly={readOnly}
-        debug={debug}
-      />
-    ),
-    cell: ({ row, table }) => (
-      <DataGridSelectCell
-        row={row}
-        table={table}
-        enableRowMarkers={enableRowMarkers}
-        hitboxSize={hitboxSize}
-        readOnly={readOnly}
-        debug={debug}
-      />
-    ),
-    size,
-    enableHiding,
-    enableResizing,
-    enableSorting,
-    ...props,
-  };
-}
+}: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<DataGridFeatures, TData> => ({
+  cell: ({ row, table }) => (
+    <DataGridSelectCell
+      row={row}
+      table={table}
+      enableRowMarkers={enableRowMarkers}
+      hitboxSize={hitboxSize}
+      readOnly={readOnly}
+      debug={debug}
+    />
+  ),
+  enableHiding,
+  enableResizing,
+  enableSorting,
+  header: ({ table }) => (
+    <DataGridSelectHeader table={table} hitboxSize={hitboxSize} readOnly={readOnly} debug={debug} />
+  ),
+  id: "select",
+  size,
+  ...props,
+});

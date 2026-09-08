@@ -1,5 +1,7 @@
 "use client";
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- WAI-ARIA grid on a virtualized div layout; table elements can't be absolutely positioned per row */
+import type { ColumnSort } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
@@ -12,9 +14,17 @@ import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getColumnBorderVisibility, getColumnPinningStyle } from "@/lib/data-grid";
 import { cn } from "cn";
 import type { DataGridRowData, Direction } from "@/lib/data-grid-types";
+import { isFunction } from "@/lib/is-function";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 const EMPTY_GENERATING_CELLS_SET = new Set<string>();
+
+const getAriaSort = (currentSort: ColumnSort | undefined, isSortable: boolean) => {
+  if (currentSort) {
+    return currentSort.desc ? "descending" : "ascending";
+  }
+  return isSortable ? "none" : undefined;
+};
 
 interface DataGridProps<TData extends DataGridRowData>
   extends
@@ -25,7 +35,7 @@ interface DataGridProps<TData extends DataGridRowData>
   stretchColumns?: boolean;
 }
 
-export function DataGrid<TData extends DataGridRowData>({
+export const DataGrid = <TData extends DataGridRowData>({
   dataGridRef,
   headerRef,
   rowMapRef,
@@ -55,11 +65,11 @@ export function DataGrid<TData extends DataGridRowData>({
   hasSelection: _hasSelection,
   generatingCells,
   ...props
-}: DataGridProps<TData>) {
-  const rows = table.getRowModel().rows;
+}: DataGridProps<TData>) => {
+  const { rows } = table.getRowModel();
   const readOnly = tableMeta?.readOnly ?? false;
-  const columnVisibility = table.state.columnVisibility;
-  const columnPinning = table.state.columnPinning;
+  const { columnVisibility } = table.state;
+  const { columnPinning } = table.state;
 
   const onRowAddRef = useAsRef(onRowAddProp);
 
@@ -76,7 +86,9 @@ export function DataGrid<TData extends DataGridRowData>({
 
   const onFooterCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!onRowAddRef.current) return;
+      if (!onRowAddRef.current) {
+        return;
+      }
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
@@ -127,7 +139,7 @@ export function DataGrid<TData extends DataGridRowData>({
               className="flex w-full"
             >
               {headerGroup.headers.map((header, colIndex) => {
-                const sorting = table.state.sorting;
+                const { sorting } = table.state;
                 const currentSort = sorting.find((sort) => sort.id === header.column.id);
                 const isSortable = header.column.getCanSort();
 
@@ -135,44 +147,42 @@ export function DataGrid<TData extends DataGridRowData>({
                 const isLastColumn = colIndex === headerGroup.headers.length - 1;
                 const { showEndBorder, showStartBorder } = getColumnBorderVisibility({
                   column: header.column,
-                  nextColumn: nextHeader?.column,
                   isLastColumn,
+                  nextColumn: nextHeader?.column,
                 });
+
+                let headerContent: React.ReactNode = null;
+                if (header.isPlaceholder) {
+                  headerContent = null;
+                } else if (isFunction(header.column.columnDef.header)) {
+                  headerContent = (
+                    <div className="size-full px-3 py-1.5">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </div>
+                  );
+                } else {
+                  headerContent = <DataGridColumnHeader header={header} table={table} />;
+                }
 
                 return (
                   <div
                     key={header.id}
                     role="columnheader"
                     aria-colindex={colIndex + 1}
-                    aria-sort={
-                      currentSort?.desc === false
-                        ? "ascending"
-                        : currentSort?.desc === true
-                          ? "descending"
-                          : isSortable
-                            ? "none"
-                            : undefined
-                    }
+                    aria-sort={getAriaSort(currentSort, isSortable)}
                     data-slot="grid-header-cell"
                     tabIndex={-1}
                     className={cn("relative", {
-                      grow: stretchColumns && header.column.id !== "select",
                       "border-e": showEndBorder && header.column.id !== "select",
                       "border-s": showStartBorder && header.column.id !== "select",
+                      grow: stretchColumns && header.column.id !== "select",
                     })}
                     style={{
                       ...getColumnPinningStyle({ column: header.column, dir }),
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >
-                    {header.isPlaceholder ? null : header.column.columnDef.header instanceof
-                      Function ? (
-                      <div className="size-full px-3 py-1.5">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </div>
-                    ) : (
-                      <DataGridColumnHeader header={header} table={table} />
-                    )}
+                    {headerContent}
                   </div>
                 );
               })}
@@ -184,13 +194,15 @@ export function DataGrid<TData extends DataGridRowData>({
           data-slot="grid-body"
           className="relative grid"
           style={{
-            height: `${virtualTotalSize}px`,
             contain: adjustLayout ? "layout paint" : "strict",
+            height: `${virtualTotalSize}px`,
           }}
         >
           {virtualItems.map((virtualItem) => {
             const row = rows[virtualItem.index];
-            if (!row) return null;
+            if (!row) {
+              return null;
+            }
 
             const cellSelectionKeys =
               cellSelectionMap?.get(virtualItem.index) ?? EMPTY_CELL_SELECTION_SET;
@@ -243,8 +255,8 @@ export function DataGrid<TData extends DataGridRowData>({
                 tabIndex={0}
                 className="relative flex h-9 grow items-center bg-muted/30 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
                 style={{
-                  width: table.getTotalSize(),
                   minWidth: table.getTotalSize(),
+                  width: table.getTotalSize(),
                 }}
                 onClick={onRowAdd}
                 onKeyDown={onFooterCellKeyDown}
@@ -260,4 +272,4 @@ export function DataGrid<TData extends DataGridRowData>({
       </div>
     </div>
   );
-}
+};

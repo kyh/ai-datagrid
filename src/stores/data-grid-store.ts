@@ -75,35 +75,26 @@ interface DataGridActions {
 
 // --- Initial State ---
 const initialState: DataGridState = {
-  // UI
-  focusedCell: null,
-  editingCell: null,
+  columnFilters: [],
   contextMenu: { open: false, x: 0, y: 0 },
-  pasteDialog: { open: false, rowsNeeded: 0, clipboardText: "" },
-
-  // Selection
+  cutCells: new Set<string>(),
+  editingCell: null,
+  focusedCell: null,
+  generatingCells: new Set<string>(),
+  lastClickedRowIndex: null,
+  matchIndex: -1,
+  pasteDialog: { clipboardText: "", open: false, rowsNeeded: 0 },
+  rowHeight: DEFAULT_ROW_HEIGHT,
+  rowSelection: {},
+  searchMatches: [],
+  searchOpen: false,
+  searchQuery: "",
   selectionState: {
+    isSelecting: false,
     selectedCells: new Set<string>(),
     selectionRange: null,
-    isSelecting: false,
   },
-  rowSelection: {},
-  cutCells: new Set<string>(),
-  lastClickedRowIndex: null,
-
-  // Search
-  searchQuery: "",
-  searchMatches: [],
-  matchIndex: -1,
-  searchOpen: false,
-
-  // Config
   sorting: [],
-  columnFilters: [],
-  rowHeight: DEFAULT_ROW_HEIGHT,
-
-  // AI
-  generatingCells: new Set<string>(),
 };
 
 // --- Store ---
@@ -113,41 +104,29 @@ export const useDataGridStore = create<DataGridStore>()(
   devtools(
     (set) => ({
       ...initialState,
-
-      // UI Actions
-      setFocusedCell: (cell) => set({ focusedCell: cell }),
-      setEditingCell: (cell) => set({ editingCell: cell }),
-      setContextMenu: (menu) => set({ contextMenu: menu }),
-      setPasteDialog: (dialog) => set({ pasteDialog: dialog }),
-
-      // Selection Actions
-      setSelectionState: (state) => set({ selectionState: state }),
-      setRowSelection: (selection) => set({ rowSelection: selection }),
-      setCutCells: (cells) => set({ cutCells: cells }),
-      setLastClickedRowIndex: (index) => set({ lastClickedRowIndex: index }),
-
-      // Search Actions
-      setSearchQuery: (query) => set({ searchQuery: query }),
-      setSearchMatches: (matches) => set({ searchMatches: matches }),
-      setMatchIndex: (index) => set({ matchIndex: index }),
-      setSearchOpen: (open) => set({ searchOpen: open }),
-
-      // Config Actions
-      setSorting: (sorting) => set({ sorting }),
-      setColumnFilters: (filters) => set({ columnFilters: filters }),
-      setRowHeight: (height) => set({ rowHeight: height }),
-
-      // AI Actions
+      batch: (updates) => set(updates),
       removeGeneratingCell: (cellKey) =>
         set((state) => {
           const next = new Set(state.generatingCells);
           next.delete(cellKey);
           return { generatingCells: next };
         }),
+      setColumnFilters: (filters) => set({ columnFilters: filters }),
+      setContextMenu: (menu) => set({ contextMenu: menu }),
+      setCutCells: (cells) => set({ cutCells: cells }),
+      setEditingCell: (cell) => set({ editingCell: cell }),
+      setFocusedCell: (cell) => set({ focusedCell: cell }),
       setGeneratingCells: (cells) => set({ generatingCells: cells }),
-
-      // Batch update for multiple state changes
-      batch: (updates) => set(updates),
+      setLastClickedRowIndex: (index) => set({ lastClickedRowIndex: index }),
+      setMatchIndex: (index) => set({ matchIndex: index }),
+      setPasteDialog: (dialog) => set({ pasteDialog: dialog }),
+      setRowHeight: (height) => set({ rowHeight: height }),
+      setRowSelection: (selection) => set({ rowSelection: selection }),
+      setSearchMatches: (matches) => set({ searchMatches: matches }),
+      setSearchOpen: (open) => set({ searchOpen: open }),
+      setSearchQuery: (query) => set({ searchQuery: query }),
+      setSelectionState: (state) => set({ selectionState: state }),
+      setSorting: (sorting) => set({ sorting }),
     }),
     { name: "data-grid-store" },
   ),

@@ -41,7 +41,7 @@ pnpm dev          # dev server — boots Next.js AND the eve agent runtime
 pnpm build        # production build (Next). Vercel builds the eve service via withEve
 pnpm verify       # the gate: typecheck · lint · format · test — run before every commit
 pnpm typecheck    # tsc --noEmit
-pnpm lint         # oxlint (warnings are errors)
+pnpm lint         # oxlint (ultracite presets; every rule is an error)
 pnpm format:fix   # oxfmt --write (`pnpm format` only checks)
 pnpm test         # node:test via tsx (grid unit tests)
 ```
@@ -63,7 +63,7 @@ This template is built to be driven end-to-end by a coding agent. `AGENTS.md` is
 
 - Path alias: `@/*` → `./src/*` — but files imported by `agent/` code MUST use relative imports (eve's compiler doesn't read tsconfig paths)
 - kebab-case filenames for TS/TSX; `agent/tools/*` are snake_case (eve derives tool names from filenames)
-- No `any`, no `!`, no `as` — enforced by `pnpm lint` via `.oxlintrc.json`; zod-parse at boundaries (stream events, tool payloads, localStorage). Unavoidable widenings go through `asRow` / `genericMemo` / `withColumnPatch`, never a bare cast
+- No `any`, no `!`, no `as` — enforced by `pnpm lint` (`oxlint.config.ts` extends the ultracite core/react/next/anti-slop presets; fix the code, don't add config overrides; a `// oxlint-disable-next-line rule -- why` needs a stated reason); zod-parse at boundaries (stream events, tool payloads, localStorage). Unavoidable widenings go through `asRow` / `genericMemo` / `withColumnPatch`, never a bare cast
 - Zod transforms are banned in tool schemas (eve can't express them in the model-facing JSON Schema) — cleaning transforms live in the client-side payload parse (`filterSchema` vs `filterWireSchema` in `assistant-schemas.ts`)
 - Add ui components ONLY via `pnpm dlx shadcn@latest add <name>` (base-vega registry); never hand-copy
 - Base UI idioms: `render` prop (not `asChild`), `data-open:`/`data-closed:` variants

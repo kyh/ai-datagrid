@@ -16,40 +16,7 @@ import {
 import type { DataGridCellProps, DataGridRowData } from "@/lib/data-grid-types";
 import { genericMemo } from "@/lib/generic-memo";
 
-export const DataGridCell = genericMemo(DataGridCellImpl, (prev, next) => {
-  // Fast path: check stable primitive props first
-  if (prev.isFocused !== next.isFocused) return false;
-  if (prev.isEditing !== next.isEditing) return false;
-  if (prev.isSelected !== next.isSelected) return false;
-  if (prev.isSearchMatch !== next.isSearchMatch) return false;
-  if (prev.isActiveSearchMatch !== next.isActiveSearchMatch) return false;
-  if (prev.isGenerating !== next.isGenerating) return false;
-  if (prev.readOnly !== next.readOnly) return false;
-  if (prev.rowIndex !== next.rowIndex) return false;
-  if (prev.columnId !== next.columnId) return false;
-  if (prev.rowHeight !== next.rowHeight) return false;
-
-  // Check cell value using row.original instead of getValue() for stability
-  // getValue() is unstable and recreates on every render, breaking memoization
-  const prevValue = prev.cell.row.original[prev.columnId];
-  const nextValue = next.cell.row.original[next.columnId];
-  if (prevValue !== nextValue) {
-    return false;
-  }
-
-  // Check cell/row identity
-  if (prev.cell.row.id !== next.cell.row.id) return false;
-
-  // Check if column metadata has changed (e.g., options for select columns)
-  // This ensures cells re-render when column options are updated
-  if (prev.cell.column.columnDef.meta?.cell !== next.cell.column.columnDef.meta?.cell) {
-    return false;
-  }
-
-  return true;
-});
-
-function DataGridCellImpl<TData extends DataGridRowData>({
+const DataGridCellImpl = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -62,7 +29,7 @@ function DataGridCellImpl<TData extends DataGridRowData>({
   isGenerating,
   readOnly,
   rowHeight,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   if (isGenerating) {
     return (
       <span className="block size-full px-2 py-1.5 text-muted-foreground italic text-sm">
@@ -77,37 +44,47 @@ function DataGridCellImpl<TData extends DataGridRowData>({
   let Comp: React.ComponentType<DataGridCellProps<TData>>;
 
   switch (variant) {
-    case "short-text":
+    case "short-text": {
       Comp = ShortTextCell;
       break;
-    case "long-text":
+    }
+    case "long-text": {
       Comp = LongTextCell;
       break;
-    case "number":
+    }
+    case "number": {
       Comp = NumberCell;
       break;
-    case "url":
+    }
+    case "url": {
       Comp = UrlCell;
       break;
-    case "checkbox":
+    }
+    case "checkbox": {
       Comp = CheckboxCell;
       break;
-    case "select":
+    }
+    case "select": {
       Comp = SelectCell;
       break;
-    case "multi-select":
+    }
+    case "multi-select": {
       Comp = MultiSelectCell;
       break;
-    case "date":
+    }
+    case "date": {
       Comp = DateCell;
       break;
-    case "file":
+    }
+    case "file": {
       Comp = FileCell;
       break;
+    }
 
-    default:
+    default: {
       Comp = ShortTextCell;
       break;
+    }
   }
 
   return (
@@ -126,4 +103,58 @@ function DataGridCellImpl<TData extends DataGridRowData>({
       readOnly={readOnly}
     />
   );
-}
+};
+export const DataGridCell = genericMemo(DataGridCellImpl, (prev, next) => {
+  // Fast path: check stable primitive props first
+  if (prev.isFocused !== next.isFocused) {
+    return false;
+  }
+  if (prev.isEditing !== next.isEditing) {
+    return false;
+  }
+  if (prev.isSelected !== next.isSelected) {
+    return false;
+  }
+  if (prev.isSearchMatch !== next.isSearchMatch) {
+    return false;
+  }
+  if (prev.isActiveSearchMatch !== next.isActiveSearchMatch) {
+    return false;
+  }
+  if (prev.isGenerating !== next.isGenerating) {
+    return false;
+  }
+  if (prev.readOnly !== next.readOnly) {
+    return false;
+  }
+  if (prev.rowIndex !== next.rowIndex) {
+    return false;
+  }
+  if (prev.columnId !== next.columnId) {
+    return false;
+  }
+  if (prev.rowHeight !== next.rowHeight) {
+    return false;
+  }
+
+  // Check cell value using row.original instead of getValue() for stability
+  // getValue() is unstable and recreates on every render, breaking memoization
+  const prevValue = prev.cell.row.original[prev.columnId];
+  const nextValue = next.cell.row.original[next.columnId];
+  if (prevValue !== nextValue) {
+    return false;
+  }
+
+  // Check cell/row identity
+  if (prev.cell.row.id !== next.cell.row.id) {
+    return false;
+  }
+
+  // Check if column metadata has changed (e.g., options for select columns)
+  // This ensures cells re-render when column options are updated
+  if (prev.cell.column.columnDef.meta?.cell !== next.cell.column.columnDef.meta?.cell) {
+    return false;
+  }
+
+  return true;
+});

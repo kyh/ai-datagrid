@@ -2,7 +2,8 @@
 
 import { cn } from "cn";
 import { motion } from "motion/react";
-import { type CSSProperties, memo, useMemo } from "react";
+import { memo, useMemo } from "react";
+import type { CSSProperties } from "react";
 
 export interface TextShimmerProps {
   children: string;
@@ -34,9 +35,9 @@ const ShimmerComponent = ({ children, className, duration = 2, spread = 2 }: Tex
       initial={{ backgroundPosition: "100% center" }}
       style={style}
       transition={{
-        repeat: Number.POSITIVE_INFINITY,
         duration,
         ease: "linear",
+        repeat: Number.POSITIVE_INFINITY,
       }}
     >
       {children}

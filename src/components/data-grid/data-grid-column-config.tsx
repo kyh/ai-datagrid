@@ -11,17 +11,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { getColumnVariant } from "@/lib/data-grid";
 import type { CellOpts } from "@/lib/data-grid-types";
+import { isFunction } from "@/lib/is-function";
 
-const CELL_VARIANTS: Array<{ value: CellOpts["variant"]; label: string }> = [
-  { value: "short-text", label: "Text" },
-  { value: "long-text", label: "Long Text" },
-  { value: "number", label: "Number" },
-  { value: "select", label: "Select" },
-  { value: "multi-select", label: "Multi-select" },
-  { value: "checkbox", label: "Checkbox" },
-  { value: "date", label: "Date" },
-  { value: "url", label: "URL" },
-  { value: "file", label: "File" },
+const CELL_VARIANTS: { value: CellOpts["variant"]; label: string }[] = [
+  { label: "Text", value: "short-text" },
+  { label: "Long Text", value: "long-text" },
+  { label: "Number", value: "number" },
+  { label: "Select", value: "select" },
+  { label: "Multi-select", value: "multi-select" },
+  { label: "Checkbox", value: "checkbox" },
+  { label: "Date", value: "date" },
+  { label: "URL", value: "url" },
+  { label: "File", value: "file" },
 ];
 
 interface ColumnConfigState {
@@ -48,34 +49,34 @@ interface DataGridColumnConfigProps<TData extends RowData> {
   children: React.ReactElement;
 }
 
-export function DataGridColumnConfig<TData extends RowData>({
+export const DataGridColumnConfig = <TData extends RowData>({
   column,
   onColumnUpdate,
   onColumnDelete,
   onEnrichColumn,
   children,
-}: DataGridColumnConfigProps<TData>) {
+}: DataGridColumnConfigProps<TData>) => {
   const [open, setOpen] = React.useState(false);
 
-  const meta = column.columnDef.meta;
+  const { meta } = column.columnDef;
   const currentVariant = meta?.cell?.variant ?? "short-text";
-  const header = column.columnDef.header;
+  const { header } = column.columnDef;
   const currentLabel =
-    meta?.label ?? (header === undefined || header instanceof Function ? column.id : header);
+    meta?.label ?? (header === undefined || isFunction(header) ? column.id : header);
   const currentPrompt = meta?.prompt ?? "";
 
   const [config, setConfig] = React.useState<ColumnConfigState>({
     label: currentLabel,
-    variant: currentVariant,
     prompt: currentPrompt,
+    variant: currentVariant,
   });
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setConfig({
         label: currentLabel,
-        variant: currentVariant,
         prompt: currentPrompt,
+        variant: currentVariant,
       });
     }
     setOpen(nextOpen);
@@ -188,4 +189,4 @@ export function DataGridColumnConfig<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
-}
+};

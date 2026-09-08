@@ -3,19 +3,17 @@
 import { faker } from "@faker-js/faker";
 import { DataGridContainer } from "@/components/data-grid/data-grid-container";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getArticlesColumns, getArticlesData, type Article } from "@/data/seed";
+import { getArticlesColumns, getArticlesData } from "@/data/seed";
+import type { Article } from "@/data/seed";
 
-function createArticle(): Article {
-  return { id: faker.string.nanoid(8) };
-}
+const createArticle = (): Article => ({ id: faker.string.nanoid(8) });
 
-function createArticles(count: number): Article[] {
-  return Array.from({ length: count }, () => ({
+const createArticles = (count: number): Article[] =>
+  Array.from({ length: count }, () => ({
     id: faker.string.nanoid(8),
   }));
-}
 
-export default function ArticlesPage() {
+const ArticlesPage = () => {
   const data = getArticlesData();
   const columns = getArticlesColumns(getFilterFn());
 
@@ -30,4 +28,6 @@ export default function ArticlesPage() {
       defaultColumnId="title"
     />
   );
-}
+};
+
+export default ArticlesPage;

@@ -2,20 +2,18 @@
 
 import { DataGridContainer } from "@/components/data-grid/data-grid-container";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getRecipesColumns, getRecipesData, recipeDemoPrompt, type Recipe } from "@/data/seed";
+import { getRecipesColumns, getRecipesData, recipeDemoPrompt } from "@/data/seed";
+import type { Recipe } from "@/data/seed";
 
-function createRecipe(): Recipe {
-  return { id: `recipe-${Date.now()}`, name: "" };
-}
+const createRecipe = (): Recipe => ({ id: `recipe-${Date.now()}`, name: "" });
 
-function createRecipes(count: number): Recipe[] {
-  return Array.from({ length: count }, (_, i) => ({
+const createRecipes = (count: number): Recipe[] =>
+  Array.from({ length: count }, (_, i) => ({
     id: `recipe-${Date.now()}-${i}`,
     name: "",
   }));
-}
 
-export default function GenerateDemoPage() {
+const GenerateDemoPage = () => {
   const data = getRecipesData();
   const columns = getRecipesColumns(getFilterFn());
 
@@ -31,4 +29,6 @@ export default function GenerateDemoPage() {
       initialChatInput={recipeDemoPrompt}
     />
   );
-}
+};
+
+export default GenerateDemoPage;

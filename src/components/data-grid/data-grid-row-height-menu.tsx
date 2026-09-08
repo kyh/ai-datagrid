@@ -19,24 +19,24 @@ import {
 
 const rowHeights = [
   {
+    icon: MinusIcon,
     label: "Short",
     value: "short" as const,
-    icon: MinusIcon,
   },
   {
+    icon: EqualIcon,
     label: "Medium",
     value: "medium" as const,
-    icon: EqualIcon,
   },
   {
+    icon: AlignVerticalSpaceAroundIcon,
     label: "Tall",
     value: "tall" as const,
-    icon: AlignVerticalSpaceAroundIcon,
   },
   {
+    icon: ChevronsDownUpIcon,
     label: "Extra Tall",
     value: "extra-tall" as const,
-    icon: ChevronsDownUpIcon,
   },
 ] as const;
 
@@ -47,29 +47,31 @@ interface DataGridRowHeightMenuProps<TData extends RowData> extends React.Compon
   disabled?: boolean;
 }
 
-export function DataGridRowHeightMenu<TData extends RowData>({
+export const DataGridRowHeightMenu = <TData extends RowData>({
   table,
   disabled,
   ...props
-}: DataGridRowHeightMenuProps<TData>) {
+}: DataGridRowHeightMenuProps<TData>) => {
   const rowHeight = table.options.meta?.rowHeight;
   const onRowHeightChange = table.options.meta?.onRowHeightChange;
 
-  const selectedRowHeight = React.useMemo(() => {
-    return (
+  const selectedRowHeight = React.useMemo(
+    () =>
       rowHeights.find((opt) => opt.value === rowHeight) ?? {
+        icon: MinusIcon,
         label: "Short",
         value: "short" as const,
-        icon: MinusIcon,
-      }
-    );
-  }, [rowHeight]);
+      },
+    [rowHeight],
+  );
 
   return (
     <Select
       value={rowHeight}
       onValueChange={(value) => {
-        if (value !== null) onRowHeightChange?.(value);
+        if (value !== null) {
+          onRowHeightChange?.(value);
+        }
       }}
       disabled={disabled}
     >
@@ -92,4 +94,4 @@ export function DataGridRowHeightMenu<TData extends RowData>({
       </SelectContent>
     </Select>
   );
-}
+};

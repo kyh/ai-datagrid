@@ -12,17 +12,17 @@ interface UseWindowSizeProps {
 
 const RESIZE_DEBOUNCE_MS = 150;
 
-let clientSize: WindowSize = { width: 0, height: 0 };
+let clientSize: WindowSize = { height: 0, width: 0 };
 
-function subscribe(onStoreChange: () => void): () => void {
+const subscribe = (onStoreChange: () => void): (() => void) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  function onResize() {
+  const onResize = () => {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
     timeoutId = setTimeout(onStoreChange, RESIZE_DEBOUNCE_MS);
-  }
+  };
 
   window.addEventListener("resize", onResize);
   return () => {
@@ -31,25 +31,25 @@ function subscribe(onStoreChange: () => void): () => void {
       clearTimeout(timeoutId);
     }
   };
-}
+};
 
 // useSyncExternalStore re-renders whenever the snapshot identity changes, so only mint a new
 // object when the dimensions actually differ
-function getSnapshot(): WindowSize {
+const getSnapshot = (): WindowSize => {
   if (clientSize.width !== window.innerWidth || clientSize.height !== window.innerHeight) {
-    clientSize = { width: window.innerWidth, height: window.innerHeight };
+    clientSize = { height: window.innerHeight, width: window.innerWidth };
   }
   return clientSize;
-}
+};
 
-export function useWindowSize(props: UseWindowSizeProps = {}): WindowSize {
+export const useWindowSize = (props: UseWindowSizeProps = {}): WindowSize => {
   const { defaultWidth = 0, defaultHeight = 0 } = props;
 
   const serverSize = React.useMemo(
-    () => ({ width: defaultWidth, height: defaultHeight }),
+    () => ({ height: defaultHeight, width: defaultWidth }),
     [defaultWidth, defaultHeight],
   );
   const getServerSnapshot = React.useCallback(() => serverSize, [serverSize]);
 
   return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-}
+};

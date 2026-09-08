@@ -50,13 +50,13 @@ User: Show tasks due before January 2025
 *Uses Add Filters with:*
 - columnId: "due-date", operator: "before", value: "2025-01-01"
 </example>`,
+  execute: (input) => input,
   inputSchema: addFiltersInputSchema,
   outputSchema: addFiltersInputSchema,
-  execute: (input) => input,
   toModelOutput: (output) => ({
     type: "text",
     value: `Successfully added ${output.filters.length} filter${
-      output.filters.length !== 1 ? "s" : ""
+      output.filters.length === 1 ? "" : "s"
     }.`,
   }),
 });

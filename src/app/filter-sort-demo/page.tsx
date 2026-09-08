@@ -3,19 +3,17 @@
 import { faker } from "@faker-js/faker";
 import { DataGridContainer } from "@/components/data-grid/data-grid-container";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getTweetsColumns, getTweetsData, type Tweet } from "@/data/seed";
+import { getTweetsColumns, getTweetsData } from "@/data/seed";
+import type { Tweet } from "@/data/seed";
 
-function createTweet(): Tweet {
-  return { id: faker.string.nanoid(8) };
-}
+const createTweet = (): Tweet => ({ id: faker.string.nanoid(8) });
 
-function createTweets(count: number): Tweet[] {
-  return Array.from({ length: count }, () => ({
+const createTweets = (count: number): Tweet[] =>
+  Array.from({ length: count }, () => ({
     id: faker.string.nanoid(8),
   }));
-}
 
-export default function FilterSortDemoPage() {
+const FilterSortDemoPage = () => {
   const data = getTweetsData();
   const columns = getTweetsColumns(getFilterFn());
 
@@ -31,4 +29,6 @@ export default function FilterSortDemoPage() {
       initialChatInput="Show only bangers from @levelsio, sorted by date descending"
     />
   );
-}
+};
+
+export default FilterSortDemoPage;
