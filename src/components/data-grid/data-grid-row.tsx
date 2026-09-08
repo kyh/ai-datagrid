@@ -1,14 +1,15 @@
 "use client";
 
-import type { RowData } from "@tanstack/react-table";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- WAI-ARIA grid on a virtualized div layout; table elements can't be absolutely positioned per row */
 import type {
+  RowData,
   ColumnDef,
   ColumnPinningState,
   Row,
   TableMeta,
   ColumnVisibilityState,
 } from "@tanstack/react-table";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { VirtualItem } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
@@ -28,6 +29,21 @@ import type {
   RowHeightValue,
 } from "@/lib/data-grid-types";
 import { genericMemo } from "@/lib/generic-memo";
+import { isFunction } from "@/lib/is-function";
+
+const cellPositionChanged = (
+  prev: CellPosition | null,
+  next: CellPosition | null,
+  prevRowIndex: number,
+  nextRowIndex: number,
+) => {
+  const prevInRow = prev?.rowIndex === prevRowIndex;
+  const nextInRow = next?.rowIndex === nextRowIndex;
+  if (prevInRow !== nextInRow) {
+    return true;
+  }
+  return nextInRow && prevInRow && prev?.columnId !== next?.columnId;
+};
 
 interface DataGridRowProps<TData extends RowData> extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
@@ -51,6 +67,147 @@ interface DataGridRowProps<TData extends RowData> extends React.ComponentProps<"
   generatingCells: Set<string>;
 }
 
+const DataGridRowImpl = <TData extends DataGridRowData>({
+  row,
+  tableMeta,
+  virtualItem,
+  measureElement,
+  rowMapRef,
+  rowHeight,
+  columns: _columns,
+  columnVisibility: _columnVisibility,
+  columnPinning: _columnPinning,
+  focusedCell,
+  editingCell,
+  cellSelectionKeys,
+  searchMatchColumns,
+  activeSearchMatch,
+  dir,
+  readOnly,
+  stretchColumns,
+  adjustLayout,
+  generatingCells,
+  className,
+  style,
+  ref,
+  ...props
+}: DataGridRowProps<TData>) => {
+  const virtualRowIndex = virtualItem.index;
+
+  const onRowChange = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node) {
+        measureElement(node);
+        rowMapRef.current?.set(virtualRowIndex, node);
+      } else {
+        rowMapRef.current?.delete(virtualRowIndex);
+      }
+    },
+    [virtualRowIndex, measureElement, rowMapRef],
+  );
+
+  const rowRef = useComposedRefs(ref, onRowChange);
+
+  const isRowSelected = row.getIsSelected();
+
+  // TanStack memoizes getVisibleCells() on visibility/pinning/columns itself; the
+  // unused props exist so the memo comparator re-renders the row when they change.
+  const visibleCells = row.getVisibleCells();
+
+  return (
+    <div
+      key={row.id}
+      role="row"
+      aria-rowindex={virtualRowIndex + 2}
+      aria-selected={isRowSelected}
+      data-index={virtualRowIndex}
+      data-slot="grid-row"
+      tabIndex={-1}
+      {...props}
+      ref={rowRef}
+      className={cn(
+        "absolute flex w-full border-b",
+        !adjustLayout && "will-change-transform",
+        className,
+      )}
+      style={{
+        height: `${getRowHeightValue(rowHeight)}px`,
+        ...(adjustLayout
+          ? { top: `${virtualItem.start}px` }
+          : { transform: `translateY(${virtualItem.start}px)` }),
+        ...style,
+      }}
+    >
+      {visibleCells.map((cell, colIndex) => {
+        const columnId = cell.column.id;
+
+        const isCellFocused =
+          focusedCell?.rowIndex === virtualRowIndex && focusedCell?.columnId === columnId;
+        const isCellEditing =
+          editingCell?.rowIndex === virtualRowIndex && editingCell?.columnId === columnId;
+        const isCellSelected =
+          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ?? false;
+
+        const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
+        const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
+        const isGenerating = generatingCells.has(getCellKey(virtualRowIndex, columnId));
+
+        const nextCell = visibleCells[colIndex + 1];
+        const isLastColumn = colIndex === visibleCells.length - 1;
+        const { showEndBorder, showStartBorder } = getColumnBorderVisibility({
+          column: cell.column,
+          isLastColumn,
+          nextColumn: nextCell?.column,
+        });
+
+        return (
+          <div
+            key={cell.id}
+            role="gridcell"
+            aria-colindex={colIndex + 1}
+            data-highlighted={isCellFocused ? "" : undefined}
+            data-slot="grid-cell"
+            tabIndex={-1}
+            className={cn({
+              "border-e": showEndBorder && columnId !== "select",
+              "border-s": showStartBorder && columnId !== "select",
+              grow: stretchColumns && columnId !== "select",
+            })}
+            style={{
+              ...getColumnPinningStyle({ column: cell.column, dir }),
+              width: `calc(var(--col-${columnId}-size) * 1px)`,
+            }}
+          >
+            {isFunction(cell.column.columnDef.header) ? (
+              <div
+                className={cn("size-full px-3 py-1.5", {
+                  "bg-primary/10": isRowSelected,
+                })}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </div>
+            ) : (
+              <DataGridCell
+                cell={cell}
+                tableMeta={tableMeta}
+                rowIndex={virtualRowIndex}
+                columnId={columnId}
+                rowHeight={rowHeight}
+                isFocused={isCellFocused}
+                isEditing={isCellEditing}
+                isSelected={isCellSelected}
+                isSearchMatch={isSearchMatch}
+                isActiveSearchMatch={isActiveSearchMatch}
+                isGenerating={isGenerating}
+                readOnly={readOnly}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 export const DataGridRow = genericMemo(DataGridRowImpl, (prev, next) => {
   const prevRowIndex = prev.virtualItem.index;
   const nextRowIndex = next.virtualItem.index;
@@ -70,34 +227,12 @@ export const DataGridRow = genericMemo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
-  // Re-render if focus state changed for this row
-  const prevHasFocus = prev.focusedCell?.rowIndex === prevRowIndex;
-  const nextHasFocus = next.focusedCell?.rowIndex === nextRowIndex;
-
-  if (prevHasFocus !== nextHasFocus) {
+  // Re-render if focus or editing moved into, out of, or within this row
+  if (cellPositionChanged(prev.focusedCell, next.focusedCell, prevRowIndex, nextRowIndex)) {
     return false;
   }
-
-  // Re-render if focused column changed within this row
-  if (nextHasFocus && prevHasFocus) {
-    if (prev.focusedCell?.columnId !== next.focusedCell?.columnId) {
-      return false;
-    }
-  }
-
-  // Re-render if editing state changed for this row
-  const prevHasEditing = prev.editingCell?.rowIndex === prevRowIndex;
-  const nextHasEditing = next.editingCell?.rowIndex === nextRowIndex;
-
-  if (prevHasEditing !== nextHasEditing) {
+  if (cellPositionChanged(prev.editingCell, next.editingCell, prevRowIndex, nextRowIndex)) {
     return false;
-  }
-
-  // Re-render if editing column changed within this row
-  if (nextHasEditing && prevHasEditing) {
-    if (prev.editingCell?.columnId !== next.editingCell?.columnId) {
-      return false;
-    }
   }
 
   // Re-render if this row's selected cells changed
@@ -164,152 +299,3 @@ export const DataGridRow = genericMemo(DataGridRowImpl, (prev, next) => {
   // Skip re-render - props are equal
   return true;
 });
-
-function DataGridRowImpl<TData extends DataGridRowData>({
-  row,
-  tableMeta,
-  virtualItem,
-  measureElement,
-  rowMapRef,
-  rowHeight,
-  columns,
-  columnVisibility,
-  columnPinning,
-  focusedCell,
-  editingCell,
-  cellSelectionKeys,
-  searchMatchColumns,
-  activeSearchMatch,
-  dir,
-  readOnly,
-  stretchColumns,
-  adjustLayout,
-  generatingCells,
-  className,
-  style,
-  ref,
-  ...props
-}: DataGridRowProps<TData>) {
-  const virtualRowIndex = virtualItem.index;
-
-  const onRowChange = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      if (node) {
-        measureElement(node);
-        rowMapRef.current?.set(virtualRowIndex, node);
-      } else {
-        rowMapRef.current?.delete(virtualRowIndex);
-      }
-    },
-    [virtualRowIndex, measureElement, rowMapRef],
-  );
-
-  const rowRef = useComposedRefs(ref, onRowChange);
-
-  const isRowSelected = row.getIsSelected();
-
-  // Memoize visible cells to avoid recreating cell array on every render
-  // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  // `getVisibleCells()` reads columnVisibility, columnPinning and columns off the
-  // table internally, so they must invalidate this memo even though the call
-  // site never names them.
-  const visibleCells = React.useMemo(
-    () => row.getVisibleCells(),
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
-    [row, columnVisibility, columnPinning, columns],
-  );
-
-  return (
-    <div
-      key={row.id}
-      role="row"
-      aria-rowindex={virtualRowIndex + 2}
-      aria-selected={isRowSelected}
-      data-index={virtualRowIndex}
-      data-slot="grid-row"
-      tabIndex={-1}
-      {...props}
-      ref={rowRef}
-      className={cn(
-        "absolute flex w-full border-b",
-        !adjustLayout && "will-change-transform",
-        className,
-      )}
-      style={{
-        height: `${getRowHeightValue(rowHeight)}px`,
-        ...(adjustLayout
-          ? { top: `${virtualItem.start}px` }
-          : { transform: `translateY(${virtualItem.start}px)` }),
-        ...style,
-      }}
-    >
-      {visibleCells.map((cell, colIndex) => {
-        const columnId = cell.column.id;
-
-        const isCellFocused =
-          focusedCell?.rowIndex === virtualRowIndex && focusedCell?.columnId === columnId;
-        const isCellEditing =
-          editingCell?.rowIndex === virtualRowIndex && editingCell?.columnId === columnId;
-        const isCellSelected =
-          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ?? false;
-
-        const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
-        const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
-        const isGenerating = generatingCells.has(getCellKey(virtualRowIndex, columnId));
-
-        const nextCell = visibleCells[colIndex + 1];
-        const isLastColumn = colIndex === visibleCells.length - 1;
-        const { showEndBorder, showStartBorder } = getColumnBorderVisibility({
-          column: cell.column,
-          nextColumn: nextCell?.column,
-          isLastColumn,
-        });
-
-        return (
-          <div
-            key={cell.id}
-            role="gridcell"
-            aria-colindex={colIndex + 1}
-            data-highlighted={isCellFocused ? "" : undefined}
-            data-slot="grid-cell"
-            tabIndex={-1}
-            className={cn({
-              grow: stretchColumns && columnId !== "select",
-              "border-e": showEndBorder && columnId !== "select",
-              "border-s": showStartBorder && columnId !== "select",
-            })}
-            style={{
-              ...getColumnPinningStyle({ column: cell.column, dir }),
-              width: `calc(var(--col-${columnId}-size) * 1px)`,
-            }}
-          >
-            {cell.column.columnDef.header instanceof Function ? (
-              <div
-                className={cn("size-full px-3 py-1.5", {
-                  "bg-primary/10": isRowSelected,
-                })}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </div>
-            ) : (
-              <DataGridCell
-                cell={cell}
-                tableMeta={tableMeta}
-                rowIndex={virtualRowIndex}
-                columnId={columnId}
-                rowHeight={rowHeight}
-                isFocused={isCellFocused}
-                isEditing={isCellEditing}
-                isSelected={isCellSelected}
-                isSearchMatch={isSearchMatch}
-                isActiveSearchMatch={isActiveSearchMatch}
-                isGenerating={isGenerating}
-                readOnly={readOnly}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}

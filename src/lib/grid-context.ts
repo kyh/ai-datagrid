@@ -49,7 +49,9 @@ const toContextRow = (row: ContextRowSource) => {
       continue;
     }
     const json = jsonValueSchema.safeParse(item);
-    if (json.success) entries[key] = json.data;
+    if (json.success) {
+      entries[key] = json.data;
+    }
   }
   return entries;
 };
@@ -60,10 +62,10 @@ const toContextColumn = (column: ExistingColumn) => ({
   id: column.id,
   label: column.label,
   variant: column.variant,
-  ...(column.prompt !== undefined ? { prompt: column.prompt } : undefined),
-  ...(column.options !== undefined
-    ? { options: column.options.map((o) => ({ label: o.label, value: o.value })) }
-    : undefined),
+  ...(column.prompt === undefined ? undefined : { prompt: column.prompt }),
+  ...(column.options === undefined
+    ? undefined
+    : { options: column.options.map((o) => ({ label: o.label, value: o.value })) }),
 });
 
 const toContextSelection = (selection: SelectionContext) => {
@@ -72,19 +74,19 @@ const toContextSelection = (selection: SelectionContext) => {
     rowData[rowIndex] = toContextRow(row);
   }
   return {
-    selectedCells: selection.selectedCells,
     bounds: selection.bounds,
     currentColumns: selection.currentColumns.map(toContextColumn),
     rowData,
+    selectedCells: selection.selectedCells,
   };
 };
 
-type BuildGridContextInput = {
+interface BuildGridContextInput {
   columns: ExistingColumn[];
   filters: ExistingFilter[];
   sorts: ExistingSort[];
   selection: SelectionContext | null;
-};
+}
 
 export const buildGridContext = ({
   columns,
@@ -94,6 +96,6 @@ export const buildGridContext = ({
 }: BuildGridContextInput) => ({
   columns: columns.map(toContextColumn),
   filters,
-  sorts,
   selection: selection === null ? null : toContextSelection(selection),
+  sorts,
 });

@@ -29,27 +29,30 @@ type EnrichCellsPayload = z.infer<typeof enrichCellsPayloadSchema>;
 
 type EnrichCellsRow = EnrichCellsInput["rows"][number];
 
-type CellTask = {
+interface CellTask {
   rowIndex: number;
   columnId: string;
   column: ColumnInfo;
   rowData?: EnrichCellsRow["rowData"];
-};
+}
 
 // -----------------------------------------------------------------------------
 // Schema Builder
 // -----------------------------------------------------------------------------
 
-function buildCellSchema(column: ColumnInfo) {
+const buildCellSchema = (column: ColumnInfo) => {
   switch (column.variant) {
-    case "number":
+    case "number": {
       return numberValueSchema;
+    }
 
-    case "checkbox":
+    case "checkbox": {
       return checkboxValueSchema;
+    }
 
-    case "date":
+    case "date": {
       return dateValueSchema;
+    }
 
     case "select": {
       if (column.options?.length) {
@@ -65,23 +68,26 @@ function buildCellSchema(column: ColumnInfo) {
       return multiSelectValueSchema;
     }
 
-    case "url":
+    case "url": {
       return urlValueSchema;
+    }
 
-    case "long-text":
+    case "long-text": {
       return longTextValueSchema;
+    }
 
     // short-text and default
-    default:
+    default: {
       return shortTextValueSchema;
+    }
   }
-}
+};
 
 // -----------------------------------------------------------------------------
 // Prompt Builder
 // -----------------------------------------------------------------------------
 
-function buildCellPrompt(task: CellTask, userMessage: string, allColumns: ColumnInfo[]): string {
+const buildCellPrompt = (task: CellTask, userMessage: string, allColumns: ColumnInfo[]): string => {
   const { column, rowIndex, rowData } = task;
 
   let prompt = `Generate a value for a spreadsheet cell.
@@ -109,7 +115,9 @@ Cell Details:
     const otherValues: string[] = [];
     for (const [columnId, value] of Object.entries(rowData)) {
       // Skip the current column being generated
-      if (columnId === column.id) continue;
+      if (columnId === column.id) {
+        continue;
+      }
       if (value !== undefined && value !== null && value !== "") {
         otherValues.push(`${labelById.get(columnId) ?? columnId}: ${JSON.stringify(value)}`);
       }
@@ -123,22 +131,22 @@ Cell Details:
   prompt += `\nGenerate realistic, varied data appropriate for this cell.`;
 
   return prompt;
-}
+};
 
 // -----------------------------------------------------------------------------
 // Batch Processor
 // -----------------------------------------------------------------------------
 
-async function processBatch<T>(
+const processBatch = async <T>(
   items: T[],
   batchSize: number,
   processor: (item: T) => Promise<void>,
-): Promise<void> {
+): Promise<void> => {
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     await Promise.all(batch.map(processor));
   }
-}
+};
 
 const MAX_CONCURRENT_CELLS = 5;
 
@@ -146,11 +154,11 @@ const MAX_CONCURRENT_CELLS = 5;
 // Enrichment
 // -----------------------------------------------------------------------------
 
-async function enrichCells(
+const enrichCells = async (
   input: EnrichCellsInput,
   gatewayApiKey: string | undefined,
   abortSignal: AbortSignal,
-): Promise<EnrichCellsPayload> {
+): Promise<EnrichCellsPayload> => {
   const model = createModel(gatewayApiKey);
 
   // Build one task per (row, column) pair
@@ -158,10 +166,10 @@ async function enrichCells(
   for (const row of input.rows) {
     for (const column of input.columns) {
       tasks.push({
-        rowIndex: row.rowIndex,
-        columnId: column.id,
         column,
-        ...(row.rowData !== undefined ? { rowData: row.rowData } : undefined),
+        columnId: column.id,
+        rowIndex: row.rowIndex,
+        ...(row.rowData === undefined ? undefined : { rowData: row.rowData }),
       });
     }
   }
@@ -175,21 +183,21 @@ async function enrichCells(
     const schema = buildCellSchema(task.column);
 
     try {
-      const { object } = await generateObject({ model, prompt, schema, abortSignal });
+      const { object } = await generateObject({ abortSignal, model, prompt, schema });
       updates.push({
-        rowIndex: task.rowIndex,
         columnId: task.columnId,
+        rowIndex: task.rowIndex,
         value: object.value,
       });
     } catch {
       // Record the failure so it can be surfaced to the client;
       // other cells continue processing.
-      failures.push({ rowIndex: task.rowIndex, columnId: task.columnId });
+      failures.push({ columnId: task.columnId, rowIndex: task.rowIndex });
     }
   });
 
-  return { updates, failures };
-}
+  return { failures, updates };
+};
 
 // -----------------------------------------------------------------------------
 // Tool
@@ -214,8 +222,6 @@ Copy the selection out of the per-turn context — do not invent rows or columns
 ## Behavior
 
 Each cell is generated individually (respecting the column's type, options, and prompt, using the row's other values for coherence) and the full batch of updates is returned at once. Failed cells are reported in \`failures\`.`,
-  inputSchema: enrichCellsInputSchema,
-  outputSchema: enrichCellsPayloadSchema,
   execute: (input, ctx) => {
     // Same BYO-key mechanism as the agent's dynamic model resolver: the
     // channel verifier stashed the caller's gateway key in session auth.
@@ -224,10 +230,12 @@ Each cell is generated individually (respecting the column's type, options, and 
     const gatewayApiKey = attribute.success ? attribute.data : undefined;
     return enrichCells(input, gatewayApiKey, ctx.abortSignal);
   },
+  inputSchema: enrichCellsInputSchema,
+  outputSchema: enrichCellsPayloadSchema,
   toModelOutput: (output) => ({
     type: "text",
     value: `Successfully enriched ${output.updates.length} cell${
-      output.updates.length !== 1 ? "s" : ""
+      output.updates.length === 1 ? "" : "s"
     }${output.failures.length > 0 ? ` (${output.failures.length} failed)` : ""}.`,
   }),
 });

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-function useLazyRef<T>(fn: () => T): React.RefObject<T> {
+const useLazyRef = <T>(fn: () => T): React.RefObject<T> => {
   const ref = React.useRef<T | null>(null);
   if (ref.current === null) {
     ref.current = fn();
@@ -9,8 +9,7 @@ function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   // so the ref is non-null for every read — it is declared nullable only to
   // allow that first assignment, and TS cannot carry the invariant across the
   // boundary.
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
   return ref as React.RefObject<T>;
-}
+};
 
 export { useLazyRef };

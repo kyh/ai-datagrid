@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { useCallbackRef } from "@/hooks/use-callback-ref";
+import { isFunction } from "@/lib/is-function";
 
 /**
  * @see https://github.com/radix-ui/primitives/blob/main/packages/react/compose-refs/src/composeRefs.tsx
@@ -11,33 +12,40 @@ type PossibleRef<T> = React.Ref<T> | undefined;
  * Set a given ref to a given value
  * This utility takes care of different types of refs: callback refs and RefObject(s)
  */
-function setRef<T>(ref: PossibleRef<T>, value: T) {
-  if (ref instanceof Function) {
+const setRef = <T,>(ref: PossibleRef<T>, value: T) => {
+  if (isFunction(ref)) {
     ref(value);
   } else if (ref !== null && ref !== undefined) {
     ref.current = value;
   }
-}
+};
 
 /**
  * A utility to compose multiple refs together
  * Accepts callback refs and RefObject(s)
  */
-export function composeRefs<T>(...refs: PossibleRef<T>[]) {
-  return (node: T) => refs.forEach((ref) => setRef(ref, node));
-}
+export const composeRefs =
+  <T,>(...refs: PossibleRef<T>[]) =>
+  (node: T) => {
+    for (const ref of refs) {
+      setRef(ref, node);
+    }
+  };
 
 /**
- * A custom hook that composes multiple refs
+ * A custom hook that composes two refs
  * Accepts callback refs and RefObject(s)
  */
-export function useComposedRefs<T>(...refs: PossibleRef<T>[]) {
-  // `refs` is the dep array by design — the composed callback must change with it.
-  // oxlint-disable-next-line react-hooks/exhaustive-deps -- see comment above
-  return React.useCallback(composeRefs(...refs), refs);
-}
+export const useComposedRefs = <T,>(a: PossibleRef<T>, b: PossibleRef<T>) =>
+  React.useCallback(
+    (node: T) => {
+      setRef(a, node);
+      setRef(b, node);
+    },
+    [a, b],
+  );
 
-export function useDebounce<T>(value: T, delay?: number): T {
+export const useDebounce = <T,>(value: T, delay?: number): T => {
   const [debouncedValue, setDebouncedValue] = React.useState<T>(value);
 
   React.useEffect(() => {
@@ -49,12 +57,12 @@ export function useDebounce<T>(value: T, delay?: number): T {
   }, [value, delay]);
 
   return debouncedValue;
-}
+};
 
-export function useDebouncedCallback<T extends (...args: never[]) => void>(
+export const useDebouncedCallback = <T extends (...args: never[]) => void>(
   callback: T,
   delay: number,
-) {
+) => {
   const handleCallback = useCallbackRef(callback);
   const debounceTimerRef = React.useRef(0);
   React.useEffect(() => () => window.clearTimeout(debounceTimerRef.current), []);
@@ -68,14 +76,12 @@ export function useDebouncedCallback<T extends (...args: never[]) => void>(
   );
 
   return setValue;
-}
+};
 
 // Media queries never match while prerendering, so the server snapshot is always `false`
-function getMediaQueryServerSnapshot() {
-  return false;
-}
+const getMediaQueryServerSnapshot = () => false;
 
-export function useMediaQuery(query = "(min-width: 640px)") {
+export const useMediaQuery = (query = "(min-width: 640px)") => {
   const subscribe = React.useCallback(
     (onStoreChange: () => void) => {
       const result = matchMedia(query);
@@ -88,7 +94,7 @@ export function useMediaQuery(query = "(min-width: 640px)") {
   const getSnapshot = React.useCallback(() => matchMedia(query).matches, [query]);
 
   return React.useSyncExternalStore(subscribe, getSnapshot, getMediaQueryServerSnapshot);
-}
+};
 
 /**
  * `Intl.DateTimeFormat` construction is the expensive part; `.format()` is cheap.
@@ -100,10 +106,10 @@ export function useMediaQuery(query = "(min-width: 640px)") {
  */
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();
 
-export function formatDate(date: Date | string | number, opts: Intl.DateTimeFormatOptions = {}) {
+export const formatDate = (date: Date | string | number, opts: Intl.DateTimeFormatOptions = {}) => {
   const resolved: Intl.DateTimeFormatOptions = {
-    month: opts.month ?? "long",
     day: opts.day ?? "numeric",
+    month: opts.month ?? "long",
     year: opts.year ?? "numeric",
     ...opts,
   };
@@ -114,10 +120,8 @@ export function formatDate(date: Date | string | number, opts: Intl.DateTimeForm
     dateFormatters.set(key, formatter);
   }
   return formatter.format(new Date(date));
-}
+};
 
 const MOBILE_BREAKPOINT = 768;
 
-export function useIsMobile() {
-  return useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-}
+export const useIsMobile = () => useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);

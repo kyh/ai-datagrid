@@ -8,34 +8,9 @@ import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/components/ui/utils";
 import type { SearchState } from "@/lib/data-grid-types";
 
-interface DataGridSearchProps extends SearchState {}
+type DataGridSearchProps = SearchState;
 
-export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
-  if (prev.searchOpen !== next.searchOpen) return false;
-
-  if (!next.searchOpen) return true;
-
-  if (prev.searchQuery !== next.searchQuery || prev.matchIndex !== next.matchIndex) {
-    return false;
-  }
-
-  if (prev.searchMatches.length !== next.searchMatches.length) return false;
-
-  for (let i = 0; i < prev.searchMatches.length; i++) {
-    const prevMatch = prev.searchMatches[i];
-    const nextMatch = next.searchMatches[i];
-
-    if (!prevMatch || !nextMatch) return false;
-
-    if (prevMatch.rowIndex !== nextMatch.rowIndex || prevMatch.columnId !== nextMatch.columnId) {
-      return false;
-    }
-  }
-
-  return true;
-});
-
-function DataGridSearchImpl({
+const DataGridSearchImpl = ({
   searchMatches,
   matchIndex,
   searchOpen,
@@ -45,13 +20,13 @@ function DataGridSearchImpl({
   onSearch,
   onNavigateToNextMatch,
   onNavigateToPrevMatch,
-}: DataGridSearchProps) {
+}: DataGridSearchProps) => {
   const propsRef = useAsRef({
-    onSearchOpenChange,
-    onSearchQueryChange,
-    onSearch,
     onNavigateToNextMatch,
     onNavigateToPrevMatch,
+    onSearch,
+    onSearchOpenChange,
+    onSearchQueryChange,
   });
 
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -68,14 +43,16 @@ function DataGridSearchImpl({
   );
 
   React.useEffect(() => {
-    if (!searchOpen) return;
+    if (!searchOpen) {
+      return;
+    }
 
-    function onEscape(event: KeyboardEvent) {
+    const onEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
         propsRef.current.onSearchOpenChange(false);
       }
-    }
+    };
 
     document.addEventListener("keydown", onEscape);
     return () => document.removeEventListener("keydown", onEscape);
@@ -103,7 +80,7 @@ function DataGridSearchImpl({
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
+      const { value } = event.target;
       propsRef.current.onSearchQueryChange(value);
       debouncedSearch(value);
     },
@@ -112,8 +89,10 @@ function DataGridSearchImpl({
 
   const onTriggerPointerDown = React.useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
     // prevent implicit pointer capture
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
+    const { target } = event;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
     if (target.hasPointerCapture(event.pointerId)) {
       target.releasePointerCapture(event.pointerId);
     }
@@ -152,11 +131,23 @@ function DataGridSearchImpl({
     propsRef.current.onNavigateToNextMatch();
   }, [propsRef]);
 
-  if (!searchOpen) return null;
+  if (!searchOpen) {
+    return null;
+  }
+
+  let status = <span>Type to search</span>;
+  if (searchMatches.length > 0) {
+    status = (
+      <span>
+        {matchIndex + 1} of {searchMatches.length}
+      </span>
+    );
+  } else if (searchQuery) {
+    status = <span>No results</span>;
+  }
 
   return (
-    <div
-      role="search"
+    <search
       data-slot="grid-search"
       className="fade-in-0 slide-in-from-top-2 absolute end-4 top-4 z-50 flex animate-in flex-col gap-2 rounded-lg border bg-background p-2 shadow-lg"
     >
@@ -208,16 +199,40 @@ function DataGridSearchImpl({
         </div>
       </div>
       <div className="flex items-center gap-1 whitespace-nowrap text-muted-foreground text-xs">
-        {searchMatches.length > 0 ? (
-          <span>
-            {matchIndex + 1} of {searchMatches.length}
-          </span>
-        ) : searchQuery ? (
-          <span>No results</span>
-        ) : (
-          <span>Type to search</span>
-        )}
+        {status}
       </div>
-    </div>
+    </search>
   );
-}
+};
+export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
+  if (prev.searchOpen !== next.searchOpen) {
+    return false;
+  }
+
+  if (!next.searchOpen) {
+    return true;
+  }
+
+  if (prev.searchQuery !== next.searchQuery || prev.matchIndex !== next.matchIndex) {
+    return false;
+  }
+
+  if (prev.searchMatches.length !== next.searchMatches.length) {
+    return false;
+  }
+
+  for (let i = 0; i < prev.searchMatches.length; i += 1) {
+    const prevMatch = prev.searchMatches[i];
+    const nextMatch = next.searchMatches[i];
+
+    if (!prevMatch || !nextMatch) {
+      return false;
+    }
+
+    if (prevMatch.rowIndex !== nextMatch.rowIndex || prevMatch.columnId !== nextMatch.columnId) {
+      return false;
+    }
+  }
+
+  return true;
+});

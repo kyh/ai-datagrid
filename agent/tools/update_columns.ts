@@ -40,13 +40,13 @@ User: Change Priority to have options Critical, High, Medium, Low
 *Uses Update Columns with:*
 - columnId: "priority", variant: "select", options: [{label: "Critical", value: "critical"}, {label: "High", value: "high"}, {label: "Medium", value: "medium"}, {label: "Low", value: "low"}]
 </example>`,
+  execute: (input) => input,
   inputSchema: updateColumnsInputSchema,
   outputSchema: updateColumnsInputSchema,
-  execute: (input) => input,
   toModelOutput: (output) => ({
     type: "text",
     value: `Successfully updated ${output.updates.length} column${
-      output.updates.length !== 1 ? "s" : ""
+      output.updates.length === 1 ? "" : "s"
     }.`,
   }),
 });

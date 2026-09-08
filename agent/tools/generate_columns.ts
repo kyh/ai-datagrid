@@ -79,15 +79,15 @@ Assistant: I'll add project management columns to track tasks and progress.
 ## Summary
 
 Use Generate Columns to create the structure of a spreadsheet. Intelligently infer column types based on context and user intent.`,
-  inputSchema: generateColumnsInputSchema,
-  outputSchema: generateColumnsInputSchema,
   // Stateless echo: the client owns the grid and applies the columns from
   // the `action.result` event; the model only needs a short ack.
   execute: (input) => input,
+  inputSchema: generateColumnsInputSchema,
+  outputSchema: generateColumnsInputSchema,
   toModelOutput: (output) => ({
     type: "text",
     value: `Successfully generated ${output.columns.length} column${
-      output.columns.length !== 1 ? "s" : ""
+      output.columns.length === 1 ? "" : "s"
     }.`,
   }),
 });

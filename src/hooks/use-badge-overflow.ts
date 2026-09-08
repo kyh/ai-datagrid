@@ -2,9 +2,12 @@ import * as React from "react";
 
 const badgeWidthCache = new Map<string, number>();
 
-const DEFAULT_CONTAINER_PADDING = 16; // px-2 = 8px * 2
-const DEFAULT_BADGE_GAP = 4; // gap-1 = 4px
-const DEFAULT_OVERFLOW_BADGE_WIDTH = 40; // Approximate width of "+N" badge
+// px-2 = 8px * 2
+const DEFAULT_CONTAINER_PADDING = 16;
+// gap-1 = 4px
+const DEFAULT_BADGE_GAP = 4;
+// Approximate width of "+N" badge
+const DEFAULT_OVERFLOW_BADGE_WIDTH = 40;
 
 interface MeasureBadgeWidthProps {
   label: string;
@@ -14,13 +17,13 @@ interface MeasureBadgeWidthProps {
   className?: string;
 }
 
-function measureBadgeWidth({
+const measureBadgeWidth = ({
   label,
   cacheKey,
   iconSize,
   maxWidth,
   className,
-}: MeasureBadgeWidthProps): number {
+}: MeasureBadgeWidthProps): number => {
   const cached = badgeWidthCache.get(cacheKey);
   if (cached !== undefined) {
     return cached;
@@ -37,7 +40,7 @@ function measureBadgeWidth({
     icon.className = "shrink-0";
     icon.style.width = `${iconSize}px`;
     icon.style.height = `${iconSize}px`;
-    measureEl.appendChild(icon);
+    measureEl.append(icon);
   }
 
   if (maxWidth) {
@@ -45,18 +48,18 @@ function measureBadgeWidth({
     text.className = "truncate";
     text.style.maxWidth = `${maxWidth}px`;
     text.textContent = label;
-    measureEl.appendChild(text);
+    measureEl.append(text);
   } else {
     measureEl.textContent = label;
   }
 
-  document.body.appendChild(measureEl);
+  document.body.append(measureEl);
   const width = measureEl.offsetWidth;
-  document.body.removeChild(measureEl);
+  measureEl.remove();
 
   badgeWidthCache.set(cacheKey, width);
   return width;
-}
+};
 
 interface UseBadgeOverflowProps<T> {
   items: T[];
@@ -78,7 +81,7 @@ interface UseBadgeOverflowReturn<T> {
   containerWidth: number;
 }
 
-export function useBadgeOverflow<T>({
+export const useBadgeOverflow = <T>({
   items,
   getLabel,
   containerRef,
@@ -90,18 +93,20 @@ export function useBadgeOverflow<T>({
   iconSize,
   maxWidth,
   className,
-}: UseBadgeOverflowProps<T>): UseBadgeOverflowReturn<T> {
+}: UseBadgeOverflowProps<T>): UseBadgeOverflowReturn<T> => {
   const [containerWidth, setContainerWidth] = React.useState(0);
 
   React.useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
 
-    function measureWidth() {
+    const measureWidth = () => {
       if (containerRef.current) {
         const width = containerRef.current.clientWidth - containerPadding;
         setContainerWidth(width);
       }
-    }
+    };
 
     measureWidth();
 
@@ -115,7 +120,7 @@ export function useBadgeOverflow<T>({
 
   const result = React.useMemo(() => {
     if (!containerWidth || items.length === 0) {
-      return { visibleItems: items, hiddenCount: 0, containerWidth };
+      return { containerWidth, hiddenCount: 0, visibleItems: items };
     }
 
     let currentLineWidth = 0;
@@ -126,11 +131,11 @@ export function useBadgeOverflow<T>({
       const label = getLabel(item);
       const cacheKey = cacheKeyPrefix ? `${cacheKeyPrefix}:${label}` : label;
       const badgeWidth = measureBadgeWidth({
-        label,
         cacheKey,
-        iconSize,
-        maxWidth,
         className,
+        iconSize,
+        label,
+        maxWidth,
       });
       const widthWithGap = badgeWidth + badgeGap;
 
@@ -138,7 +143,7 @@ export function useBadgeOverflow<T>({
         currentLineWidth += widthWithGap;
         visible.push(item);
       } else if (currentLine < lineCount) {
-        currentLine++;
+        currentLine += 1;
         currentLineWidth = widthWithGap;
         visible.push(item);
       } else {
@@ -151,9 +156,9 @@ export function useBadgeOverflow<T>({
     }
 
     return {
-      visibleItems: visible,
-      hiddenCount: Math.max(0, items.length - visible.length),
       containerWidth,
+      hiddenCount: Math.max(0, items.length - visible.length),
+      visibleItems: visible,
     };
   }, [
     items,
@@ -169,8 +174,8 @@ export function useBadgeOverflow<T>({
   ]);
 
   return result;
-}
+};
 
-export function clearBadgeWidthCache(): void {
+export const clearBadgeWidthCache = (): void => {
   badgeWidthCache.clear();
-}
+};

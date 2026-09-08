@@ -36,11 +36,11 @@ User: Sort by priority then by due date
 *Uses Add Sorts with:*
 - [{ columnId: "priority", direction: "asc" }, { columnId: "due-date", direction: "asc" }]
 </example>`,
+  execute: (input) => input,
   inputSchema: addSortsInputSchema,
   outputSchema: addSortsInputSchema,
-  execute: (input) => input,
   toModelOutput: (output) => ({
     type: "text",
-    value: `Successfully added ${output.sorts.length} sort${output.sorts.length !== 1 ? "s" : ""}.`,
+    value: `Successfully added ${output.sorts.length} sort${output.sorts.length === 1 ? "" : "s"}.`,
   }),
 });

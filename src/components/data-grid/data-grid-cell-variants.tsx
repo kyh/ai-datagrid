@@ -41,9 +41,200 @@ import {
   parseLocalDate,
 } from "@/lib/data-grid";
 import { cn } from "cn";
-import type { DataGridCellProps, DataGridRowData, FileCellData } from "@/lib/data-grid-types";
+import type {
+  CellOpts,
+  DataGridCellProps,
+  DataGridRowData,
+  FileCellData,
+} from "@/lib/data-grid-types";
 
-export function ShortTextCell<TData extends DataGridRowData>({
+const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
+const DEFAULT_MAX_FILES = 10;
+const REJECTED_NAME_MAX_LENGTH = 20;
+
+const resolveFileCellOpts = (cellOpts: CellOpts | undefined) => {
+  const fileCellOpts = cellOpts?.variant === "file" ? cellOpts : null;
+  return {
+    accept: fileCellOpts?.accept,
+    maxFileSize: fileCellOpts?.maxFileSize ?? DEFAULT_MAX_FILE_SIZE,
+    maxFiles: fileCellOpts?.maxFiles ?? DEFAULT_MAX_FILES,
+    multiple: fileCellOpts?.multiple ?? false,
+  };
+};
+
+const getDropzoneHint = (maxFileSize: number, maxFiles: number) => {
+  if (maxFileSize) {
+    return `Max size: ${formatFileSize(maxFileSize)}${maxFiles ? ` • Max ${maxFiles} files` : ""}`;
+  }
+  return maxFiles ? `Max ${maxFiles} files` : "Select files to upload";
+};
+
+const getFileStatusLabel = (
+  file: FileCellData,
+  isFileUploading: boolean,
+  isFileDeleting: boolean,
+) => {
+  if (isFileUploading) {
+    return "Uploading...";
+  }
+  if (isFileDeleting) {
+    return "Deleting...";
+  }
+  return formatFileSize(file.size);
+};
+
+/** Toasts the first rejection and returns its reason, or null when nothing was rejected. */
+const reportRejectedFiles = (rejectedFiles: { name: string; reason: string }[]) => {
+  const [firstError] = rejectedFiles;
+  if (!firstError) {
+    return null;
+  }
+  const truncatedName =
+    firstError.name.length > REJECTED_NAME_MAX_LENGTH
+      ? `${firstError.name.slice(0, REJECTED_NAME_MAX_LENGTH)}...`
+      : firstError.name;
+  toast(firstError.reason, {
+    description:
+      rejectedFiles.length === 1
+        ? `"${truncatedName}" has been rejected`
+        : `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
+  });
+  return firstError.reason;
+};
+
+const getUploadFallbackMessage = (fileCount: number) =>
+  `Failed to upload ${fileCount} file${fileCount === 1 ? "" : "s"}`;
+
+interface FileCellFileListProps {
+  files: FileCellData[];
+  uploadingFiles: Set<string>;
+  deletingFiles: Set<string>;
+  isPending: boolean;
+  onClearAll: () => void;
+  onRemove: (fileId: string) => void;
+}
+
+const FileCellFileList = ({
+  files,
+  uploadingFiles,
+  deletingFiles,
+  isPending,
+  onClearAll,
+  onRemove,
+}: FileCellFileListProps) => (
+  <div className="flex flex-col gap-2">
+    <div className="flex items-center justify-between">
+      <p className="font-medium text-muted-foreground text-xs">
+        {files.length} {files.length === 1 ? "file" : "files"}
+      </p>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-6 text-muted-foreground text-xs"
+        onClick={onClearAll}
+        disabled={isPending}
+      >
+        Clear all
+      </Button>
+    </div>
+    <div className="max-h-[200px] space-y-1 overflow-y-auto">
+      {files.map((file) => {
+        const FileIcon = getFileIcon(file.type);
+        const isFileUploading = uploadingFiles.has(file.id);
+        const isFileDeleting = deletingFiles.has(file.id);
+        const isFilePending = isFileUploading || isFileDeleting;
+
+        return (
+          <div
+            key={file.id}
+            data-pending={isFilePending ? "" : undefined}
+            className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5 data-pending:opacity-60"
+          >
+            {FileIcon && <FileIcon className="size-4 shrink-0 text-muted-foreground" />}
+            <div className="flex-1 overflow-hidden">
+              <p className="truncate text-sm">{file.name}</p>
+              <p className="text-muted-foreground text-xs">
+                {getFileStatusLabel(file, isFileUploading, isFileDeleting)}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-5 rounded-sm"
+              onClick={() => onRemove(file.id)}
+              disabled={isPending}
+            >
+              <X className="size-3" />
+            </Button>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+interface FileCellPreviewProps {
+  isDraggingOver: boolean;
+  fileCount: number;
+  visibleFiles: FileCellData[];
+  hiddenFileCount: number;
+  uploadingFiles: Set<string>;
+}
+
+const FileCellPreview = ({
+  isDraggingOver,
+  fileCount,
+  visibleFiles,
+  hiddenFileCount,
+  uploadingFiles,
+}: FileCellPreviewProps) => {
+  if (isDraggingOver) {
+    return (
+      <div className="flex items-center justify-center gap-2 text-primary text-sm">
+        <Upload className="size-4" />
+        <span>Drop files here</span>
+      </div>
+    );
+  }
+  if (fileCount === 0) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1 overflow-hidden">
+      {visibleFiles.map((file) => {
+        if (uploadingFiles.has(file.id)) {
+          return (
+            <Skeleton
+              key={file.id}
+              className="h-5 shrink-0 px-1.5"
+              style={{
+                width: `${Math.min(file.name.length * 8 + 30, 100)}px`,
+              }}
+            />
+          );
+        }
+
+        const FileIcon = getFileIcon(file.type);
+
+        return (
+          <Badge key={file.id} variant="secondary" className="gap-1 px-1.5 py-px">
+            {FileIcon && <FileIcon className="size-3 shrink-0" />}
+            <span className="max-w-[100px] truncate">{file.name}</span>
+          </Badge>
+        );
+      })}
+      {hiddenFileCount > 0 && (
+        <Badge variant="outline" className="px-1.5 py-px text-muted-foreground">
+          +{hiddenFileCount}
+        </Badge>
+      )}
+    </div>
+  );
+};
+
+export const ShortTextCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -55,7 +246,7 @@ export function ShortTextCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
@@ -71,7 +262,7 @@ export function ShortTextCell<TData extends DataGridRowData>({
     // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
     if (!readOnly && currentValue !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: currentValue });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
@@ -81,30 +272,23 @@ export function ShortTextCell<TData extends DataGridRowData>({
     setValue(currentValue);
   }, []);
 
+  const commitValue = React.useCallback(() => {
+    const currentValue = cellRef.current?.textContent ?? "";
+    if (currentValue !== initialValue) {
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: currentValue });
+    }
+  }, [initialValue, tableMeta, columnId, rowIndex]);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          const currentValue = cellRef.current?.textContent ?? "";
-          if (currentValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({
-              rowIndex,
-              columnId,
-              value: currentValue,
-            });
-          }
+          commitValue();
           tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
-          const currentValue = cellRef.current?.textContent ?? "";
-          if (currentValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({
-              rowIndex,
-              columnId,
-              value: currentValue,
-            });
-          }
+          commitValue();
           tableMeta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
@@ -130,7 +314,7 @@ export function ShortTextCell<TData extends DataGridRowData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId],
+    [isEditing, isFocused, initialValue, tableMeta, commitValue],
   );
 
   React.useEffect(() => {
@@ -152,7 +336,7 @@ export function ShortTextCell<TData extends DataGridRowData>({
     }
   }, [isEditing, value]);
 
-  const displayValue = !isEditing ? (value ?? "") : "";
+  const displayValue = isEditing ? "" : (value ?? "");
 
   return (
     <DataGridCellWrapper<TData>
@@ -171,6 +355,7 @@ export function ShortTextCell<TData extends DataGridRowData>({
       onKeyDown={onWrapperKeyDown}
     >
       <div
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a contentEditable div is the edit surface; an <input> can't inherit the cell's inline layout
         role="textbox"
         data-slot="grid-cell-content"
         contentEditable={isEditing}
@@ -187,9 +372,9 @@ export function ShortTextCell<TData extends DataGridRowData>({
       </div>
     </DataGridCellWrapper>
   );
-}
+};
 
-export function LongTextCell<TData extends DataGridRowData>({
+export const LongTextCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -201,7 +386,7 @@ export function LongTextCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -217,14 +402,14 @@ export function LongTextCell<TData extends DataGridRowData>({
 
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     if (!readOnly) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: newValue });
     }
   }, 300);
 
   const onSave = React.useCallback(() => {
     // Immediately save any pending changes and close the popover
     if (!readOnly && value !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
@@ -233,7 +418,7 @@ export function LongTextCell<TData extends DataGridRowData>({
     // Restore the original value
     setValue(initialValue ?? "");
     if (!readOnly) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: initialValue });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, initialValue, rowIndex, columnId, readOnly]);
@@ -245,7 +430,7 @@ export function LongTextCell<TData extends DataGridRowData>({
       } else {
         // Immediately save any pending changes when closing
         if (!readOnly && value !== initialValue) {
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+          tableMeta?.onDataUpdate?.({ columnId, rowIndex, value });
         }
         tableMeta?.onCellEditingStop?.();
       }
@@ -256,7 +441,7 @@ export function LongTextCell<TData extends DataGridRowData>({
   const onInitialFocus = React.useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
-      const length = textareaRef.current.value.length;
+      const { length } = textareaRef.current.value;
       textareaRef.current.setSelectionRange(length, length);
       if (pendingCharRef.current) {
         const char = pendingCharRef.current;
@@ -276,7 +461,7 @@ export function LongTextCell<TData extends DataGridRowData>({
   const onBlur = React.useCallback(() => {
     // Immediately save any pending changes on blur
     if (!readOnly && value !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
@@ -302,7 +487,7 @@ export function LongTextCell<TData extends DataGridRowData>({
         event.preventDefault();
         // Save any pending changes
         if (value !== initialValue) {
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+          tableMeta?.onDataUpdate?.({ columnId, rowIndex, value });
         }
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
@@ -376,9 +561,9 @@ export function LongTextCell<TData extends DataGridRowData>({
       </PopoverContent>
     </Popover>
   );
-}
+};
 
-export function NumberCell<TData extends DataGridRowData>({
+export const NumberCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -390,7 +575,7 @@ export function NumberCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const initialValue = cell.getValue<number>();
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -413,7 +598,7 @@ export function NumberCell<TData extends DataGridRowData>({
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (!readOnly && numValue !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: numValue });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, rowIndex, columnId, initialValue, value, readOnly]);
@@ -422,22 +607,23 @@ export function NumberCell<TData extends DataGridRowData>({
     setValue(event.target.value);
   }, []);
 
+  const commitValue = React.useCallback(() => {
+    const numValue = value === "" ? null : Number(value);
+    if (numValue !== initialValue) {
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: numValue });
+    }
+  }, [value, initialValue, tableMeta, columnId, rowIndex]);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          const numValue = value === "" ? null : Number(value);
-          if (numValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
-          }
+          commitValue();
           tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
-          const numValue = value === "" ? null : Number(value);
-          if (numValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
-          }
+          commitValue();
           tableMeta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
@@ -456,7 +642,7 @@ export function NumberCell<TData extends DataGridRowData>({
         }
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId, value],
+    [isEditing, isFocused, initialValue, tableMeta, commitValue],
   );
 
   React.useEffect(() => {
@@ -502,9 +688,9 @@ export function NumberCell<TData extends DataGridRowData>({
       )}
     </DataGridCellWrapper>
   );
-}
+};
 
-export function UrlCell<TData extends DataGridRowData>({
+export const UrlCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -516,7 +702,7 @@ export function UrlCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
@@ -533,8 +719,8 @@ export function UrlCell<TData extends DataGridRowData>({
 
     if (!readOnly && currentValue !== initialValue) {
       tableMeta?.onDataUpdate?.({
-        rowIndex,
         columnId,
+        rowIndex,
         value: currentValue || null,
       });
     }
@@ -546,30 +732,23 @@ export function UrlCell<TData extends DataGridRowData>({
     setValue(currentValue);
   }, []);
 
+  const commitValue = React.useCallback(() => {
+    const currentValue = cellRef.current?.textContent?.trim() ?? "";
+    if (!readOnly && currentValue !== initialValue) {
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: currentValue || null });
+    }
+  }, [readOnly, initialValue, tableMeta, columnId, rowIndex]);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          const currentValue = cellRef.current?.textContent?.trim() ?? "";
-          if (!readOnly && currentValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({
-              rowIndex,
-              columnId,
-              value: currentValue || null,
-            });
-          }
+          commitValue();
           tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
-          const currentValue = cellRef.current?.textContent?.trim() ?? "";
-          if (!readOnly && currentValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({
-              rowIndex,
-              columnId,
-              value: currentValue || null,
-            });
-          }
+          commitValue();
           tableMeta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
@@ -601,7 +780,7 @@ export function UrlCell<TData extends DataGridRowData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId, readOnly],
+    [isEditing, isFocused, initialValue, tableMeta, readOnly, commitValue],
   );
 
   const onLinkClick = React.useCallback(
@@ -647,7 +826,7 @@ export function UrlCell<TData extends DataGridRowData>({
     }
   }, [isEditing, value]);
 
-  const displayValue = !isEditing ? (value ?? "") : "";
+  const displayValue = isEditing ? "" : (value ?? "");
   const urlHref = displayValue ? getUrlHref(displayValue) : "";
   const isDangerousUrl = displayValue && !urlHref;
 
@@ -683,6 +862,7 @@ export function UrlCell<TData extends DataGridRowData>({
         </div>
       ) : (
         <div
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a contentEditable div is the edit surface; an <input> can't inherit the cell's inline layout
           role="textbox"
           data-slot="grid-cell-content"
           contentEditable={isEditing}
@@ -700,9 +880,9 @@ export function UrlCell<TData extends DataGridRowData>({
       )}
     </DataGridCellWrapper>
   );
-}
+};
 
-export function CheckboxCell<TData extends DataGridRowData>({
+export const CheckboxCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -713,7 +893,7 @@ export function CheckboxCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: Omit<DataGridCellProps<TData>, "isEditing">) {
+}: Omit<DataGridCellProps<TData>, "isEditing">) => {
   const initialValue = cell.getValue<boolean>();
   const [value, setValue] = React.useState(Boolean(initialValue));
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -726,9 +906,11 @@ export function CheckboxCell<TData extends DataGridRowData>({
 
   const onCheckedChange = React.useCallback(
     (checked: boolean) => {
-      if (readOnly) return;
+      if (readOnly) {
+        return;
+      }
       setValue(checked);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: checked });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: checked });
     },
     [tableMeta, rowIndex, columnId, readOnly],
   );
@@ -801,9 +983,9 @@ export function CheckboxCell<TData extends DataGridRowData>({
       />
     </DataGridCellWrapper>
   );
-}
+};
 
-export function SelectCell<TData extends DataGridRowData>({
+export const SelectCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -815,7 +997,7 @@ export function SelectCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -830,9 +1012,11 @@ export function SelectCell<TData extends DataGridRowData>({
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
-      if (readOnly) return;
+      if (readOnly) {
+        return;
+      }
       setValue(newValue);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: newValue });
       tableMeta?.onCellEditingStop?.();
     },
     [tableMeta, rowIndex, columnId, readOnly],
@@ -867,6 +1051,16 @@ export function SelectCell<TData extends DataGridRowData>({
 
   const displayLabel = options.find((opt) => opt.value === value)?.label ?? value;
 
+  const display = displayLabel ? (
+    <Badge
+      data-slot="grid-cell-content"
+      variant="secondary"
+      className="whitespace-pre-wrap px-1.5 py-px"
+    >
+      {displayLabel}
+    </Badge>
+  ) : null;
+
   return (
     <DataGridCellWrapper<TData>
       ref={containerRef}
@@ -887,7 +1081,9 @@ export function SelectCell<TData extends DataGridRowData>({
         <Select
           value={value}
           onValueChange={(v) => {
-            if (v !== null) onValueChange(v);
+            if (v !== null) {
+              onValueChange(v);
+            }
           }}
           open={isEditing}
           onOpenChange={onOpenChange}
@@ -919,20 +1115,14 @@ export function SelectCell<TData extends DataGridRowData>({
             ))}
           </SelectContent>
         </Select>
-      ) : displayLabel ? (
-        <Badge
-          data-slot="grid-cell-content"
-          variant="secondary"
-          className="whitespace-pre-wrap px-1.5 py-px"
-        >
-          {displayLabel}
-        </Badge>
-      ) : null}
+      ) : (
+        display
+      )}
     </DataGridCellWrapper>
   );
-}
+};
 
-export function MultiSelectCell<TData extends DataGridRowData>({
+export const MultiSelectCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -944,7 +1134,7 @@ export function MultiSelectCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const cellValue = React.useMemo(() => {
     const value = cell.getValue<string[]>();
     return value ?? [];
@@ -974,13 +1164,15 @@ export function MultiSelectCell<TData extends DataGridRowData>({
 
   const onValueChange = React.useCallback(
     (value: string) => {
-      if (readOnly) return;
+      if (readOnly) {
+        return;
+      }
       const newValues = selectedValues.includes(value)
         ? selectedValues.filter((v) => v !== value)
         : [...selectedValues, value];
 
       setSelectedValues(newValues);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: newValues });
       setSearchValue("");
       queueMicrotask(() => inputRef.current?.focus());
     },
@@ -989,12 +1181,14 @@ export function MultiSelectCell<TData extends DataGridRowData>({
 
   const removeValue = React.useCallback(
     (valueToRemove: string, event?: React.MouseEvent) => {
-      if (readOnly) return;
+      if (readOnly) {
+        return;
+      }
       event?.stopPropagation();
       event?.preventDefault();
       const newValues = selectedValues.filter((v) => v !== valueToRemove);
       setSelectedValues(newValues);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: newValues });
       // Focus back on input after removing
       setTimeout(() => inputRef.current?.focus(), 0);
     },
@@ -1002,9 +1196,11 @@ export function MultiSelectCell<TData extends DataGridRowData>({
   );
 
   const clearAll = React.useCallback(() => {
-    if (readOnly) return;
+    if (readOnly) {
+      return;
+    }
     setSelectedValues([]);
-    tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
+    tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: [] });
     queueMicrotask(() => inputRef.current?.focus());
   }, [tableMeta, rowIndex, columnId, readOnly]);
 
@@ -1047,7 +1243,7 @@ export function MultiSelectCell<TData extends DataGridRowData>({
       // Handle backspace when input is empty - remove last selected item
       if (event.key === "Backspace" && searchValue === "" && selectedValues.length > 0) {
         event.preventDefault();
-        const lastValue = selectedValues[selectedValues.length - 1];
+        const lastValue = selectedValues.at(-1);
         if (lastValue) {
           removeValue(lastValue);
         }
@@ -1068,9 +1264,9 @@ export function MultiSelectCell<TData extends DataGridRowData>({
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } = useBadgeOverflow({
-    items: displayLabels,
-    getLabel: (label) => label,
     containerRef,
+    getLabel: (label) => label,
+    items: displayLabels,
     lineCount,
   });
 
@@ -1135,7 +1331,7 @@ export function MultiSelectCell<TData extends DataGridRowData>({
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
                   {options.map((option) => {
-                    const isSelected = selectedValues.includes(option.value);
+                    const isOptionSelected = selectedValues.includes(option.value);
 
                     return (
                       <CommandItem
@@ -1146,7 +1342,7 @@ export function MultiSelectCell<TData extends DataGridRowData>({
                         <div
                           className={cn(
                             "flex size-4 items-center justify-center rounded-sm border border-primary",
-                            isSelected
+                            isOptionSelected
                               ? "bg-primary text-primary-foreground"
                               : "opacity-50 [&_svg]:invisible",
                           )}
@@ -1192,9 +1388,9 @@ export function MultiSelectCell<TData extends DataGridRowData>({
       ) : null}
     </DataGridCellWrapper>
   );
-}
+};
 
-export function DateCell<TData extends DataGridRowData>({
+export const DateCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -1206,7 +1402,7 @@ export function DateCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const initialValue = cell.getValue<string>();
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -1222,12 +1418,14 @@ export function DateCell<TData extends DataGridRowData>({
 
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
-      if (!date || readOnly) return;
+      if (!date || readOnly) {
+        return;
+      }
 
       // Format using local date components to avoid timezone issues
       const formattedDate = formatDateToString(date);
       setValue(formattedDate);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: formattedDate });
       tableMeta?.onCellEditingStop?.();
     },
     [tableMeta, rowIndex, columnId, readOnly],
@@ -1288,7 +1486,6 @@ export function DateCell<TData extends DataGridRowData>({
             className="w-auto p-0"
           >
             <Calendar
-              // oxlint-disable-next-line jsx-a11y/no-autofocus -- opened by explicit user action
               autoFocus
               captionLayout="dropdown"
               mode="single"
@@ -1301,9 +1498,9 @@ export function DateCell<TData extends DataGridRowData>({
       </Popover>
     </DataGridCellWrapper>
   );
-}
+};
 
-export function FileCell<TData extends DataGridRowData>({
+export const FileCell = <TData extends DataGridRowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -1315,7 +1512,7 @@ export function FileCell<TData extends DataGridRowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
-}: DataGridCellProps<TData>) {
+}: DataGridCellProps<TData>) => {
   const cellValue = React.useMemo(() => cell.getValue<FileCellData[]>() ?? [], [cell]);
 
   const cellKey = getCellKey(rowIndex, columnId);
@@ -1340,11 +1537,7 @@ export function FileCell<TData extends DataGridRowData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -getRowHeightValue(rowHeight);
 
-  const fileCellOpts = cellOpts?.variant === "file" ? cellOpts : null;
-  const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
-  const maxFiles = fileCellOpts?.maxFiles ?? 10;
-  const accept = fileCellOpts?.accept;
-  const multiple = fileCellOpts?.multiple ?? false;
+  const { accept, maxFileSize, maxFiles, multiple } = resolveFileCellOpts(cellOpts);
 
   const acceptedTypes = React.useMemo(
     () => (accept ? accept.split(",").map((t) => t.trim()) : null),
@@ -1396,7 +1589,9 @@ export function FileCell<TData extends DataGridRowData>({
 
   const addFiles = React.useCallback(
     async (newFiles: File[], skipUpload = false) => {
-      if (readOnly || isPending) return;
+      if (readOnly || isPending) {
+        return;
+      }
       setError(null);
 
       if (maxFiles && files.length + newFiles.length > maxFiles) {
@@ -1409,7 +1604,7 @@ export function FileCell<TData extends DataGridRowData>({
         return;
       }
 
-      const rejectedFiles: Array<{ name: string; reason: string }> = [];
+      const rejectedFiles: { name: string; reason: string }[] = [];
       const filesToValidate: File[] = [];
 
       for (const file of newFiles) {
@@ -1422,23 +1617,9 @@ export function FileCell<TData extends DataGridRowData>({
       }
 
       if (rejectedFiles.length > 0) {
-        const firstError = rejectedFiles[0];
-        if (firstError) {
-          setError(firstError.reason);
-
-          const truncatedName =
-            firstError.name.length > 20 ? `${firstError.name.slice(0, 20)}...` : firstError.name;
-
-          if (rejectedFiles.length === 1) {
-            toast(firstError.reason, {
-              description: `"${truncatedName}" has been rejected`,
-            });
-          } else {
-            toast(firstError.reason, {
-              description: `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
-            });
-          }
-
+        const reason = reportRejectedFiles(rejectedFiles);
+        if (reason !== null) {
+          setError(reason);
           setTimeout(() => {
             setError(null);
           }, 2000);
@@ -1446,7 +1627,18 @@ export function FileCell<TData extends DataGridRowData>({
       }
 
       if (filesToValidate.length > 0) {
-        if (!skipUpload) {
+        if (skipUpload) {
+          const newFilesData: FileCellData[] = filesToValidate.map((f) => ({
+            id: crypto.randomUUID(),
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            url: URL.createObjectURL(f),
+          }));
+          const updatedFiles = [...files, ...newFilesData];
+          setFiles(updatedFiles);
+          tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: updatedFiles });
+        } else {
           const tempFiles = filesToValidate.map((f) => ({
             id: crypto.randomUUID(),
             name: f.name,
@@ -1465,17 +1657,15 @@ export function FileCell<TData extends DataGridRowData>({
           if (tableMeta?.onFilesUpload) {
             try {
               uploadedFiles = await tableMeta.onFilesUpload({
+                columnId,
                 files: filesToValidate,
                 rowIndex,
-                columnId,
               });
-            } catch (error) {
+            } catch (uploadError) {
               toast.error(
-                error instanceof Error
-                  ? error.message
-                  : `Failed to upload ${filesToValidate.length} file${
-                      filesToValidate.length !== 1 ? "s" : ""
-                    }`,
+                uploadError instanceof Error
+                  ? uploadError.message
+                  : getUploadFallbackMessage(filesToValidate.length),
               );
               setFiles((prev) => prev.filter((f) => !uploadingIds.has(f.id)));
               setUploadingFiles(new Set());
@@ -1502,22 +1692,7 @@ export function FileCell<TData extends DataGridRowData>({
 
           setFiles(finalFiles);
           setUploadingFiles(new Set());
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: finalFiles });
-        } else {
-          const newFilesData: FileCellData[] = filesToValidate.map((f) => ({
-            id: crypto.randomUUID(),
-            name: f.name,
-            size: f.size,
-            type: f.type,
-            url: URL.createObjectURL(f),
-          }));
-          const updatedFiles = [...files, ...newFilesData];
-          setFiles(updatedFiles);
-          tableMeta?.onDataUpdate?.({
-            rowIndex,
-            columnId,
-            value: updatedFiles,
-          });
+          tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: finalFiles });
         }
       }
     },
@@ -1526,24 +1701,30 @@ export function FileCell<TData extends DataGridRowData>({
 
   const removeFile = React.useCallback(
     async (fileId: string) => {
-      if (readOnly || isPending) return;
+      if (readOnly || isPending) {
+        return;
+      }
       setError(null);
 
       const fileToRemove = files.find((f) => f.id === fileId);
-      if (!fileToRemove) return;
+      if (!fileToRemove) {
+        return;
+      }
 
       setDeletingFiles((prev) => new Set(prev).add(fileId));
 
       if (tableMeta?.onFilesDelete) {
         try {
           await tableMeta.onFilesDelete({
+            columnId,
             fileIds: [fileId],
             rowIndex,
-            columnId,
           });
-        } catch (error) {
+        } catch (deleteError) {
           toast.error(
-            error instanceof Error ? error.message : `Failed to delete ${fileToRemove.name}`,
+            deleteError instanceof Error
+              ? deleteError.message
+              : `Failed to delete ${fileToRemove.name}`,
           );
           setDeletingFiles((prev) => {
             const next = new Set(prev);
@@ -1565,13 +1746,15 @@ export function FileCell<TData extends DataGridRowData>({
         next.delete(fileId);
         return next;
       });
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+      tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: updatedFiles });
     },
     [files, tableMeta, rowIndex, columnId, readOnly, isPending],
   );
 
   const clearAll = React.useCallback(async () => {
-    if (readOnly || isPending) return;
+    if (readOnly || isPending) {
+      return;
+    }
     setError(null);
 
     const fileIds = files.map((f) => f.id);
@@ -1580,12 +1763,12 @@ export function FileCell<TData extends DataGridRowData>({
     if (tableMeta?.onFilesDelete && files.length > 0) {
       try {
         await tableMeta.onFilesDelete({
+          columnId,
           fileIds,
           rowIndex,
-          columnId,
         });
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to delete files");
+      } catch (deleteError) {
+        toast.error(deleteError instanceof Error ? deleteError.message : "Failed to delete files");
         setDeletingFiles(new Set());
         return;
       }
@@ -1598,7 +1781,7 @@ export function FileCell<TData extends DataGridRowData>({
     }
     setFiles([]);
     setDeletingFiles(new Set());
-    tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
+    tableMeta?.onDataUpdate?.({ columnId, rowIndex, value: [] });
   }, [files, tableMeta, rowIndex, columnId, readOnly, isPending]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
@@ -1632,7 +1815,7 @@ export function FileCell<TData extends DataGridRowData>({
       event.stopPropagation();
       setIsDraggingOver(false);
 
-      const droppedFiles = Array.from(event.dataTransfer.files);
+      const droppedFiles = [...event.dataTransfer.files];
       if (droppedFiles.length > 0) {
         addFiles(droppedFiles, false);
       }
@@ -1669,7 +1852,7 @@ export function FileCell<TData extends DataGridRowData>({
       event.stopPropagation();
       setIsDragging(false);
 
-      const droppedFiles = Array.from(event.dataTransfer.files);
+      const droppedFiles = [...event.dataTransfer.files];
       addFiles(droppedFiles, false);
     },
     [addFiles],
@@ -1691,7 +1874,7 @@ export function FileCell<TData extends DataGridRowData>({
 
   const onFileInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(event.target.files ?? []);
+      const selectedFiles = [...(event.target.files ?? [])];
       addFiles(selectedFiles, false);
       event.target.value = "";
     },
@@ -1700,11 +1883,10 @@ export function FileCell<TData extends DataGridRowData>({
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
+      setError(null);
       if (open && !readOnly) {
-        setError(null);
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
-        setError(null);
         tableMeta?.onCellEditingStop?.();
       }
     },
@@ -1712,7 +1894,9 @@ export function FileCell<TData extends DataGridRowData>({
   );
 
   const onContentKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") event.stopPropagation();
+    if (event.key === "Escape") {
+      event.stopPropagation();
+    }
   }, []);
 
   const onInitialFocus = React.useCallback(() => {
@@ -1751,25 +1935,26 @@ export function FileCell<TData extends DataGridRowData>({
     [isEditing, isFocused, cellValue, tableMeta, onDropzoneClick, rowIndex, columnId],
   );
 
-  React.useEffect(() => {
-    return () => {
+  React.useEffect(
+    () => () => {
       for (const file of files) {
         if (file.url) {
           URL.revokeObjectURL(file.url);
         }
       }
-    };
-  }, [files]);
+    },
+    [files],
+  );
 
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } = useBadgeOverflow({
-    items: files,
-    getLabel: (file) => file.name,
-    containerRef,
-    lineCount,
     cacheKeyPrefix: "file",
+    containerRef,
+    getLabel: (file) => file.name,
     iconSize: 12,
+    items: files,
+    lineCount,
     maxWidth: 100,
   });
 
@@ -1812,9 +1997,7 @@ export function FileCell<TData extends DataGridRowData>({
                 File upload
               </span>
               <div
-                // focusable, clickable and a drop target — a button, not a landmark.
-                // The error state reaches AT through `aria-describedby`; `aria-invalid`
-                // is only supported on form-input roles.
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the dropzone wraps block content (<p>) a <button> cannot contain; its error state reaches AT via aria-describedby since aria-invalid needs a form-input role
                 role="button"
                 aria-labelledby={labelId}
                 aria-describedby={descriptionId}
@@ -1840,13 +2023,7 @@ export function FileCell<TData extends DataGridRowData>({
                   <p className="text-muted-foreground text-xs">or click to browse</p>
                 </div>
                 <p id={descriptionId} className="text-muted-foreground text-xs">
-                  {maxFileSize
-                    ? `Max size: ${formatFileSize(maxFileSize)}${
-                        maxFiles ? ` • Max ${maxFiles} files` : ""
-                      }`
-                    : maxFiles
-                      ? `Max ${maxFiles} files`
-                      : "Select files to upload"}
+                  {getDropzoneHint(maxFileSize, maxFiles)}
                 </p>
               </div>
               <input
@@ -1860,106 +2037,26 @@ export function FileCell<TData extends DataGridRowData>({
                 onChange={onFileInputChange}
               />
               {files.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-muted-foreground text-xs">
-                      {files.length} {files.length === 1 ? "file" : "files"}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-muted-foreground text-xs"
-                      onClick={clearAll}
-                      disabled={isPending}
-                    >
-                      Clear all
-                    </Button>
-                  </div>
-                  <div className="max-h-[200px] space-y-1 overflow-y-auto">
-                    {files.map((file) => {
-                      const FileIcon = getFileIcon(file.type);
-                      const isFileUploading = uploadingFiles.has(file.id);
-                      const isFileDeleting = deletingFiles.has(file.id);
-                      const isFilePending = isFileUploading || isFileDeleting;
-
-                      return (
-                        <div
-                          key={file.id}
-                          data-pending={isFilePending ? "" : undefined}
-                          className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5 data-pending:opacity-60"
-                        >
-                          {FileIcon && (
-                            <FileIcon className="size-4 shrink-0 text-muted-foreground" />
-                          )}
-                          <div className="flex-1 overflow-hidden">
-                            <p className="truncate text-sm">{file.name}</p>
-                            <p className="text-muted-foreground text-xs">
-                              {isFileUploading
-                                ? "Uploading..."
-                                : isFileDeleting
-                                  ? "Deleting..."
-                                  : formatFileSize(file.size)}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-5 rounded-sm"
-                            onClick={() => removeFile(file.id)}
-                            disabled={isPending}
-                          >
-                            <X className="size-3" />
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <FileCellFileList
+                  files={files}
+                  uploadingFiles={uploadingFiles}
+                  deletingFiles={deletingFiles}
+                  isPending={isPending}
+                  onClearAll={clearAll}
+                  onRemove={removeFile}
+                />
               )}
             </div>
           </PopoverContent>
         </Popover>
       ) : null}
-      {isDraggingOver ? (
-        <div className="flex items-center justify-center gap-2 text-primary text-sm">
-          <Upload className="size-4" />
-          <span>Drop files here</span>
-        </div>
-      ) : files.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1 overflow-hidden">
-          {visibleFiles.map((file) => {
-            const isUploading = uploadingFiles.has(file.id);
-
-            if (isUploading) {
-              return (
-                <Skeleton
-                  key={file.id}
-                  className="h-5 shrink-0 px-1.5"
-                  style={{
-                    width: `${Math.min(file.name.length * 8 + 30, 100)}px`,
-                  }}
-                />
-              );
-            }
-
-            const FileIcon = getFileIcon(file.type);
-
-            return (
-              <Badge key={file.id} variant="secondary" className="gap-1 px-1.5 py-px">
-                {FileIcon && <FileIcon className="size-3 shrink-0" />}
-                <span className="max-w-[100px] truncate">{file.name}</span>
-              </Badge>
-            );
-          })}
-          {hiddenFileCount > 0 && (
-            <Badge variant="outline" className="px-1.5 py-px text-muted-foreground">
-              +{hiddenFileCount}
-            </Badge>
-          )}
-        </div>
-      ) : null}
+      <FileCellPreview
+        isDraggingOver={isDraggingOver}
+        fileCount={files.length}
+        visibleFiles={visibleFiles}
+        hiddenFileCount={hiddenFileCount}
+        uploadingFiles={uploadingFiles}
+      />
     </DataGridCellWrapper>
   );
-}
+};

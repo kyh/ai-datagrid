@@ -17,9 +17,9 @@ Use Clear Sorts when:
 User: Clear all sorting
 *Uses Clear Sorts*
 </example>`,
+  execute: (input) => input,
   inputSchema: clearSortsInputSchema,
   outputSchema: clearSortsInputSchema,
-  execute: (input) => input,
   toModelOutput: () => ({
     type: "text",
     value: "Successfully cleared all sorting.",

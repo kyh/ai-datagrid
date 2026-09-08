@@ -95,30 +95,29 @@ export const CELL_VARIANT_TAGS = [
   "date",
   "url",
   "file",
-] as const satisfies ReadonlyArray<CellOpts["variant"]>;
+] as const satisfies readonly CellOpts["variant"][];
 
 /** Narrow assistant- or form-supplied strings to a known cell variant. */
-export function isCellVariant(value: string | undefined): value is CellOpts["variant"] {
-  return CELL_VARIANT_TAGS.some((variant) => variant === value);
-}
+export const isCellVariant = (value: string | undefined): value is CellOpts["variant"] =>
+  CELL_VARIANT_TAGS.some((variant) => variant === value);
 
 /**
  * The grid addresses cells by column id, so rows it generates are assembled from
  * a runtime column set and cannot be proven to satisfy the caller's nominal row
  * type. This is the single place that widening happens.
  */
-export function asRow<TRow extends DataGridRowData>(row: DataGridRowData): TRow {
+export const asRow = <TRow extends DataGridRowData>(row: DataGridRowData): TRow =>
   // SAFETY: the grid addresses cells only through string column ids, so every
   // read and write on `TRow` goes through the same open-dictionary contract the
   // input satisfies; the nominal row type adds no fields the grid could miss.
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- see comment above
-  return row as TRow;
-}
+  row as TRow;
 
-export function getCellOptions(cell: CellOpts | undefined): CellSelectOption[] | undefined {
-  if (!cell) return undefined;
+export const getCellOptions = (cell: CellOpts | undefined): CellSelectOption[] | undefined => {
+  if (!cell) {
+    return undefined;
+  }
   return cell.variant === "select" || cell.variant === "multi-select" ? cell.options : undefined;
-}
+};
 
 declare module "@tanstack/react-table" {
   // TFeatures, TData and TValue are consumed by the augmented interface below.
@@ -144,7 +143,7 @@ declare module "@tanstack/react-table" {
     rowHeight?: RowHeightValue;
     onRowHeightChange?: (value: RowHeightValue) => void;
     onRowSelect?: (rowIndex: number, checked: boolean, shiftKey: boolean) => void;
-    onDataUpdate?: (params: CellUpdate | Array<CellUpdate>) => void;
+    onDataUpdate?: (params: CellUpdate | CellUpdate[]) => void;
     onRowsDelete?: (rowIndices: number[]) => void | Promise<void>;
     onColumnClick?: (columnId: string) => void;
     onCellClick?: (rowIndex: number, columnId: string, event?: React.MouseEvent) => void;

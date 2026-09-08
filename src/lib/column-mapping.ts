@@ -15,12 +15,12 @@ const filterFn = getFilterFn<DataGridRowData>();
  * `@/lib/assistant-schemas`) to a TanStack Table ColumnDef.
  * Pure: no state, safe to call anywhere.
  */
-export function columnDefinitionToColumnDef(
+export const columnDefinitionToColumnDef = (
   col: ColumnDefinition,
-): ColumnDef<DataGridFeatures, DataGridRowData> {
+): ColumnDef<DataGridFeatures, DataGridRowData> => {
   let cell: CellOpts;
   switch (col.variant) {
-    case "number":
+    case "number": {
       cell = {
         variant: "number",
         ...(col.min !== undefined && { min: col.min }),
@@ -28,30 +28,28 @@ export function columnDefinitionToColumnDef(
         ...(col.step !== undefined && { step: col.step }),
       };
       break;
+    }
     case "select":
-    case "multi-select":
-      cell = { variant: col.variant, options: col.options ?? [] };
+    case "multi-select": {
+      cell = { options: col.options ?? [], variant: col.variant };
       break;
-    case "short-text":
-    case "long-text":
-    case "checkbox":
-    case "date":
-    case "url":
-    case "file":
+    }
+    default: {
       cell = { variant: col.variant };
       break;
+    }
   }
 
   return {
-    id: col.id,
     accessorKey: col.id,
-    header: col.label,
-    minSize: 180,
     filterFn,
+    header: col.label,
+    id: col.id,
     meta: {
-      label: col.label,
       cell,
+      label: col.label,
       ...(col.prompt && { prompt: col.prompt }),
     },
+    minSize: 180,
   };
-}
+};

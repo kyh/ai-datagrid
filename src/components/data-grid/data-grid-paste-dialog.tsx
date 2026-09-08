@@ -21,41 +21,33 @@ interface DataGridPasteDialogProps<TData extends RowData> {
   pasteDialog: PasteDialogState;
 }
 
-export function DataGridPasteDialog<TData extends RowData>({
-  tableMeta,
-  pasteDialog,
-}: DataGridPasteDialogProps<TData>) {
-  const onPasteDialogOpenChange = tableMeta?.onPasteDialogOpenChange;
-  const onCellsPaste = tableMeta?.onCellsPaste;
-
-  if (!pasteDialog.open) return null;
-
-  return (
-    <PasteDialog
-      pasteDialog={pasteDialog}
-      onPasteDialogOpenChange={onPasteDialogOpenChange}
-      onCellsPaste={onCellsPaste}
-    />
-  );
-}
-
 interface PasteDialogProps
   extends
     Pick<TableMeta<DataGridFeatures, DataGridRowData>, "onPasteDialogOpenChange" | "onCellsPaste">,
     Required<Pick<TableMeta<DataGridFeatures, DataGridRowData>, "pasteDialog">> {}
 
-const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
-  if (prev.pasteDialog.open !== next.pasteDialog.open) return false;
-  if (!next.pasteDialog.open) return true;
-  if (prev.pasteDialog.rowsNeeded !== next.pasteDialog.rowsNeeded) return false;
-
-  return true;
-});
-
-function PasteDialogImpl({ pasteDialog, onPasteDialogOpenChange, onCellsPaste }: PasteDialogProps) {
+const RadioItem = ({ className, ...props }: React.ComponentProps<"input">) => (
+  <input
+    type="radio"
+    className={cn(
+      "relative size-4 shrink-0 appearance-none rounded-full border border-input bg-background shadow-xs outline-none transition-[color,box-shadow]",
+      "text-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+      "disabled:cursor-not-allowed disabled:opacity-50",
+      "checked:before:absolute checked:before:start-1/2 checked:before:top-1/2 checked:before:size-2 checked:before:-translate-x-1/2 checked:before:-translate-y-1/2 checked:before:rounded-full checked:before:bg-primary checked:before:content-['']",
+      "dark:bg-input/30",
+      className,
+    )}
+    {...props}
+  />
+);
+const PasteDialogImpl = ({
+  pasteDialog,
+  onPasteDialogOpenChange,
+  onCellsPaste,
+}: PasteDialogProps) => {
   const propsRef = useAsRef({
-    onPasteDialogOpenChange,
     onCellsPaste,
+    onPasteDialogOpenChange,
   });
 
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
@@ -82,7 +74,7 @@ function PasteDialogImpl({ pasteDialog, onPasteDialogOpenChange, onCellsPaste }:
           <DialogTitle>Do you want to add more rows?</DialogTitle>
           <DialogDescription>
             We need <strong>{pasteDialog.rowsNeeded}</strong> additional row
-            {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to paste everything from your clipboard.
+            {pasteDialog.rowsNeeded === 1 ? "" : "s"} to paste everything from your clipboard.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-1">
@@ -98,7 +90,7 @@ function PasteDialogImpl({ pasteDialog, onPasteDialogOpenChange, onCellsPaste }:
               <span className="font-medium text-sm leading-none">Create new rows</span>
               <span className="text-muted-foreground text-sm">
                 Add {pasteDialog.rowsNeeded} new row
-                {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to the table and paste all data
+                {pasteDialog.rowsNeeded === 1 ? "" : "s"} to the table and paste all data
               </span>
             </div>
           </label>
@@ -121,21 +113,38 @@ function PasteDialogImpl({ pasteDialog, onPasteDialogOpenChange, onCellsPaste }:
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-function RadioItem({ className, ...props }: React.ComponentProps<"input">) {
+const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
+  if (prev.pasteDialog.open !== next.pasteDialog.open) {
+    return false;
+  }
+  if (!next.pasteDialog.open) {
+    return true;
+  }
+  if (prev.pasteDialog.rowsNeeded !== next.pasteDialog.rowsNeeded) {
+    return false;
+  }
+
+  return true;
+});
+
+export const DataGridPasteDialog = <TData extends RowData>({
+  tableMeta,
+  pasteDialog,
+}: DataGridPasteDialogProps<TData>) => {
+  const onPasteDialogOpenChange = tableMeta?.onPasteDialogOpenChange;
+  const onCellsPaste = tableMeta?.onCellsPaste;
+
+  if (!pasteDialog.open) {
+    return null;
+  }
+
   return (
-    <input
-      type="radio"
-      className={cn(
-        "relative size-4 shrink-0 appearance-none rounded-full border border-input bg-background shadow-xs outline-none transition-[color,box-shadow]",
-        "text-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        "checked:before:absolute checked:before:start-1/2 checked:before:top-1/2 checked:before:size-2 checked:before:-translate-x-1/2 checked:before:-translate-y-1/2 checked:before:rounded-full checked:before:bg-primary checked:before:content-['']",
-        "dark:bg-input/30",
-        className,
-      )}
-      {...props}
+    <PasteDialog
+      pasteDialog={pasteDialog}
+      onPasteDialogOpenChange={onPasteDialogOpenChange}
+      onCellsPaste={onCellsPaste}
     />
   );
-}
+};

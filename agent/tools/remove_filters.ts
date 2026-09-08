@@ -22,13 +22,13 @@ User: Remove the status filter
 *Uses Remove Filters with:*
 - columnIds: ["status"]
 </example>`,
+  execute: (input) => input,
   inputSchema: removeFiltersInputSchema,
   outputSchema: removeFiltersInputSchema,
-  execute: (input) => input,
   toModelOutput: (output) => ({
     type: "text",
     value: `Successfully removed filters from ${output.columnIds.length} column${
-      output.columnIds.length !== 1 ? "s" : ""
+      output.columnIds.length === 1 ? "" : "s"
     }.`,
   }),
 });

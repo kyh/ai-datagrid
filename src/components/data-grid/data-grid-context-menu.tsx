@@ -24,39 +24,8 @@ import { genericMemo } from "@/lib/generic-memo";
 
 interface DataGridContextMenuProps<TData extends RowData> {
   tableMeta: TableMeta<DataGridFeatures, TData>;
-  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
+  columns: readonly ColumnDef<DataGridFeatures, TData>[];
   contextMenu: ContextMenuState;
-}
-
-export function DataGridContextMenu<TData extends DataGridRowData>({
-  tableMeta,
-  columns,
-  contextMenu,
-}: DataGridContextMenuProps<TData>) {
-  const onContextMenuOpenChange = tableMeta?.onContextMenuOpenChange;
-  const selectionState = tableMeta?.selectionState;
-  const dataGridRef = tableMeta?.dataGridRef;
-  const onDataUpdate = tableMeta?.onDataUpdate;
-  const onRowsDelete = tableMeta?.onRowsDelete;
-  const onCellsCopy = tableMeta?.onCellsCopy;
-  const onCellsCut = tableMeta?.onCellsCut;
-
-  if (!contextMenu.open) return null;
-
-  return (
-    <ContextMenu
-      tableMeta={tableMeta}
-      columns={columns}
-      dataGridRef={dataGridRef}
-      contextMenu={contextMenu}
-      onContextMenuOpenChange={onContextMenuOpenChange}
-      selectionState={selectionState}
-      onDataUpdate={onDataUpdate}
-      onRowsDelete={onRowsDelete}
-      onCellsCopy={onCellsCopy}
-      onCellsCut={onCellsCut}
-    />
-  );
 }
 
 interface ContextMenuProps<TData extends RowData>
@@ -74,23 +43,10 @@ interface ContextMenuProps<TData extends RowData>
     >,
     Required<Pick<TableMeta<DataGridFeatures, TData>, "contextMenu">> {
   tableMeta: TableMeta<DataGridFeatures, TData>;
-  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
+  columns: readonly ColumnDef<DataGridFeatures, TData>[];
 }
 
-const ContextMenu = genericMemo(ContextMenuImpl, (prev, next) => {
-  if (prev.contextMenu.open !== next.contextMenu.open) return false;
-  if (!next.contextMenu.open) return true;
-  if (prev.contextMenu.x !== next.contextMenu.x) return false;
-  if (prev.contextMenu.y !== next.contextMenu.y) return false;
-
-  const prevSize = prev.selectionState?.selectedCells?.size ?? 0;
-  const nextSize = next.selectionState?.selectedCells?.size ?? 0;
-  if (prevSize !== nextSize) return false;
-
-  return true;
-});
-
-function ContextMenuImpl<TData extends DataGridRowData>({
+const ContextMenuImpl = <TData extends DataGridRowData>({
   tableMeta,
   columns,
   dataGridRef,
@@ -101,30 +57,30 @@ function ContextMenuImpl<TData extends DataGridRowData>({
   onRowsDelete,
   onCellsCopy,
   onCellsCut,
-}: ContextMenuProps<TData>) {
+}: ContextMenuProps<TData>) => {
   const propsRef = useAsRef({
+    columns,
     dataGridRef,
-    selectionState,
-    onDataUpdate,
-    onRowsDelete,
     onCellsCopy,
     onCellsCut,
-    columns,
+    onDataUpdate,
+    onRowsDelete,
+    selectionState,
   });
 
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
-      position: "fixed",
+      background: "transparent",
+      border: "none",
+      height: "1px",
       left: `${contextMenu.x}px`,
+      margin: 0,
+      opacity: 0,
+      padding: 0,
+      pointerEvents: "none",
+      position: "fixed",
       top: `${contextMenu.y}px`,
       width: "1px",
-      height: "1px",
-      padding: 0,
-      margin: 0,
-      border: "none",
-      background: "transparent",
-      pointerEvents: "none",
-      opacity: 0,
     }),
     [contextMenu.x, contextMenu.y],
   );
@@ -142,19 +98,29 @@ function ContextMenuImpl<TData extends DataGridRowData>({
   }, [propsRef]);
 
   const onClear = React.useCallback(() => {
-    const { selectionState, columns, onDataUpdate } = propsRef.current;
+    const {
+      selectionState: selection,
+      columns: columnDefs,
+      onDataUpdate: updateData,
+    } = propsRef.current;
 
-    if (!selectionState?.selectedCells || selectionState.selectedCells.size === 0) return;
+    if (!selection?.selectedCells || selection.selectedCells.size === 0) {
+      return;
+    }
 
-    const updates: Array<CellUpdate> = [];
+    const updates: CellUpdate[] = [];
 
-    for (const cellKey of selectionState.selectedCells) {
+    for (const cellKey of selection.selectedCells) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
 
       // Get column from columns array
-      const column = columns.find((col) => {
-        if (col.id) return col.id === columnId;
-        if ("accessorKey" in col) return col.accessorKey === columnId;
+      const column = columnDefs.find((col) => {
+        if (col.id) {
+          return col.id === columnId;
+        }
+        if ("accessorKey" in col) {
+          return col.accessorKey === columnId;
+        }
         return false;
       });
       const cellVariant = column?.meta?.cell?.variant;
@@ -168,31 +134,33 @@ function ContextMenuImpl<TData extends DataGridRowData>({
         emptyValue = false;
       }
 
-      updates.push({ rowIndex, columnId, value: emptyValue });
+      updates.push({ columnId, rowIndex, value: emptyValue });
     }
 
-    onDataUpdate?.(updates);
+    updateData?.(updates);
 
-    toast.success(`${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`);
+    toast.success(`${updates.length} cell${updates.length === 1 ? "" : "s"} cleared`);
   }, [propsRef]);
 
   const onDelete = React.useCallback(async () => {
-    const { selectionState, onRowsDelete } = propsRef.current;
+    const { selectionState: selection, onRowsDelete: deleteRows } = propsRef.current;
 
-    if (!selectionState?.selectedCells || selectionState.selectedCells.size === 0) return;
+    if (!selection?.selectedCells || selection.selectedCells.size === 0) {
+      return;
+    }
 
     const rowIndices = new Set<number>();
-    for (const cellKey of selectionState.selectedCells) {
+    for (const cellKey of selection.selectedCells) {
       const { rowIndex } = parseCellKey(cellKey);
       rowIndices.add(rowIndex);
     }
 
-    const rowIndicesArray = Array.from(rowIndices).toSorted((a, b) => a - b);
+    const rowIndicesArray = [...rowIndices].toSorted((a, b) => a - b);
     const rowCount = rowIndicesArray.length;
 
-    await onRowsDelete?.(rowIndicesArray);
+    await deleteRows?.(rowIndicesArray);
 
-    toast.success(`${rowCount} row${rowCount !== 1 ? "s" : ""} deleted`);
+    toast.success(`${rowCount} row${rowCount === 1 ? "" : "s"} deleted`);
   }, [propsRef]);
 
   return (
@@ -228,4 +196,59 @@ function ContextMenuImpl<TData extends DataGridRowData>({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
+const ContextMenu = genericMemo(ContextMenuImpl, (prev, next) => {
+  if (prev.contextMenu.open !== next.contextMenu.open) {
+    return false;
+  }
+  if (!next.contextMenu.open) {
+    return true;
+  }
+  if (prev.contextMenu.x !== next.contextMenu.x) {
+    return false;
+  }
+  if (prev.contextMenu.y !== next.contextMenu.y) {
+    return false;
+  }
+
+  const prevSize = prev.selectionState?.selectedCells?.size ?? 0;
+  const nextSize = next.selectionState?.selectedCells?.size ?? 0;
+  if (prevSize !== nextSize) {
+    return false;
+  }
+
+  return true;
+});
+
+export const DataGridContextMenu = <TData extends DataGridRowData>({
+  tableMeta,
+  columns,
+  contextMenu,
+}: DataGridContextMenuProps<TData>) => {
+  const onContextMenuOpenChange = tableMeta?.onContextMenuOpenChange;
+  const selectionState = tableMeta?.selectionState;
+  const dataGridRef = tableMeta?.dataGridRef;
+  const onDataUpdate = tableMeta?.onDataUpdate;
+  const onRowsDelete = tableMeta?.onRowsDelete;
+  const onCellsCopy = tableMeta?.onCellsCopy;
+  const onCellsCut = tableMeta?.onCellsCut;
+
+  if (!contextMenu.open) {
+    return null;
+  }
+
+  return (
+    <ContextMenu
+      tableMeta={tableMeta}
+      columns={columns}
+      dataGridRef={dataGridRef}
+      contextMenu={contextMenu}
+      onContextMenuOpenChange={onContextMenuOpenChange}
+      selectionState={selectionState}
+      onDataUpdate={onDataUpdate}
+      onRowsDelete={onRowsDelete}
+      onCellsCopy={onCellsCopy}
+      onCellsCut={onCellsCut}
+    />
+  );
+};

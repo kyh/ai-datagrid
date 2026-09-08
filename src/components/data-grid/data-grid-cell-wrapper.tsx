@@ -1,15 +1,34 @@
 "use client";
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- the wrapper hosts the cell's own inputs and buttons, which a <button> cannot contain */
 import * as React from "react";
 import { useComposedRefs } from "@/components/ui/utils";
 import { getCellKey } from "@/lib/data-grid";
 import { cn } from "cn";
 import type { DataGridCellProps, DataGridRowData } from "@/lib/data-grid-types";
 
+const NAVIGATION_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "Tab",
+]);
+
+const isEditStartKey = (event: React.KeyboardEvent) =>
+  event.key === "F2" ||
+  event.key === "Enter" ||
+  event.key === " " ||
+  (event.key.length === 1 && !event.ctrlKey && !event.metaKey);
+
 interface DataGridCellWrapperProps<TData extends DataGridRowData>
   extends Omit<DataGridCellProps<TData>, "isGenerating">, React.ComponentProps<"div"> {}
 
-export function DataGridCellWrapper<TData extends DataGridRowData>({
+export const DataGridCellWrapper = <TData extends DataGridRowData>({
   tableMeta,
   rowIndex,
   columnId,
@@ -25,12 +44,14 @@ export function DataGridCellWrapper<TData extends DataGridRowData>({
   onKeyDown: onKeyDownProp,
   ref,
   ...props
-}: DataGridCellWrapperProps<TData>) {
+}: DataGridCellWrapperProps<TData>) => {
   const cellMapRef = tableMeta?.cellMapRef;
 
   const onCellChange = React.useCallback(
     (node: HTMLDivElement | null) => {
-      if (!cellMapRef) return;
+      if (!cellMapRef) {
+        return;
+      }
 
       const cellKey = getCellKey(rowIndex, columnId);
 
@@ -83,42 +104,18 @@ export function DataGridCellWrapper<TData extends DataGridRowData>({
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       onKeyDownProp?.(event);
 
-      if (event.defaultPrevented) return;
-
-      if (
-        event.key === "ArrowUp" ||
-        event.key === "ArrowDown" ||
-        event.key === "ArrowLeft" ||
-        event.key === "ArrowRight" ||
-        event.key === "Home" ||
-        event.key === "End" ||
-        event.key === "PageUp" ||
-        event.key === "PageDown" ||
-        event.key === "Tab"
-      ) {
+      if (event.defaultPrevented) {
         return;
       }
 
-      if (isFocused && !isEditing && !readOnly) {
-        if (event.key === "F2" || event.key === "Enter") {
-          event.preventDefault();
-          event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowIndex, columnId);
-          return;
-        }
+      if (NAVIGATION_KEYS.has(event.key)) {
+        return;
+      }
 
-        if (event.key === " ") {
-          event.preventDefault();
-          event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowIndex, columnId);
-          return;
-        }
-
-        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          event.preventDefault();
-          event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowIndex, columnId);
-        }
+      if (isFocused && !isEditing && !readOnly && isEditStartKey(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       }
     },
     [onKeyDownProp, isFocused, isEditing, readOnly, tableMeta, rowIndex, columnId],
@@ -158,15 +155,15 @@ export function DataGridCellWrapper<TData extends DataGridRowData>({
       className={cn(
         "size-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
-          "ring-1 ring-ring ring-inset": isFocused,
-          "bg-yellow-100 dark:bg-yellow-900/30": isSearchMatch && !isActiveSearchMatch,
-          "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
-          "bg-primary/10": isSelected && !isEditing,
-          "cursor-default": !isEditing,
           "**:data-[slot=grid-cell-content]:line-clamp-1": !isEditing && rowHeight === "short",
           "**:data-[slot=grid-cell-content]:line-clamp-2": !isEditing && rowHeight === "medium",
           "**:data-[slot=grid-cell-content]:line-clamp-3": !isEditing && rowHeight === "tall",
           "**:data-[slot=grid-cell-content]:line-clamp-4": !isEditing && rowHeight === "extra-tall",
+          "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
+          "bg-primary/10": isSelected && !isEditing,
+          "bg-yellow-100 dark:bg-yellow-900/30": isSearchMatch && !isActiveSearchMatch,
+          "cursor-default": !isEditing,
+          "ring-1 ring-ring ring-inset": isFocused,
         },
         className,
       )}
@@ -179,4 +176,4 @@ export function DataGridCellWrapper<TData extends DataGridRowData>({
       onKeyDown={onKeyDown}
     />
   );
-}
+};

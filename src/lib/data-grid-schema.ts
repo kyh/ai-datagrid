@@ -8,10 +8,10 @@ import type { CellValue, FileCellData } from "./data-grid-types";
  * Schema for cell select option
  */
 export const cellSelectOptionSchema = z.object({
+  count: z.number().optional(),
+  icon: z.any().optional().describe("React component for the icon"),
   label: z.string(),
   value: z.string(),
-  icon: z.any().optional().describe("React component for the icon"),
-  count: z.number().optional(),
 });
 
 /**
@@ -43,8 +43,8 @@ export const cellValueSchema = z.union([
  * Schema for update cell
  */
 export const updateCellSchema = z.object({
-  rowIndex: z.number(),
   columnId: z.string(),
+  rowIndex: z.number(),
   value: cellValueSchema,
 });
 
@@ -111,21 +111,25 @@ export const multiSelectValueSchema = z.object({
 /**
  * Creates a select value schema with specific options
  */
-export function createSelectValueSchema(options: string[]) {
+export const createSelectValueSchema = (options: string[]) => {
   const [first, ...rest] = options;
-  if (first === undefined) return selectValueSchema;
+  if (first === undefined) {
+    return selectValueSchema;
+  }
   return z.object({
     value: z.enum([first, ...rest]).describe("One of the valid options"),
   });
-}
+};
 
 /**
  * Creates a multi-select value schema with specific options
  */
-export function createMultiSelectValueSchema(options: string[]) {
+export const createMultiSelectValueSchema = (options: string[]) => {
   const [first, ...rest] = options;
-  if (first === undefined) return multiSelectValueSchema;
+  if (first === undefined) {
+    return multiSelectValueSchema;
+  }
   return z.object({
     value: z.array(z.enum([first, ...rest])).describe("Array of selected options"),
   });
-}
+};

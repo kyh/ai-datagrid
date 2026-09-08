@@ -27,9 +27,9 @@ export const dataGridFeatures = tableFeatures({
   columnResizingFeature,
   columnSizingFeature,
   columnVisibilityFeature,
+  filteredRowModel: createFilteredRowModel(),
   rowSelectionFeature,
   rowSortingFeature,
-  filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
 });
 

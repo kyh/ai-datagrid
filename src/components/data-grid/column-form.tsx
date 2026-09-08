@@ -18,16 +18,16 @@ import { getColumnVariant } from "@/lib/data-grid";
 import type { CellOpts, CellSelectOption } from "@/lib/data-grid-types";
 import { isCellVariant } from "@/lib/data-grid-types";
 
-const CELL_VARIANTS: Array<{ value: CellOpts["variant"]; label: string }> = [
-  { value: "short-text", label: "Text" },
-  { value: "long-text", label: "Long Text" },
-  { value: "number", label: "Number" },
-  { value: "select", label: "Select" },
-  { value: "multi-select", label: "Multi-select" },
-  { value: "checkbox", label: "Checkbox" },
-  { value: "date", label: "Date" },
-  { value: "url", label: "URL" },
-  { value: "file", label: "File" },
+const CELL_VARIANTS: { value: CellOpts["variant"]; label: string }[] = [
+  { label: "Text", value: "short-text" },
+  { label: "Long Text", value: "long-text" },
+  { label: "Number", value: "number" },
+  { label: "Select", value: "select" },
+  { label: "Multi-select", value: "multi-select" },
+  { label: "Checkbox", value: "checkbox" },
+  { label: "Date", value: "date" },
+  { label: "URL", value: "url" },
+  { label: "File", value: "file" },
 ];
 
 const MAX_UNIQUE_VALUE_ATTEMPTS = 1000;
@@ -50,18 +50,23 @@ interface ColumnFormProps {
   onSubmit?: (values: ColumnFormValues) => void;
   submitLabel?: string;
   autoFocus?: boolean;
+  ref?: React.Ref<ColumnFormRef>;
 }
 
-export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(function ColumnForm(
-  { mode, defaultValues, onSubmit, submitLabel, autoFocus = true },
+export const ColumnForm = ({
+  mode,
+  defaultValues,
+  onSubmit,
+  submitLabel,
+  autoFocus = true,
   ref,
-) {
+}: ColumnFormProps) => {
   const form = useForm<ColumnFormValues>({
     defaultValues: {
       label: defaultValues?.label ?? "",
-      variant: defaultValues?.variant ?? "short-text",
       options: defaultValues?.options ?? [],
       prompt: defaultValues?.prompt ?? "",
+      variant: defaultValues?.variant ?? "short-text",
     },
   });
 
@@ -93,12 +98,12 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
 
   // Helper to generate unique option value
   const generateUniqueValue = React.useCallback(
-    (label: string, existingOptions: CellSelectOption[]) => {
+    (optionLabel: string, existingOptions: CellSelectOption[]) => {
       const baseValue =
-        label
+        optionLabel
           .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, "") || "option";
+          .replaceAll(/\s+/gu, "-")
+          .replaceAll(/[^a-z0-9-]/gu, "") || "option";
 
       let uniqueValue = baseValue;
       let counter = 1;
@@ -107,7 +112,7 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
         counter < MAX_UNIQUE_VALUE_ATTEMPTS
       ) {
         uniqueValue = `${baseValue}-${counter}`;
-        counter++;
+        counter += 1;
       }
       return uniqueValue;
     },
@@ -125,8 +130,8 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
 
     onSubmit?.({
       ...values,
-      options: finalOptions,
       label: values.label.trim(),
+      options: finalOptions,
       prompt: values.prompt.trim(),
     });
   });
@@ -143,7 +148,9 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
 
   const handleAddOption = React.useCallback(() => {
     const trimmedLabel = newOptionLabel.trim();
-    if (!trimmedLabel) return;
+    if (!trimmedLabel) {
+      return;
+    }
 
     const currentOptions = form.getValues("options");
     const uniqueValue = generateUniqueValue(trimmedLabel, currentOptions);
@@ -169,8 +176,9 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
 
   const handleVariantChange = React.useCallback(
     (newVariant: string | null) => {
-      if (newVariant === null) return;
-      if (!isCellVariant(newVariant)) return;
+      if (newVariant === null || !isCellVariant(newVariant)) {
+        return;
+      }
       const v = newVariant;
       form.setValue("variant", v);
       // Clear options when changing away from select types
@@ -193,7 +201,6 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
           onKeyDown={handleKeyDown}
           placeholder="Column name"
           className="h-8"
-          // oxlint-disable-next-line jsx-a11y/no-autofocus -- opt-in via prop; set only when the form opens on user intent
           autoFocus={autoFocus}
         />
       </div>
@@ -303,4 +310,4 @@ export const ColumnForm = React.forwardRef<ColumnFormRef, ColumnFormProps>(funct
       )}
     </form>
   );
-});
+};

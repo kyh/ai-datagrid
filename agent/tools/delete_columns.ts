@@ -34,13 +34,13 @@ User: Remove the Description and Comments columns
 *Uses Delete Columns with:*
 - columnIds: ["description", "comments"]
 </example>`,
+  execute: (input) => input,
   inputSchema: deleteColumnsInputSchema,
   outputSchema: deleteColumnsInputSchema,
-  execute: (input) => input,
   toModelOutput: (output) => ({
     type: "text",
     value: `Successfully deleted ${output.columnIds.length} column${
-      output.columnIds.length !== 1 ? "s" : ""
+      output.columnIds.length === 1 ? "" : "s"
     }.`,
   }),
 });
