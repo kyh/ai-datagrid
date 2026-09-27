@@ -25,7 +25,7 @@ const createSpreadsheetRows = (count: number): SpreadsheetRow[] => {
   });
 };
 
-const SpreadsheetPage = () => {
+export const SpreadsheetGrid = () => {
   const data = getSpreadsheetData();
   const columns = getSpreadsheetColumns(getFilterFn());
 
@@ -41,5 +41,3 @@ const SpreadsheetPage = () => {
     />
   );
 };
-
-export default SpreadsheetPage;
