@@ -56,7 +56,7 @@ Static gate — run before every commit:
 pnpm verify   # typecheck · lint · format · test
 ```
 
-**There is no CI in this repo** (no `.github/workflows`). `pnpm verify` is the only gate that will ever run, so nothing catches you if you skip it.
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, format, test and `pnpm build` on every PR and push to `main`.
 
 Runtime — drive the real UI with [agent-browser](https://github.com/vercel-labs/agent-browser). Non-AI assertion against the deterministic fixtures:
 
