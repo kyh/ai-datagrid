@@ -84,15 +84,19 @@ Useful selectors: `[data-slot="grid-header-cell"]`, `[data-slot="grid-cell-conte
 
 ## Routes
 
-| Route               | What it is                                                       |
-| ------------------- | ---------------------------------------------------------------- |
-| `/`                 | Empty 26-column × 1001-row spreadsheet (A–Z) — the blank surface |
-| `/people`           | 50 people — the widest column-type coverage                      |
-| `/companies`        | 50 companies                                                     |
-| `/articles`         | 50 articles — exercises the **date** column type                 |
-| `/generate-demo`    | `generate_columns` smoke test (preseeded prompt)                 |
-| `/enrich-demo`      | `enrich_cells` demo (select cells, then ask)                     |
-| `/filter-sort-demo` | `add_filters` / `add_sorts` smoke test (preseeded prompt)        |
+| Route                            | What it is                                                       |
+| -------------------------------- | ---------------------------------------------------------------- |
+| `/`                              | Empty 26-column × 1001-row spreadsheet (A–Z) — the blank surface |
+| `/people`                        | 50 people — the widest column-type coverage                      |
+| `/companies`                     | 50 companies                                                     |
+| `/articles`                      | 50 articles — exercises the **date** column type                 |
+| `/generate-demo`                 | `generate_columns` smoke test (preseeded prompt)                 |
+| `/enrich-demo`                   | `enrich_cells` demo (select cells, then ask)                     |
+| `/filter-sort-demo`              | `add_filters` / `add_sorts` smoke test (preseeded prompt)        |
+| `/about`, `/contact`, `/privacy` | Trust pages, rendered from `src/lib/agent/site-content.ts`       |
+| `/llms.txt`                      | llmstxt.org overview for agents                                  |
+
+Any page requested with `Accept: text/markdown` is rewritten by `src/proxy.ts` to `/api/markdown/*`, which returns its Markdown twin (unknown paths: 404 with a Markdown body). The homepage carries a visually hidden, server-rendered outline (`src/components/site-intro.tsx`) because the grid is client-rendered. Edit copy in `site-content.ts` — HTML, Markdown, `/llms.txt` and JSON-LD all read from it.
 
 ## Platform matrix
 
@@ -119,6 +123,7 @@ Useful selectors: `[data-slot="grid-header-cell"]`, `[data-slot="grid-cell-conte
 - `src/components/chat/chat.tsx` — `useEveAgent` bridge: grid snapshot out as `clientContext`, `action.result` events in
 - `src/components/data-grid/`, `src/hooks/use-data-grid.ts`, `src/stores/data-grid-store.ts` — the grid
 - `src/data/seed.tsx` — every fixture, all routes
+- `src/lib/agent/` — agent-readiness: Accept negotiation, Markdown/llms.txt renderers, JSON-LD, shared site copy
 - `CLAUDE.md` — conventions + architecture (Claude-specific) · `README.md` — the human-facing tour
 
 <!-- BEGIN:nextjs-agent-rules -->
