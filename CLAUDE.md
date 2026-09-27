@@ -46,7 +46,7 @@ pnpm format:fix   # oxfmt --write (`pnpm format` only checks)
 pnpm test         # node:test via tsx (grid unit tests)
 ```
 
-There is no CI in this repo, so `pnpm verify` is the only gate that ever runs.
+CI (`.github/workflows/ci.yml`) runs the same gates plus `pnpm build` on every PR and push to `main`.
 
 **NEVER run `eve build` while `pnpm dev` is running** — it corrupts the eve dev workflow cache. If dev breaks mysteriously: delete `.eve/` + `.workflow-data/` and restart.
 

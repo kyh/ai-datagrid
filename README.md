@@ -47,7 +47,7 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-Driving this repo with a coding agent? Read [AGENTS.md](AGENTS.md). Before committing, run `pnpm verify` (typecheck · lint · format · test) — there is no CI.
+Driving this repo with a coding agent? Read [AGENTS.md](AGENTS.md). Before committing, run `pnpm verify` (typecheck · lint · format · test); CI runs the same gates plus `pnpm build` on every PR.
 
 ## AI Setup
 
