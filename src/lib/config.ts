@@ -3,7 +3,7 @@ export const siteConfig = {
   creator: "@kaiyuhsu",
   description:
     "Forkable Next.js template featuring an AI spreadsheet — generate columns, enrich cells, filter and sort in natural language.",
-  email: "im.kaiyu@gmail.com",
+  email: "kai@kyh.io",
   name: "AI Datagrid",
   repository: "https://github.com/kyh/ai-datagrid",
   routes: [
