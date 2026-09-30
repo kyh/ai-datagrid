@@ -26,7 +26,7 @@ export const SiteIntro = () => (
     {homeSections.map((section) => (
       <section key={section.heading}>
         <h3>{section.heading}</h3>
-        <ProseList items={section.items} />
+        <ProseList items={section.items} focus="untabbable" />
       </section>
     ))}
   </section>

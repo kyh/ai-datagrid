@@ -17,24 +17,50 @@ const withInlineCode = (text: string): ReactNode =>
 
 const linkClassName = "text-foreground underline underline-offset-4 hover:text-primary";
 
+/** `untabbable` is for links inside visually hidden blocks, so keyboard focus never lands on something invisible. */
+type LinkFocus = "tabbable" | "untabbable";
+
 /** Files like `/llms.txt` aren't App Router pages, so they skip `<Link>` along with off-site URLs. */
-const ProseLink = ({ href, children }: { href: string; children: ReactNode }) =>
-  href.startsWith("/") && !href.includes(".") ? (
-    <Link className={linkClassName} href={href}>
+const ProseLink = ({
+  href,
+  children,
+  focus,
+}: {
+  href: string;
+  children: ReactNode;
+  focus: LinkFocus;
+}) => {
+  const tabIndex = focus === "untabbable" ? -1 : undefined;
+  return href.startsWith("/") && !href.includes(".") ? (
+    <Link
+      className={linkClassName}
+      href={href}
+      prefetch={focus === "untabbable" ? false : undefined}
+      tabIndex={tabIndex}
+    >
       {children}
     </Link>
   ) : (
-    <a className={linkClassName} href={href}>
+    <a className={linkClassName} href={href} tabIndex={tabIndex}>
       {children}
     </a>
   );
+};
 
-export const ProseList = ({ items }: { items: ProseListItem[] }) => (
+export const ProseList = ({
+  items,
+  focus = "tabbable",
+}: {
+  items: ProseListItem[];
+  focus?: LinkFocus;
+}) => (
   <ul className="flex list-disc flex-col gap-2 pl-5">
     {items.map((item) => (
       <li key={item.label}>
         {item.href ? (
-          <ProseLink href={item.href}>{item.label}</ProseLink>
+          <ProseLink href={item.href} focus={focus}>
+            {item.label}
+          </ProseLink>
         ) : (
           <span className="text-foreground">{item.label}</span>
         )}

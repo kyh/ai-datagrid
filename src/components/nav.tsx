@@ -7,12 +7,9 @@ import {
   BuildingIcon,
   FileSpreadsheetIcon,
   FilterIcon,
-  InfoIcon,
-  MailIcon,
   MenuIcon,
   MoonIcon,
   NewspaperIcon,
-  ShieldIcon,
   SparklesIcon,
   SunIcon,
   UsersIcon,
@@ -49,12 +46,6 @@ const aiItems = [
   { icon: WandIcon, label: "Generate Demo", path: "/generate-demo" },
   { icon: SparklesIcon, label: "Enrich Demo", path: "/enrich-demo" },
   { icon: FilterIcon, label: "Filter/Sort Demo", path: "/filter-sort-demo" },
-] as const;
-
-const siteItems = [
-  { icon: InfoIcon, label: "About", path: "/about" },
-  { icon: MailIcon, label: "Contact", path: "/contact" },
-  { icon: ShieldIcon, label: "Privacy", path: "/privacy" },
 ] as const;
 
 export const Nav = () => {
@@ -98,17 +89,6 @@ export const Nav = () => {
             />
           ))}
           <DropdownMenuSeparator />
-          {siteItems.map((item) => (
-            <DropdownMenuItem
-              key={item.path}
-              render={
-                <Link href={item.path} className={pathname === item.path ? "bg-accent" : ""}>
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Link>
-              }
-            />
-          ))}
           <DropdownMenuItem
             render={
               <a
