@@ -77,12 +77,6 @@ const toolResultEventSchema = z.object({
   type: z.literal("action.result"),
 });
 
-/** `subagent.event` wraps a child session's stream event under `data.event`. */
-const subagentEventSchema = z.object({
-  data: z.object({ event: z.unknown() }),
-  type: z.literal("subagent.event"),
-});
-
 /**
  * Auth-shaped failures: a 401 from the channel (keyless in prod), a
  * rejected gateway key at the model call, or a missing server key in dev.
@@ -112,19 +106,8 @@ interface ChatProps {
 
 type ToolResult = z.infer<typeof toolResultEventSchema>["data"]["result"];
 
-/** Unwrap subagent envelopes and keep only completed, non-error tool results. */
-const parseCompletedToolResult = (incoming: MessageStreamEvent): ToolResult | null => {
-  // Delegation is forbidden by the instructions, but if the model strays,
-  // unwrap the child's events so its tool results still reach the grid.
-  let event: unknown = incoming;
-  for (
-    let wrapped = subagentEventSchema.safeParse(event);
-    wrapped.success;
-    wrapped = subagentEventSchema.safeParse(event)
-  ) {
-    const { event: inner } = wrapped.data.data;
-    event = inner;
-  }
+/** Keep only completed, non-error tool results. */
+const parseCompletedToolResult = (event: MessageStreamEvent): ToolResult | null => {
   const parsed = toolResultEventSchema.safeParse(event);
   if (!parsed.success) {
     return null;

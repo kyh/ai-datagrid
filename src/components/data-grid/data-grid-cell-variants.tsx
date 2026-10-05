@@ -1489,7 +1489,7 @@ export const DateCell = <TData extends DataGridRowData>({
               autoFocus
               captionLayout="dropdown"
               mode="single"
-              defaultMonth={selectedDate ?? new Date()}
+              defaultMonth={selectedDate}
               selected={selectedDate}
               onSelect={onDateSelect}
             />
