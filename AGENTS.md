@@ -115,6 +115,7 @@ Any page requested with `Accept: text/markdown` is rewritten by `src/proxy.ts` t
 - **No `any`, no non-null `!`, no `as` casts.** `any` and `!` are errors under the ultracite presets; an `as` must carry a `// SAFETY:` comment (anti-slop `require-safety-comment-for-type-assertion`), so `pnpm lint` enforces all three. Zod-parse at every boundary: stream events, tool payloads, localStorage. The handful of unavoidable widenings are funnelled through named helpers (`asRow`, `genericMemo`, `withColumnPatch`) that carry a `SAFETY:` explanation — add no new bare casts.
 - **Add UI only via `pnpm dlx shadcn@latest add <name>`** (base-vega registry on Base UI — `render` prop, not `asChild`). Never hand-copy a component.
 - **Grid cell dates render through `formatDateForDisplay`** (`src/lib/data-grid.ts`) — fixed locale and fixed zone, so a cell can't differ between server, client and visitor. Don't reintroduce bare `toLocaleDateString()` in a cell or in the paste path. Carve-out: the date-picker popover (`src/components/ui/utils.tsx` `formatDate`, and the vendored `src/components/ui/calendar.tsx`) stays on the **local** zone on purpose — its inputs are local-midnight dates, it is client-only and never prerendered, so pinning UTC there would show the wrong day east of UTC.
+- **`cacheComponents` and `partialPrefetching` are on** (`next.config.ts`). Route segment config (`dynamic`, `revalidate`, …) is a build error under them; anything reading the clock or the request at render time needs `"use cache"` or `<Suspense>` (see `src/app/sitemap.ts`).
 
 ## Map
 
